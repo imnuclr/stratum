@@ -825,7 +825,11 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    the clip edge never crosses a visible icon. A decelerating curve on the width
    also front-loads the change into the first third and reads as a pop on its own,
    so size changes use an eased-both-ends curve instead.
-32. **Warping the cursor is not a substitute for hovering.**
+32. **`DotText` is a `Row`, so it has no width to align within.** Giving it a
+   `width` and `horizontalAlignment` is silently ignored, since a positioner
+   sizes itself to its contents. Right-aligning a column of percentages means
+   wrapping it in an `Item` of fixed width and anchoring the text inside.
+33. **Warping the cursor is not a substitute for hovering.**
    `hl.dsp.cursor.move({x, y})` is the only way to move the pointer here, and a
    teleport produces enter and leave sequences that real motion does not — it made
    popouts look like they opened and closed on their own long after the behaviour
@@ -833,13 +837,13 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    for confirming that a hover path fires at all; worthless for judging whether
    hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
    timer, so a sampled state reads as closed when it is merely closing.
-33. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+34. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-34. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+35. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-35. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+36. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

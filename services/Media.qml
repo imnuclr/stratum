@@ -46,6 +46,23 @@ Singleton {
             remembered = null;
     }
 
+    readonly property string elapsedLabel: formatTime(position)
+    readonly property string lengthLabel: formatTime(length)
+
+    function formatTime(seconds) {
+        if (!(seconds > 0))
+            return "0:00";
+        const total = Math.floor(seconds);
+        const h = Math.floor(total / 3600);
+        const m = Math.floor(total / 60) % 60;
+        const s = total % 60;
+        // Hours only when there are any: a three-minute track reading 0:03:12
+        // wastes two characters on every row that will ever show it.
+        if (h > 0)
+            return `${h}:${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
+        return `${m}:${s < 10 ? "0" : ""}${s}`;
+    }
+
     function playPause() {
         if (active?.canTogglePlaying)
             active.togglePlaying();

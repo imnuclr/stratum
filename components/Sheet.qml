@@ -75,6 +75,36 @@ PanelWindow {
             border.width: 1
             border.color: Theme.lineHi
 
+            /*
+             * Dismiss affordance at the bottom edge. Clicking outside already
+             * closes the sheet, but nothing on the sheet itself said so.
+             */
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: Theme.space(2)
+                width: 44
+                height: 4
+                radius: 2
+                color: grip.containsMouse ? Theme.fgFaint : Theme.lineHi
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.micro
+                    }
+                }
+
+                MouseArea {
+                    id: grip
+
+                    anchors.fill: parent
+                    anchors.margins: -8
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Shell.close()
+                }
+            }
+
             transformOrigin: Item.Top
             opacity: root.open ? 1 : 0
             scale: root.open ? 1 : 0.96

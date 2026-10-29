@@ -41,7 +41,15 @@ Singleton {
         "chevron-down": "m6 9.5 6 6 6-6",
         "chevron-left": "m14.5 6-6 6 6 6",
         "app": "M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z",
-        "terminal": "m5 7.5 4 4.5-4 4.5M12.5 16.5H19"
+        "terminal": "m5 7.5 4 4.5-4 4.5M12.5 16.5H19",
+        "sun": "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4",
+        "moon": "M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5",
+        "arrow-down": "M12 5v14M6.5 13.5 12 19l5.5-5.5",
+        "arrow-up": "M12 19V5M6.5 10.5 12 5l5.5 5.5",
+        "play": "M8 5.5v13l11-6.5z",
+        "pause": "M9 5.5h2.5v13H9zM14.5 5.5H17v13h-2.5z",
+        "skip-back": "M18 5.5v13L8.5 12zM6.5 5.5H8v13H6.5z",
+        "skip-forward": "M6 5.5v13L15.5 12zM16 5.5h1.5v13H16z"
     })
 
     // The battery outline is drawn once and filled by Glyph, so it isn't a path.

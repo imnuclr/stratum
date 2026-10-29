@@ -2,55 +2,86 @@ import QtQuick
 import qs.components
 import qs.services
 import qs.theme
+import qs.utils
 
-/*
- * The ring reads temperature against a fixed -10..40°C span rather than against
- * anything measured, so the same reading always fills it the same amount.
- */
 Column {
     id: root
 
-    readonly property real span: Weather.metric ? 50 : 90
-    readonly property real floor: Weather.metric ? -10 : 14
-
     spacing: Theme.space(2)
+
+    SectionLabel {
+        text: Weather.condition.length > 0
+            ? Weather.condition
+            : (Weather.error.length > 0 ? Weather.error : "loading")
+    }
+
+    Row {
+        spacing: Theme.space(2)
+
+        DotMatrix {
+            anchors.verticalCenter: parent.verticalCenter
+            pattern: WeatherGlyphs.forCode(Weather.code, Weather.day)
+            cell: 6.5
+            dotSize: 4.4
+        }
+
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 1
+
+            DotText {
+                text: Weather.ready ? `${Math.round(Weather.temperature)}` : "--"
+                size: 40
+            }
+
+            // Raised, not centred: a degree sign sits on the cap line.
+            DotText {
+                y: 2
+                text: "°"
+                size: 18
+            }
+        }
+    }
+
+    SectionLabel {
+        dim: true
+        visible: Weather.ready
+        text: `feels ${Math.round(Weather.apparent)}° · ${Math.round(Weather.windSpeed)} m/s`
+    }
 
     Row {
         spacing: Theme.space(3)
 
-        DotRing {
-            width: 74
-            height: 74
-            count: 40
-            dotSize: 3.2
-            value: Weather.ready
-                ? Math.max(0, Math.min(1, (Weather.temperature - root.floor) / root.span))
-                : 0
+        Repeater {
+            model: Weather.daily.slice(0, 4)
 
-            DotText {
-                anchors.centerIn: parent
-                text: Weather.ready ? `${Math.round(Weather.temperature)}` : "--"
-                size: 17
-            }
-        }
+            Column {
+                required property var modelData
 
-        Column {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Theme.space(1)
+                spacing: Theme.space(1)
 
-            SectionLabel {
-                text: Weather.condition.length > 0 ? Weather.condition : (Weather.error.length > 0 ? Weather.error : "loading")
-            }
+                SectionLabel {
+                    text: modelData.day
+                }
 
-            SectionLabel {
-                dim: true
-                text: Weather.place.length > 0 ? Weather.place : "—"
-            }
+                DotMatrix {
+                    // Forecast glyphs always use the daytime variant; a row of
+                    // crescent moons for four consecutive days reads as a bug.
+                    pattern: WeatherGlyphs.forCode(modelData.code, true)
+                    cell: 4.4
+                    dotSize: 3
+                }
 
-            SectionLabel {
-                dim: true
-                visible: Weather.ready
-                text: `feels ${Math.round(Weather.apparent)}°${Weather.unit} · ${Math.round(Weather.humidity)}%`
+                DotText {
+                    text: `${Math.round(modelData.max)}°`
+                    size: 19
+                }
+
+                DotText {
+                    text: `${Math.round(modelData.min)}°`
+                    size: 15
+                    color: Theme.fgFaint
+                }
             }
         }
     }

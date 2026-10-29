@@ -44,6 +44,31 @@ Singleton {
         root.watchers = Math.max(0, root.watchers - 1);
     }
 
+    /*
+     * Split rather than one string: the strip renders the number in dot numerals
+     * and the unit as a caps label, which cannot be done to one piece of text.
+     */
+    function humanNumber(bytesPerSecond) {
+        let v = bytesPerSecond;
+        let i = 0;
+        while (v >= 1024 && i < 3) {
+            v /= 1024;
+            i++;
+        }
+        return v < 10 && i > 0 ? v.toFixed(1) : `${Math.round(v)}`;
+    }
+
+    function humanUnit(bytesPerSecond) {
+        const units = ["B/S", "KB/S", "MB/S", "GB/S"];
+        let v = bytesPerSecond;
+        let i = 0;
+        while (v >= 1024 && i < 3) {
+            v /= 1024;
+            i++;
+        }
+        return units[i];
+    }
+
     function human(bytesPerSecond) {
         const units = ["B", "K", "M", "G"];
         let v = bytesPerSecond;

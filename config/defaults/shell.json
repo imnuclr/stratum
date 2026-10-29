@@ -57,8 +57,15 @@
       "network",
       "media"
     ],
+    "weights": {
+      "time": 21,
+      "weather": 18,
+      "system": 26,
+      "network": 15,
+      "media": 20
+    },
     "width": 1900,
-    "artPlaceholder": ""
+    "height": 286
   },
   "lock": {
     "greeting": {

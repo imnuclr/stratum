@@ -10,17 +10,27 @@ import qs.modules.dashboard.columns
  * The wide strip: categories divided by vertical hairlines, no scrolling.
  *
  * Each column is its own file, loaded by the name it appears under in
- * dashboard.columns, so reordering or dropping one is a config change.
+ * dashboard.columns, so reordering or dropping one is a config change. Columns
+ * own their own heading rather than taking the category name, because what
+ * belongs at the top differs per column — the interface name for the network,
+ * the player for media, the day of the week for time.
  */
 Sheet {
     id: root
 
     readonly property var columnNames: Config.get("dashboard.columns", ["time", "weather", "system", "network", "media"])
+    readonly property var weights: Config.get("dashboard.weights", ({}))
+    readonly property real weightTotal: {
+        let sum = 0;
+        for (const n of columnNames)
+            sum += weights[n] ?? 1;
+        return sum > 0 ? sum : 1;
+    }
 
     name: "dashboard"
     originX: 0.5
     sheetWidth: Math.min(Config.get("dashboard.width", 1900), monitor.width - Theme.space(4) * 2)
-    sheetHeight: 220
+    sheetHeight: Config.get("dashboard.height", 360)
 
     /*
      * The polled services idle at a slow tick and speed up while something is
@@ -32,10 +42,14 @@ Sheet {
             SysStats.watch();
             Netstat.watch();
             Media.watch();
+            Gpu.watch();
+            Processes.watch();
         } else {
             SysStats.unwatch();
             Netstat.unwatch();
             Media.unwatch();
+            Gpu.unwatch();
+            Processes.unwatch();
         }
     }
 
@@ -54,7 +68,9 @@ Sheet {
 
                 readonly property bool last: index === root.columnNames.length - 1
 
-                width: (root.sheetWidth - 2) / root.columnNames.length
+                // Proportional, not equal: the system column carries three rings
+                // and two sub-tables, the network column two rows.
+                width: (root.sheetWidth - 2) * (root.weights[modelData] ?? 1) / root.weightTotal
                 height: parent.height
 
                 Rectangle {
@@ -66,33 +82,26 @@ Sheet {
                     visible: !column.last
                 }
 
-                Column {
+                Loader {
                     anchors.fill: parent
-                    anchors.margins: Theme.space(3)
-                    spacing: Theme.space(2)
+                    anchors.margins: Theme.space(4)
 
-                    SectionLabel {
-                        text: column.modelData
-                    }
-
-                    Loader {
-                        // A name with no column file renders nothing rather than
-                        // failing the whole sheet.
-                        source: {
-                            switch (column.modelData) {
-                            case "time":
-                                return "columns/TimeColumn.qml";
-                            case "weather":
-                                return "columns/WeatherColumn.qml";
-                            case "system":
-                                return "columns/SystemColumn.qml";
-                            case "network":
-                                return "columns/NetworkColumn.qml";
-                            case "media":
-                                return "columns/MediaColumn.qml";
-                            default:
-                                return "";
-                            }
+                    // A name with no column file renders nothing rather than
+                    // failing the whole sheet.
+                    source: {
+                        switch (column.modelData) {
+                        case "time":
+                            return "columns/TimeColumn.qml";
+                        case "weather":
+                            return "columns/WeatherColumn.qml";
+                        case "system":
+                            return "columns/SystemColumn.qml";
+                        case "network":
+                            return "columns/NetworkColumn.qml";
+                        case "media":
+                            return "columns/MediaColumn.qml";
+                        default:
+                            return "";
                         }
                     }
                 }

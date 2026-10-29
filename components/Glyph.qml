@@ -14,6 +14,12 @@ Item {
     property real size: 17
     property color color: Theme.fg
     property real stroke: 1.7
+    /*
+     * Solid rather than outlined. The transport controls read as filled shapes
+     * at the size they are drawn; a 1.7 stroke around a 13px triangle closes up
+     * into a blob anyway.
+     */
+    property bool filled: false
 
     implicitWidth: size
     implicitHeight: size
@@ -28,9 +34,9 @@ Item {
         ShapePath {
             id: shapePath
 
-            strokeColor: root.color
-            strokeWidth: root.stroke
-            fillColor: "transparent"
+            strokeColor: root.filled ? "transparent" : root.color
+            strokeWidth: root.filled ? 0 : root.stroke
+            fillColor: root.filled ? root.color : "transparent"
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
 
