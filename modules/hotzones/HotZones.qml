@@ -38,5 +38,17 @@ Variants {
             // multi-monitor layout and gets crossed, not aimed at.
             dwell: Config.forMonitor(modelData.name, "hotzones.cornerDwell", 180)
         }
-    }
+    
+        // Top left, where it was before: the overview is a corner you throw the
+        // pointer at without aiming.
+        HotZone {
+            monitor: modelData
+            panel: "overview"
+            edge: "top"
+            along: 0
+            zoneLength: Config.forMonitor(modelData.name, "hotzones.overviewLength", 200)
+            zoneDepth: Config.forMonitor(modelData.name, "hotzones.overviewDepth", 10)
+            dwell: Config.forMonitor(modelData.name, "hotzones.overviewDwell", 150)
+        }
+}
 }

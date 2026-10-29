@@ -852,18 +852,30 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    takes two screenshots or moves the volume twice. `hl.unbind` has to drop the
    original first; it is guarded with `type(...) == "function"` since it is not
    in every version.
-38. **`hl.unbind` only matches unmodified keys.** Dropping `Print` worked;
+38. **Hyprland's modmask has SHIFT at 1 and ALT at 8, not the other way round.**
+   `SUPER + SHIFT` is 65; 72 is `SUPER + ALT`. Counting binds at mask 72 to decide
+   who owned `SUPER + SHIFT + S` compared two different key combinations and
+   produced a confident, wrong conclusion that `hl.unbind` cannot reclaim modified
+   keys. It can: at mask 65 the unbind works and the surviving bind is ours. The
+   actual screenshot fault was the latched busy flag below. Read the mask before
+   trusting a bind count.
+39. **A flag held for the lifetime of an external capture latches.** Screenshot
+   guarded re-entry with a `busy` flag cleared on process exit. Anything that
+   ended the capture without that exit left it set and every screenshot
+   afterwards was dropped in silence — which is why restarting the shell appeared
+   to fix the keybind. A guard against double-firing wants a timer, not a
+   lifetime. Dropping `Print` worked;
    `SUPER + SHIFT + S` could not be dropped in any spelling, so caelestia kept it
    and Hyprland silently discarded the duplicate — the shortcut was registered,
    the bind existed, and the key still did nothing. Proving which config owned a
    key meant removing one side and counting binds again. Screenshot actions moved
    to `Print`, `SUPER + Print` and `CTRL + Print`; `SHIFT + Print` is not usable
    because that combination emits SysRq rather than Print.
-39. **A transform moves what is drawn but not where input lands.** Sliding a sheet
+40. **A transform moves what is drawn but not where input lands.** Sliding a sheet
    in with `transform: Translate` left the picture and the pointer disagreeing for
    the length of the animation, and hover-opened panels flapped open and shut.
    Animating the item's own `y` keeps the mask with it.
-40. **Warping the cursor is not a substitute for hovering** — and after changing
+41. **Warping the cursor is not a substitute for hovering** — and after changing
    an item's size, recompute where it actually is before concluding a hover is
    broken. Two rounds were spent on a popout that was opening correctly the whole
    time, off the edge of the crop being captured.
@@ -874,13 +886,13 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    for confirming that a hover path fires at all; worthless for judging whether
    hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
    timer, so a sampled state reads as closed when it is merely closing.
-41. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+42. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-42. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+43. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-43. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+44. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

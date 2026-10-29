@@ -13,6 +13,7 @@ import qs.modules.bar
 import qs.modules.control
 import qs.modules.dashboard
 import qs.modules.hotzones
+import qs.modules.overview
 import qs.modules.session
 
 ShellRoot {
@@ -61,6 +62,7 @@ ShellRoot {
     Dashboard {}
     Control {}
     HotZones {}
+    Overview {}
     Session {}
     Shortcuts {}
 

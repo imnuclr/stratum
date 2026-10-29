@@ -114,5 +114,8 @@
   },
   "session": {
     "width": 300
+  },
+  "overview": {
+    "cardWidth": 260
   }
 }
