@@ -31,6 +31,11 @@ Singleton {
     property string profile: "balanced"
     readonly property var profiles: ["power-saver", "balanced", "performance"]
 
+    function cycleProfile() {
+        const i = root.profiles.indexOf(root.profile);
+        root.setProfile(root.profiles[(i + 1) % root.profiles.length]);
+    }
+
     function setProfile(name) {
         if (!profiles.includes(name))
             return;

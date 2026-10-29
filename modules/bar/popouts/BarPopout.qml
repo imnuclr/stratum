@@ -24,6 +24,13 @@ Item {
 
     required property string monitorName
     required property real barBottom
+    /*
+     * A left-edge bar puts its popouts beside the trigger instead of beneath it.
+     * Both cases are the same surface — only which axis is clamped and which is
+     * fixed to the bar's edge changes.
+     */
+    property bool vertical: false
+    property real barEdge: 0
 
     // The bar window masks input to this rect, so it must be empty when closed.
     readonly property alias maskItem: maskRect
@@ -41,10 +48,12 @@ Item {
     Item {
         id: maskRect
 
-        x: frame.x
-        y: frame.y - root.bridge
-        width: root.shown ? frame.width : 0
-        height: root.shown ? frame.height + root.bridge : 0
+        // The mask reaches back over the gap to the bar, so the pointer can cross
+        // from the trigger to the panel without leaving the surface.
+        x: root.vertical ? frame.x - root.bridge : frame.x
+        y: root.vertical ? frame.y : frame.y - root.bridge
+        width: root.shown ? frame.width + (root.vertical ? root.bridge : 0) : 0
+        height: root.shown ? frame.height + (root.vertical ? 0 : root.bridge) : 0
     }
 
     Tile {
@@ -63,9 +72,14 @@ Item {
         readonly property real targetHeight: content.implicitHeight + Theme.space(3) * 2
 
         // Clamped so a popout under an item near the edge stays on screen.
-        x: Math.max(Theme.space(1), Math.min(root.width - targetWidth - Theme.space(1),
-            Popouts.anchorX - targetWidth / 2))
-        y: root.barBottom + Theme.space(1)
+        x: root.vertical
+            ? root.barEdge + Theme.space(1)
+            : Math.max(Theme.space(1), Math.min(root.width - targetWidth - Theme.space(1),
+                Popouts.anchorX - targetWidth / 2))
+        y: root.vertical
+            ? Math.max(Theme.space(1), Math.min(root.height - targetHeight - Theme.space(1),
+                Popouts.anchorY - targetHeight / 2))
+            : root.barBottom + Theme.space(1)
 
         width: targetWidth
         height: targetHeight

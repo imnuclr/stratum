@@ -63,10 +63,19 @@ PanelWindow {
 
             // Clamped so a sheet growing from an island near the screen edge stays
             // on screen rather than hanging off it.
-            x: Math.round(Math.max(Theme.space(1),
+            // Offset from whichever edge the bar occupies, and clamped so a sheet
+            // growing from an item near the far edge stays on screen rather than
+            // hanging off it.
+            readonly property real barOffset: Config.get("bar.orientation", "vertical") === "vertical"
+                ? Config.get("bar.width", 56) + Config.get("bar.margin", 10) + Theme.space(1)
+                : 0
+
+            x: Math.round(Math.max(barOffset + Theme.space(1),
                 Math.min(parent.width - width - Theme.space(1),
-                    parent.width * root.originX - width / 2)))
-            y: Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
+                    barOffset + (parent.width - barOffset) * root.originX - width / 2)))
+            y: Config.get("bar.orientation", "vertical") === "vertical"
+                ? Config.get("bar.margin", 10) + Theme.space(1)
+                : Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
 
             width: root.sheetWidth
             height: root.sheetHeight

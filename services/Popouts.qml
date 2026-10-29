@@ -30,6 +30,7 @@ Singleton {
     property string monitorName: ""
     // Centre of the hovered item, in bar-window coordinates.
     property real anchorX: 0
+    property real anchorY: 0
 
     readonly property bool open: current.length > 0
 
@@ -67,6 +68,19 @@ Singleton {
     }
 
     // A trigger was entered.
+    /*
+     * The vertical bar anchors its popouts level with the trigger, so it hands
+     * over a y. Kept as a separate property rather than one orientation-agnostic
+     * "anchor" so each surface reads only the axis it actually positions on.
+     */
+    function showAtY(name, y, monitor) {
+        hideTimer.stop();
+        hoveredTrigger = name;
+        current = name;
+        anchorY = y;
+        monitorName = monitor;
+    }
+
     function show(name, x, monitor) {
         hideTimer.stop();
         hoveredTrigger = name;

@@ -837,7 +837,15 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    produces for one frame.** `Math.floor(height / pitch)` is negative while the
    parent has not laid out and the height is still a negative margin, giving
    "Model size of -7 is less than 0" on every instance. Clamp at zero.
-35. **Warping the cursor is not a substitute for hovering.**
+35. **An item that sizes itself from a child anchored back to it can collapse to
+   zero.** A status item bound `height` to its content Column's implicitHeight
+   while that Column was `anchors.centerIn` the item. Nothing warns, the glyphs
+   still draw, and the item is left with no hover area at all. Size from the
+   child directly, with a floor.
+36. **Warping the cursor is not a substitute for hovering** — and after changing
+   an item's size, recompute where it actually is before concluding a hover is
+   broken. Two rounds were spent on a popout that was opening correctly the whole
+   time, off the edge of the crop being captured.
    `hl.dsp.cursor.move({x, y})` is the only way to move the pointer here, and a
    teleport produces enter and leave sequences that real motion does not — it made
    popouts look like they opened and closed on their own long after the behaviour
@@ -845,13 +853,13 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    for confirming that a hover path fires at all; worthless for judging whether
    hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
    timer, so a sampled state reads as closed when it is merely closing.
-36. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+37. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-37. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+38. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-38. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+39. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.
