@@ -39,6 +39,12 @@ Singleton {
      */
     property bool busy: false
 
+    /*
+     * Pasted as well as saved. A screenshot is usually wanted somewhere else
+     * immediately, and hunting for the file afterwards is the slow path.
+     */
+    readonly property string copy: "wl-copy --type image/png"
+
     function stamp() {
         return Qt.formatDateTime(new Date(), "yyyyMMdd-HHmmss");
     }
@@ -60,24 +66,24 @@ Singleton {
     // monitors is rarely what is wanted and is always enormous.
     function screen() {
         const path = `${root.directory}/screen-${root.stamp()}.png`;
-        root.run(`grim -o "$(hyprctl -j activeworkspace | sed -n 's/.*\\"monitor\\": \\"\\([^\\"]*\\)\\".*/\\1/p')" '${path}'`, path);
+        root.run(`grim -o "$(hyprctl -j activeworkspace | sed -n 's/.*\\"monitor\\": \\"\\([^\\"]*\\)\\".*/\\1/p')" '${path}' && ${root.copy} <'${path}'`, path);
     }
 
     function region() {
         const path = `${root.directory}/region-${root.stamp()}.png`;
         // slurp exits non-zero when cancelled, which must not leave an empty file.
-        root.run(`geom=$(slurp -d </dev/null) || exit 0; grim -g "$geom" '${path}'`, path);
+        root.run(`geom=$(slurp -d </dev/null) || exit 0; grim -g "$geom" '${path}' && ${root.copy} <'${path}'`, path);
     }
 
     function window() {
         const path = `${root.directory}/window-${root.stamp()}.png`;
-        root.run(`geom=$(hyprctl -j activewindow | python3 -c 'import json,sys; w=json.load(sys.stdin); print(f"{w[\\"at\\"][0]},{w[\\"at\\"][1]} {w[\\"size\\"][0]}x{w[\\"size\\"][1]}")'); grim -g "$geom" '${path}'`, path);
+        root.run(`geom=$(hyprctl -j activewindow | python3 -c 'import json,sys; w=json.load(sys.stdin); print(f"{w[\\"at\\"][0]},{w[\\"at\\"][1]} {w[\\"size\\"][0]}x{w[\\"size\\"][1]}")'); grim -g "$geom" '${path}' && ${root.copy} <'${path}'`, path);
     }
 
     // Straight to the annotator; satty owns saving from there.
     function annotate() {
         const path = `${root.directory}/edit-${root.stamp()}.png`;
-        root.run(`geom=$(slurp -d </dev/null) || exit 0; grim -g "$geom" - | satty --filename - --output-filename '${path}'`, path);
+        root.run(`geom=$(slurp -d </dev/null) || exit 0; grim -g "$geom" - | satty --filename - --copy-command '${root.copy}' --output-filename '${path}'`, path);
     }
 
     Process {

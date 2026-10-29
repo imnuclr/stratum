@@ -852,32 +852,41 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    takes two screenshots or moves the volume twice. `hl.unbind` has to drop the
    original first; it is guarded with `type(...) == "function"` since it is not
    in every version.
-38. **slurp blocks on stdin when stdin is a pipe.** It takes a list of candidate
+38. **A child MouseArea with hoverEnabled makes an ancestor's HoverHandler report
+   false.** The sheet's hold was driven by a HoverHandler on its body, and every
+   control inside it — sliders, switches, buttons — is a MouseArea with hover
+   enabled. Tracing showed `bodyHover` flapping true and false with no hot-zone
+   events in between, which is the pointer moving onto a toggle rather than
+   leaving the panel; resting on one for longer than the grace closed the sheet
+   under the pointer. The handler now lives on a transparent overlay above the
+   content with `blocking: false`, which reports the hover without taking it from
+   the controls beneath.
+39. **slurp blocks on stdin when stdin is a pipe.** It takes a list of candidate
    regions that way, so spawned from the shell — which hands a child a pipe — it
    never connected to Wayland and drew nothing: 0 open sockets, blocked in
    `anon_pipe_read`, alive for a quarter of an hour. From a terminal it worked
    perfectly, which is what made it look like a keybind fault for three rounds.
    `</dev/null` on every slurp. Check `/proc/<pid>/wchan` and the socket count
    before blaming the thing that launched a process.
-39. **A sheet that cannot fit goes to the top.** Deriving y from the space left
+40. **A sheet that cannot fit goes to the top.** Deriving y from the space left
    over and flooring it at zero places a too-tall sheet at `edgeGap`, so the
    control centre — momentarily taller than a 1080 screen while its content
    settles — appeared at the top and travelled down. A bottom-anchored sheet pins
    its bottom edge unconditionally. It never showed on the 1440 monitor, where it
    always fit, which is why it could not be reproduced from the desk it was
    reported on.
-40. **`gpu-screen-recorder -w focused` demands `-s WxH`** and errors out without
+41. **`gpu-screen-recorder -w focused` demands `-s WxH`** and errors out without
    it, recording nothing at all. Naming the output (`-w DP-2`) gives its native
    resolution for free; `-w screen` picks whichever output it considers first,
    which is not the one being worked on.
-41. **Hyprland's modmask has SHIFT at 1 and ALT at 8, not the other way round.**
+42. **Hyprland's modmask has SHIFT at 1 and ALT at 8, not the other way round.**
    `SUPER + SHIFT` is 65; 72 is `SUPER + ALT`. Counting binds at mask 72 to decide
    who owned `SUPER + SHIFT + S` compared two different key combinations and
    produced a confident, wrong conclusion that `hl.unbind` cannot reclaim modified
    keys. It can: at mask 65 the unbind works and the surviving bind is ours. The
    actual screenshot fault was the latched busy flag below. Read the mask before
    trusting a bind count.
-42. **A flag held for the lifetime of an external capture latches.** Screenshot
+43. **A flag held for the lifetime of an external capture latches.** Screenshot
    guarded re-entry with a `busy` flag cleared on process exit. Anything that
    ended the capture without that exit left it set and every screenshot
    afterwards was dropped in silence — which is why restarting the shell appeared
@@ -889,11 +898,11 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    key meant removing one side and counting binds again. Screenshot actions moved
    to `Print`, `SUPER + Print` and `CTRL + Print`; `SHIFT + Print` is not usable
    because that combination emits SysRq rather than Print.
-43. **A transform moves what is drawn but not where input lands.** Sliding a sheet
+44. **A transform moves what is drawn but not where input lands.** Sliding a sheet
    in with `transform: Translate` left the picture and the pointer disagreeing for
    the length of the animation, and hover-opened panels flapped open and shut.
    Animating the item's own `y` keeps the mask with it.
-44. **Warping the cursor is not a substitute for hovering** — and after changing
+45. **Warping the cursor is not a substitute for hovering** — and after changing
    an item's size, recompute where it actually is before concluding a hover is
    broken. Two rounds were spent on a popout that was opening correctly the whole
    time, off the edge of the crop being captured.
@@ -904,13 +913,13 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    for confirming that a hover path fires at all; worthless for judging whether
    hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
    timer, so a sampled state reads as closed when it is merely closing.
-45. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+46. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-46. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+47. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-47. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+48. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

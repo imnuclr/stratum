@@ -35,7 +35,7 @@ PanelWindow {
      */
     readonly property bool mine: Shell.openPanel === panel
     readonly property int liveDepth: mine
-        ? Config.get("bar.margin", 10) + Theme.space(2)
+        ? Math.max(zoneDepth, Config.get("bar.margin", 10) + Theme.space(2))
         : zoneDepth
 
     readonly property bool vertical: edge === "left" || edge === "right"

@@ -130,17 +130,40 @@ PanelWindow {
             width: root.sheetWidth
             height: root.sheetHeight
 
-            HoverHandler {
-                id: bodyHover
+            /*
+             * Whether the pointer is over the sheet at all, which is what keeps a
+             * hover-opened sheet alive.
+             *
+             * This cannot be a plain HoverHandler on the body: the controls
+             * inside — sliders, switches, buttons — are MouseAreas with
+             * hoverEnabled, and a child MouseArea taking the hover event makes an
+             * ancestor's handler report false. Tracing showed bodyHover flapping
+             * true and false with no hot-zone events in between, which is the
+             * pointer moving onto a toggle, not leaving the panel; resting on one
+             * for longer than the grace closed the sheet under the pointer.
+             *
+             * So the handler lives on a transparent overlay above the content and
+             * is non-blocking, which reports the hover without taking it away
+             * from the controls underneath.
+             */
+            Item {
+                anchors.fill: parent
+                z: 999
 
-                onHoveredChanged: {
-                    Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds}`);
-                    if (!root.hoverDismiss)
-                        return;
-                    if (hovered)
-                        Shell.hold();
-                    else
-                        Shell.release();
+                HoverHandler {
+                    id: bodyHover
+
+                    blocking: false
+
+                    onHoveredChanged: {
+                        Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds}`);
+                        if (!root.hoverDismiss)
+                            return;
+                        if (hovered)
+                            Shell.hold();
+                        else
+                            Shell.release();
+                    }
                 }
             }
 
