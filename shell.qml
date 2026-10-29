@@ -9,6 +9,7 @@ import qs.config
 import qs.theme
 import qs.services
 import qs.modules.bar
+import qs.modules.dashboard
 
 ShellRoot {
     id: root
@@ -53,4 +54,5 @@ ShellRoot {
     }
 
     Bar {}
+    Dashboard {}
 }

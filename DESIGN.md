@@ -675,6 +675,15 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    dark wallpaper the bar was invisible in a screenshot. `Tile.floating` raises the border
    to 14% for anything that sits directly over the wallpaper.
 4. **`pkill -f` matches the caller.** See §8.
-5. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+5. **A new directory needs a full restart, not a hot reload.** Quickshell builds the
+   `qs.*` module map when the config loads, so adding `modules/dashboard/` and importing
+   it silently produced no delegates and logged nothing at all — `Variants` just yielded
+   nothing. `qs -c stratum kill` then relaunch. Editing files inside an existing
+   directory hot-reloads normally.
+6. **Exclusive keyboard focus on a layer surface logs Qt noise.** A `Sheet` taking
+   `WlrKeyboardFocus.Exclusive` with no text input in it emits repeated
+   `QWaylandTextInputv3::disableSurface ... but 0x0 is focused` warnings. Harmless, and
+   not worth suppressing globally — just don't mistake it for a real fault.
+7. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

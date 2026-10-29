@@ -7,39 +7,85 @@
     "gap": 8,
     "layout": "thirds",
     "islands": {
-      "left":   ["workspaces", "activeWindow"],
-      "centre": ["clock", "date"],
-      "right":  ["tray", "status", "controlCentre"]
+      "left": [
+        "workspaces",
+        "activeWindow"
+      ],
+      "centre": [
+        "clock",
+        "date"
+      ],
+      "right": [
+        "tray",
+        "status",
+        "controlCentre"
+      ]
     },
-    "workspaces": { "count": 6, "activeWidth": 18, "dotSize": 6 }
+    "workspaces": {
+      "count": 6,
+      "activeWidth": 18,
+      "dotSize": 6
+    }
   },
-
   "controlCentre": {
     "width": 372,
-    "toggles": ["dnd", "night", "airplane", "caffeine", "mic", "record", "vpn", "theme"],
-    "sliders": ["brightness", "volume"],
+    "toggles": [
+      "dnd",
+      "night",
+      "airplane",
+      "caffeine",
+      "mic",
+      "record",
+      "vpn",
+      "theme"
+    ],
+    "sliders": [
+      "brightness",
+      "volume"
+    ],
     "showProfiles": true,
     "showMedia": true,
     "notifications": 3
   },
-
   "dashboard": {
-    "columns": ["time", "weather", "system", "network", "media"],
-    "width": 1900
+    "columns": [
+      "time",
+      "weather",
+      "system",
+      "network",
+      "media"
+    ],
+    "width": 1900,
+    "artPlaceholder": ""
   },
-
   "lock": {
     "greeting": {
-      "morning":   ["good morning", "up early"],
-      "afternoon": ["good afternoon"],
-      "evening":   ["good evening"],
-      "night":     ["still up?", "good night"]
+      "morning": [
+        "good morning",
+        "up early"
+      ],
+      "afternoon": [
+        "good afternoon"
+      ],
+      "evening": [
+        "good evening"
+      ],
+      "night": [
+        "still up?",
+        "good night"
+      ]
     },
     "notifications": "app",
-    "media": { "controls": true, "hideMetadata": false }
+    "media": {
+      "controls": true,
+      "hideMetadata": false
+    }
   },
-
-  "weather": { "provider": "open-meteo", "latitude": null, "longitude": null, "units": "metric" },
-
+  "weather": {
+    "provider": "open-meteo",
+    "latitude": null,
+    "longitude": null,
+    "units": "metric"
+  },
   "monitors": {}
 }

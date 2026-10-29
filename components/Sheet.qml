@@ -1,17 +1,17 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
-import qs.theme
 import qs.config
 import qs.services
+import qs.theme
 
 /*
  * Every panel in the shell is one of these. Sheet owns anchoring, the backdrop,
  * focus grab, Esc, click-outside and the origin-anchored grow transition, so a
  * module supplies content and nothing else.
  *
- * Panels never manage their own visibility: Shell.openPanel is the single source
- * of truth, and `name` is what it matches against.
+ * Panels never hold their own visibility: Shell.openPanel is the single source
+ * of truth and `name` is what it matches against.
  */
 PanelWindow {
     id: root
@@ -29,8 +29,11 @@ PanelWindow {
 
     readonly property bool open: Shell.openPanel === name
 
+    // The window stays mapped until the exit transition has finished, otherwise
+    // the sheet vanishes instead of shrinking.
+    visible: open || body.opacity > 0.001
+
     screen: monitor
-    visible: open || closing.running
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
@@ -43,53 +46,59 @@ PanelWindow {
         right: true
     }
 
-    // Click-outside dismiss.
+    // Click anywhere outside the sheet dismisses it.
     MouseArea {
         anchors.fill: parent
         onClicked: Shell.close()
     }
 
-    Rectangle {
-        id: body
+    FocusScope {
+        anchors.fill: parent
+        focus: true
 
-        x: Math.round(Math.max(Theme.space(1),
-            Math.min(root.width - width - Theme.space(1), root.width * root.originX - width / 2)))
-        y: Theme.space(1) + Config.get("bar.height", 38) + Config.get("bar.margin", 10)
+        Keys.onEscapePressed: Shell.close()
 
-        width: root.sheetWidth
-        height: root.sheetHeight
-        radius: Theme.rSheet
-        color: Theme.surface
-        border.width: 1
-        border.color: Theme.line
+        Rectangle {
+            id: body
 
-        transformOrigin: Item.Top
-        opacity: root.open ? 1 : 0
-        scale: root.open ? 1 : 0.96
+            // Clamped so a sheet growing from an island near the screen edge stays
+            // on screen rather than hanging off it.
+            x: Math.round(Math.max(Theme.space(1),
+                Math.min(parent.width - width - Theme.space(1),
+                    parent.width * root.originX - width / 2)))
+            y: Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
 
-        // Swallow clicks so they don't reach the dismiss layer underneath.
-        MouseArea {
-            anchors.fill: parent
-        }
+            width: root.sheetWidth
+            height: root.sheetHeight
+            radius: Theme.rSheet
+            color: Theme.surface
+            border.width: 1
+            border.color: Theme.lineHi
 
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Theme.sheetMs
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.enterEasing
+            transformOrigin: Item.Top
+            opacity: root.open ? 1 : 0
+            scale: root.open ? 1 : 0.96
+
+            // Swallow clicks so they don't reach the dismiss layer underneath.
+            MouseArea {
+                anchors.fill: parent
             }
-        }
 
-        Behavior on scale {
-            NumberAnimation {
-                id: closing
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.enterEasing
+                }
+            }
 
-                duration: Theme.sheetMs
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.enterEasing
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.enterEasing
+                }
             }
         }
     }
-
-    Keys.onEscapePressed: Shell.close()
 }
