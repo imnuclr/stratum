@@ -1,22 +1,22 @@
 import QtQuick
 import qs.components
+import qs.config
 import qs.services
 import qs.theme
 
 /*
- * Status cluster and the dot-grid control centre trigger. Service-backed glyphs
- * land here in phase 2; for now the grid button is wired so the panel machinery
- * can be exercised end to end.
+ * Tray, status cluster and the dot-grid control centre trigger.
  */
 Pill {
     id: root
 
     required property string monitorName
 
+    readonly property var modules: Config.forMonitor(monitorName, "bar.islands.right", ["tray", "status", "controlCentre"])
+
     implicitWidth: row.implicitWidth + Theme.space(2) * 2
     level: 0
     floating: true
-    hovered: mouse.containsMouse
 
     Row {
         id: row
@@ -24,36 +24,74 @@ Pill {
         anchors.centerIn: parent
         spacing: Theme.space(2)
 
-        // 3x3 dot grid — the control centre's trigger, never a hamburger.
-        Grid {
+        Tray {
+            id: tray
+
             anchors.verticalCenter: parent.verticalCenter
-            columns: 3
-            spacing: 2.5
+            visible: root.modules.includes("tray") && hasItems
+        }
 
-            Repeater {
-                model: 9
+        Rectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            width: 1
+            height: 14
+            color: Theme.lineHi
+            visible: tray.visible
+        }
 
-                Rectangle {
-                    width: 3
-                    height: 3
-                    radius: 1.5
-                    color: mouse.containsMouse ? Theme.fg : Theme.fgDim
+        StatusCluster {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.modules.includes("status")
+        }
 
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: Theme.micro
+        Rectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            width: 1
+            height: 14
+            color: Theme.lineHi
+            visible: root.modules.includes("controlCentre")
+        }
+
+        // 3x3 dot grid — the control centre's trigger, never a hamburger.
+        Item {
+            anchors.verticalCenter: parent.verticalCenter
+            implicitWidth: gridBtn.implicitWidth
+            implicitHeight: gridBtn.implicitHeight
+            visible: root.modules.includes("controlCentre")
+
+            Grid {
+                id: gridBtn
+
+                columns: 3
+                spacing: 2.5
+
+                Repeater {
+                    model: 9
+
+                    Rectangle {
+                        width: 3
+                        height: 3
+                        radius: 1.5
+                        color: gridMouse.containsMouse || Shell.openPanel === "controlCentre" ? Theme.fg : Theme.fgDim
+
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Theme.micro
+                            }
                         }
                     }
                 }
             }
+
+            MouseArea {
+                id: gridMouse
+
+                anchors.fill: parent
+                anchors.margins: -6
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Shell.toggle("controlCentre")
+            }
         }
-    }
-
-    MouseArea {
-        id: mouse
-
-        anchors.fill: parent
-        hoverEnabled: true
-        onClicked: Shell.toggle("controlCentre")
     }
 }

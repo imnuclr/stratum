@@ -684,6 +684,22 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    `WlrKeyboardFocus.Exclusive` with no text input in it emits repeated
    `QWaylandTextInputv3::disableSurface ... but 0x0 is focused` warnings. Harmless, and
    not worth suppressing globally — just don't mistake it for a real fault.
-7. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+7. **`Quickshell.Networking` has two undocumented shapes.** `Network.signalStrength` is
+   **0..1, not 0..100** — feeding it to a 0..100 threshold silently selects the weakest
+   icon. And `NetworkDevice.network` stays null even on a connected wifi device; the
+   active network is the connected entry in `device.networks`. The backend also
+   populates asynchronously, so for roughly the first second `devices` is empty and
+   `wifiEnabled` reads false. Bind to it; never read it in `Component.onCompleted`.
+8. **Don't swap between strength-variant glyphs.** The weakest wifi variant is a lone
+   dot, which at 16px reads as "no icon" rather than "weak signal". `WifiGlyph` stacks
+   all four arcs and dims the unlit ones instead, so the shape is always present.
+9. **`font.pixelSize` is an int.** Assigning a real (`12.5`) doesn't warn — it fails the
+   whole config load with "Invalid property assignment". `DotText` rounds at the
+   assignment so callers can pass a real `size`.
+10. **An anchored child inside a `Grid` silently disables the layout.** Putting a
+   `MouseArea { anchors.fill: parent }` in a `Grid` logs "Grid will not function" and
+   stacks every cell at the origin. Wrap the Grid in an Item and make the hit area a
+   sibling.
+11. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

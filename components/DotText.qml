@@ -35,7 +35,7 @@ Row {
                 text: cell.char
                 color: root.color
                 font.family: Theme.fontDot
-                font.pixelSize: root.size
+                font.pixelSize: Math.round(root.size)
                 font.weight: root.weight
                 font.features: ({ tnum: 1 })
                 renderType: Text.NativeRendering

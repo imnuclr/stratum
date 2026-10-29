@@ -36,6 +36,12 @@ Singleton {
     readonly property color dotOff: pick("color.dotOff", "#21FFFFFF")
     readonly property color accent: pick("color.accent", "#E5252B")
 
+    // Semantic colours stay unused until something is genuinely wrong — a low
+    // battery, an unroutable connection. They are not a second accent.
+    readonly property color ok: pick("color.ok", "#4ADE80")
+    readonly property color warn: pick("color.warn", "#FBBF24")
+    readonly property color crit: pick("color.crit", "#EF4444")
+
     // --- geometry ---
     readonly property int rTile: pick("radius.tile", 20)
     readonly property int rSheet: pick("radius.sheet", 28)

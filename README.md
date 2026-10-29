@@ -13,13 +13,13 @@ field, and album art is dithered into dots. Five greys and one red.
 
 ## Status
 
-Phase 0 of 8. The bar renders on every monitor with a live dot-matrix clock,
-config and theme hot-reload from JSON, and panel IPC works end to end.
+Phase 1 of 8. The bar is daily-drivable on both monitors: live clock, workspaces,
+focused window, system tray, and a status cluster wired to real services.
 See [`DESIGN.md`](DESIGN.md) for the full plan.
 
 - [x] **0** &mdash; skeleton, config + theme singletons, dot primitives
-- [ ] **1** &mdash; bar: tray, status cluster, active window
-- [ ] **2** &mdash; services (audio, network, bluetooth, power, media, notifications, GPU)
+- [x] **1** &mdash; bar: tray, status cluster, active window
+- [ ] **2** &mdash; remaining services (media, notifications, GPU, weather, sysstats)
 - [ ] **3** &mdash; dashboard strip + control centre
 - [ ] **4** &mdash; wallpaper layer + depth parallax
 - [ ] **5** &mdash; widget canvas + edit mode
