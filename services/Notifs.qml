@@ -98,6 +98,19 @@ Singleton {
         Hypr.focusApp(notification.desktopEntry || notification.appName);
     }
 
+    /*
+     * Whether a notification is new enough to still be worth announcing.
+     *
+     * Toast delegates are built for every tracked notification, including ones
+     * that were already on screen before the delegate existed — after a config
+     * reload, say. Without this they would all announce themselves again at once.
+     * Deliberately not a binding: it answers for the moment it is asked.
+     */
+    function fresh(notification, within) {
+        const at = root.arrivals[notification?.id];
+        return at !== undefined && Date.now() - at < within;
+    }
+
     function age(notification) {
         // Touch the tick so this re-evaluates as it advances.
         void root.clock;

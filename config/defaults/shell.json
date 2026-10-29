@@ -125,7 +125,8 @@
     },
     "notifications": {
         "width": 380,
-        "listHeight": 460
+        "listHeight": 460,
+        "toastMs": 5000
     },
     "wallpaper": {
         "dir": "~/Pictures/Wallpapers",

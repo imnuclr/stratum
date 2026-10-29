@@ -76,6 +76,7 @@ ShellRoot {
 
     Notifications {}
     HotZones {}
+    Toasts {}
     Session {}
     Shortcuts {}
 
