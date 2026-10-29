@@ -94,11 +94,17 @@ PanelWindow {
      * against it, and the band is where the hot zone lives, so travelling from
      * the zone into the sheet never crosses dead ground.
      */
+    readonly property real reachX: Math.round(body.x - (root.originX < 0.5 ? root.bridge : 0))
+    readonly property real reachY: Math.round(body.y - (root.originY < 0.5 ? root.edgeGapTop : 0))
+    readonly property real reachW: Math.round(body.width + root.bridge)
+    readonly property real reachH: Math.round(body.height
+        + (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom))
+
     mask: Region {
-        x: Math.round(body.x - (root.originX < 0.5 ? root.bridge : 0))
-        y: Math.round(body.y - (root.originY < 0.5 ? root.edgeGapTop : 0))
-        width: Math.round(body.width + root.bridge)
-        height: Math.round(body.height + (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom))
+        x: root.reachX
+        y: root.reachY
+        width: root.reachW
+        height: root.reachH
     }
 
 
@@ -119,6 +125,48 @@ PanelWindow {
          * closed and reopened on a stationary cursor. The card inside does the
          * moving instead.
          */
+        /*
+         * Everything the mask lets through, as an actual item.
+         *
+         * The mask decides what the compositor delivers to this surface, but an
+         * event still has to land on an item before a handler sees it. The band
+         * bridging the card to the screen edge had no item in it, so input
+         * arrived and hit nothing — and that band is exactly where the hot zone
+         * sits. The sheet's mask covers the zone the moment it opens, so the zone
+         * loses the pointer, and nothing here picked it up: the trace showed the
+         * zone going false on the same frame the panel opened, no bodyHover at
+         * all, and the grace closing the sheet under a stationary cursor.
+         *
+         * Nothing but the handler lives here, so clicks and the controls' own
+         * hover pass straight through to the card beneath.
+         */
+        Item {
+            id: reach
+
+            x: root.reachX
+            y: root.reachY
+            width: root.reachW
+            height: root.reachH
+            z: 1
+
+            HoverHandler {
+                id: bodyHover
+
+                blocking: false
+
+                onHoveredChanged: {
+                    Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds} at=${Math.round(point.position.x)},${Math.round(point.position.y)} of ${Math.round(parent.width)}x${Math.round(parent.height)}`);
+                    if (!root.hoverDismiss)
+                        return;
+                    if (hovered)
+                        Shell.hold();
+                    else
+                        Shell.release();
+                }
+            }
+        }
+
+
         Item {
             id: body
 
@@ -151,39 +199,15 @@ PanelWindow {
             height: root.sheetHeight
 
             /*
-             * Whether the pointer is over the sheet at all, which is what keeps a
-             * hover-opened sheet alive.
-             *
-             * This cannot be a plain HoverHandler on the body: the controls
-             * inside — sliders, switches, buttons — are MouseAreas with
-             * hoverEnabled, and a child MouseArea taking the hover event makes an
-             * ancestor's handler report false. Tracing showed bodyHover flapping
-             * true and false with no hot-zone events in between, which is the
-             * pointer moving onto a toggle, not leaving the panel; resting on one
-             * for longer than the grace closed the sheet under the pointer.
-             *
-             * So the handler lives on a transparent overlay above the content and
-             * is non-blocking, which reports the hover without taking it away
-             * from the controls underneath.
+             * A sheet that sizes itself from its content resizes rather than
+             * jumping. The mask and the hover item both read this, so they follow
+             * it frame by frame and input stays where the sheet is drawn.
              */
-            Item {
-                anchors.fill: parent
-                z: 999
-
-                HoverHandler {
-                    id: bodyHover
-
-                    blocking: false
-
-                    onHoveredChanged: {
-                        Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds} at=${Math.round(point.position.x)},${Math.round(point.position.y)} of ${Math.round(parent.width)}x${Math.round(parent.height)}`);
-                        if (!root.hoverDismiss)
-                            return;
-                        if (hovered)
-                            Shell.hold();
-                        else
-                            Shell.release();
-                    }
+            Behavior on height {
+                NumberAnimation {
+                    duration: Theme.standard
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
                 }
             }
 

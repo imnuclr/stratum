@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
+import qs.services
 
 /*
  * The notification server, and the list the shell shows.
@@ -22,7 +23,19 @@ import Quickshell.Services.Notifications
 Singleton {
     id: root
 
+    /*
+     * Two views of the same thing. `list` is a plain array, for counting and for
+     * walking; `model` is the server's own object model, which is what a view has
+     * to be given.
+     *
+     * Handing a view the array instead looks like it works and quietly destroys
+     * every animation: a new array is a whole new model, so the view resets
+     * rather than being told one row went, and a reset destroys and rebuilds
+     * every delegate. No add or remove transition can run across one — the rows
+     * simply blink from one arrangement to the next.
+     */
     readonly property var list: server.trackedNotifications?.values ?? []
+    readonly property var model: server.trackedNotifications
     readonly property int count: list.length
     readonly property bool any: count > 0
 
@@ -52,10 +65,37 @@ Singleton {
         root.watchers = Math.max(0, root.watchers - 1);
     }
 
+    // Dismissing one. The row's close button called this before it existed, so
+    // clearing a single notification quietly did nothing at all.
+    function dismiss(notification) {
+        notification?.dismiss();
+    }
+
     function clearAll() {
         // Dismissing mutates the list being walked, so copy first.
         for (const n of [...root.list])
             n.dismiss();
+    }
+
+    /*
+     * What clicking a notification does. The sender's default action if it
+     * offered one — that is the action a desktop environment invokes when the
+     * body is clicked — and otherwise bring the application's own window forward,
+     * which is what someone reaching for the notification wanted either way.
+     */
+    function activate(notification) {
+        if (!notification)
+            return;
+
+        const actions = notification.actions ?? [];
+        const fallback = actions.length === 1 ? actions[0] : null;
+        const preferred = actions.find(a => a.identifier === "default") ?? fallback;
+        if (preferred) {
+            preferred.invoke();
+            return;
+        }
+
+        Hypr.focusApp(notification.desktopEntry || notification.appName);
     }
 
     function age(notification) {

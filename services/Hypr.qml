@@ -41,6 +41,20 @@ Singleton {
      * known good — but it does not move Hyprland's focus, so clicking a window in
      * the overview did nothing. A dispatch does.
      */
+    /*
+     * Brings an application forward by name. Hyprland matches a class as a
+     * regular expression, so the name is anchored and escaped — an app id with a
+     * dot in it would otherwise match more than itself.
+     */
+    function focusApp(name) {
+        if (!name)
+            return;
+        const pattern = `^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`;
+        Hyprland.dispatch(lua
+            ? `hl.dsp.focus({ window = "class:${pattern}" })`
+            : `focuswindow class:${pattern}`);
+    }
+
     function focusWindow(address) {
         if (!address)
             return;
