@@ -3,67 +3,95 @@ import qs.components
 import qs.services
 import qs.theme
 
-Column {
-    spacing: Theme.space(2)
+/*
+ * Head at the top, sun times anchored to the bottom, so the column fills its
+ * height rather than stacking from the top and leaving a gap.
+ */
+Item {
+    id: root
 
-    SectionLabel {
-        text: Time.format("dddd")
-    }
+    Column {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        spacing: Theme.space(2)
 
-    DotText {
-        text: Time.format("HH:mm")
-        size: 52
-    }
-
-    SectionLabel {
-        dim: true
-        text: `${Time.format("d MMMM")} · week ${Time.weekNumber()}`
-    }
-
-    DotBar {
-        count: 34
-        value: Time.dayProgress
-    }
-
-    // Sun times come from the weather forecast, so they are absent until it
-    // resolves and there is nothing useful to show in the meantime.
-    Row {
-        spacing: Theme.space(4)
-        visible: Weather.sunrise.length > 0
-
-        Row {
-            spacing: Theme.space(1)
-
-            Glyph {
-                anchors.verticalCenter: parent.verticalCenter
-                name: "sun"
-                size: 13
-                color: Theme.fgFaint
-            }
-
-            DotText {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Weather.sunrise
-                size: 15
-                color: Theme.fgFaint
-            }
+        SectionLabel {
+            text: Time.format("dddd")
         }
 
-        Row {
-            spacing: Theme.space(1)
+        DotText {
+            text: Time.format("HH:mm")
+            size: 60
+        }
 
-            Glyph {
-                anchors.verticalCenter: parent.verticalCenter
-                name: "moon"
-                size: 13
-                color: Theme.fgFaint
+        SectionLabel {
+            dim: true
+            text: `${Time.format("d MMMM")} · week ${Time.weekNumber()}`
+        }
+
+        DotBar {
+            width: parent.width
+            count: 34
+            dotSize: 3
+            litScale: 1.5
+            value: Time.dayProgress
+        }
+    }
+
+    Item {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: childrenRect.height
+
+        // Sun times come from the weather forecast, so they are absent until it
+        // resolves and there is nothing useful to show in the meantime.
+        Item {
+            width: parent.width
+            height: rise.height
+            visible: Weather.sunrise.length > 0
+
+            Row {
+                id: rise
+
+                spacing: Theme.space(2)
+
+                Glyph {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "sun"
+                    size: 14
+                    color: Theme.fgFaint
+                }
+
+                DotText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Weather.sunrise
+                    size: 16
+                    color: Theme.fgFaint
+                }
             }
 
-            DotText {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Weather.sunset
-                size: 15
-                color: Theme.fgFaint
+            // Pinned to the far side rather than spaced from sunrise: the pair
+            // reads as the ends of the day, which is also what the bar above
+            // measures.
+            Row {
+                anchors.right: parent.right
+                spacing: Theme.space(2)
+
+                Glyph {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "moon"
+                    size: 14
+                    color: Theme.fgFaint
+                }
+
+                DotText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Weather.sunset
+                    size: 16
+                    color: Theme.fgFaint
+                }
             }
         }
     }

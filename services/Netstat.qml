@@ -31,8 +31,8 @@ Singleton {
     readonly property real rxScaled: peak > 0 ? Math.min(1, rxRate / peak) : 0
     readonly property real txScaled: peak > 0 ? Math.min(1, txRate / peak) : 0
 
-    property var rxHistory: []
-    readonly property int historyLength: 10
+    readonly property int historyLength: 22
+    property var rxHistory: new Array(22).fill(0)
 
     property int watchers: 0
 

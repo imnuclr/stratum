@@ -829,7 +829,15 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    `width` and `horizontalAlignment` is silently ignored, since a positioner
    sizes itself to its contents. Right-aligning a column of percentages means
    wrapping it in an `Item` of fixed width and anchoring the text inside.
-33. **Warping the cursor is not a substitute for hovering.**
+33. **A history array has to be padded to its full length from the start.** A dot
+   field takes one column per value, so an array that fills up sample by sample
+   makes the field grow a column at a time, which reads as a layout bug rather
+   than as a graph filling. The services seed theirs with zeros.
+34. **A `Repeater` warns on a negative model, which a size-derived count
+   produces for one frame.** `Math.floor(height / pitch)` is negative while the
+   parent has not laid out and the height is still a negative margin, giving
+   "Model size of -7 is less than 0" on every instance. Clamp at zero.
+35. **Warping the cursor is not a substitute for hovering.**
    `hl.dsp.cursor.move({x, y})` is the only way to move the pointer here, and a
    teleport produces enter and leave sequences that real motion does not — it made
    popouts look like they opened and closed on their own long after the behaviour
@@ -837,13 +845,13 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    for confirming that a hover path fires at all; worthless for judging whether
    hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
    timer, so a sampled state reads as closed when it is merely closing.
-34. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+36. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-35. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+37. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-36. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+38. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

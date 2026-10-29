@@ -3,49 +3,41 @@ import qs.components
 import qs.services
 import qs.theme
 
-Column {
+Item {
     id: root
 
-    spacing: Theme.space(3)
+    Column {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        spacing: Theme.space(3)
 
-    SectionLabel {
-        text: Netstat.iface.length > 0 ? `net · ${Netstat.iface}` : "net · offline"
-    }
+        SectionLabel {
+            text: Netstat.iface.length > 0 ? `net · ${Netstat.iface}` : "net · offline"
+        }
 
-    Repeater {
-        model: [
-            { glyph: "arrow-down", rate: Netstat.rxRate, scaled: Netstat.rxScaled },
-            { glyph: "arrow-up", rate: Netstat.txRate, scaled: Netstat.txScaled }
-        ]
-
-        Row {
-            required property var modelData
-
-            spacing: Theme.space(2)
-
-            DotRing {
-                width: 36
-                height: 36
-                count: 22
-                dotSize: 2.6
-                value: modelData.scaled
-
-                Glyph {
-                    anchors.centerIn: parent
-                    name: modelData.glyph
-                    size: 13
-                    color: Theme.fgDim
-                }
-            }
+        Repeater {
+            model: [
+                { glyph: "arrow-down", rate: Netstat.rxRate },
+                { glyph: "arrow-up", rate: Netstat.txRate }
+            ]
 
             Row {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: Theme.space(1)
+                required property var modelData
+
+                spacing: Theme.space(2)
+
+                Glyph {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: modelData.glyph
+                    size: 15
+                    color: Theme.fgDim
+                }
 
                 DotText {
                     anchors.verticalCenter: parent.verticalCenter
                     text: Netstat.humanNumber(modelData.rate)
-                    size: 21
+                    size: 22
                 }
 
                 SectionLabel {
@@ -57,10 +49,15 @@ Column {
         }
     }
 
+    // Spans the column: the history is the only thing in here with a shape, and
+    // a narrow field beside empty space reads as unfinished.
     DotField {
-        rows: 5
-        cell: 6.4
-        dotSize: 3.6
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        rows: 7
+        cell: 6.2
+        dotSize: 3.4
         values: Netstat.rxHistory
     }
 }

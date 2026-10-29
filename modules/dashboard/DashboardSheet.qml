@@ -73,12 +73,10 @@ Sheet {
                 width: (root.sheetWidth - 2) * (root.weights[modelData] ?? 1) / root.weightTotal
                 height: parent.height
 
-                Rectangle {
+                DotDivider {
                     anchors.right: parent.right
-                    width: 1
-                    height: parent.height - Theme.space(3) * 2
                     anchors.verticalCenter: parent.verticalCenter
-                    color: Theme.line
+                    height: parent.height - Theme.space(3) * 2
                     visible: !column.last
                 }
 

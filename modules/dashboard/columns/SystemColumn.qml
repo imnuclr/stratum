@@ -3,13 +3,15 @@ import qs.components
 import qs.services
 import qs.theme
 
-Column {
+Item {
     id: root
 
-    spacing: Theme.space(3)
-
+    // Centred as a group: three rings left-aligned against a wide column leave
+    // an empty third that reads as a missing fourth.
     Row {
-        spacing: Theme.space(3)
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: Theme.space(4)
 
         Repeater {
             // Captions carry a second reading each, so the rings can stay as
@@ -23,19 +25,20 @@ Column {
             Column {
                 required property var modelData
 
-                spacing: Theme.space(1)
+                spacing: Theme.space(2)
 
                 DotRing {
-                    width: 74
-                    height: 74
-                    count: 40
-                    dotSize: 3.2
+                    width: 86
+                    height: 86
+                    count: 44
+                    dotSize: 3.4
+
                     value: modelData.value
 
                     DotText {
                         anchors.centerIn: parent
                         text: modelData.reading
-                        size: 17
+                        size: 21
                     }
                 }
 
@@ -49,10 +52,14 @@ Column {
     }
 
     Row {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         spacing: Theme.space(4)
 
         Column {
-            spacing: Theme.space(1)
+            width: 180
+            spacing: Theme.space(2)
 
             SectionLabel {
                 text: "processes"
@@ -74,7 +81,7 @@ Column {
                         color: Theme.fgDim
                         font.family: Theme.fontUi
                         font.pixelSize: 11
-                        font.letterSpacing: 0.6
+                        font.letterSpacing: 0.8
                         renderType: Text.NativeRendering
                     }
 
@@ -97,8 +104,9 @@ Column {
 
                     DotBar {
                         anchors.verticalCenter: parent.verticalCenter
-                        count: 5
-                        dotSize: 2.8
+                        count: 6
+                        dotSize: 2.6
+                        litScale: 1.5
                         value: modelData.usage
                     }
                 }
@@ -106,29 +114,19 @@ Column {
         }
 
         Column {
-            spacing: Theme.space(1)
+            spacing: Theme.space(2)
 
             SectionLabel {
                 text: SysStats.frequencyLabel.length > 0 ? `cores · ${SysStats.frequencyLabel}` : "cores"
             }
 
-            // Sixteen cores in one row would be wider than the column, so they
-            // wrap into two.
-            Column {
-                spacing: 2
-
-                Repeater {
-                    model: 2
-
-                    DotField {
-                        required property int index
-
-                        rows: 5
-                        cell: 6.4
-                        dotSize: 3.6
-                        values: SysStats.cores.slice(index * 8, index * 8 + 8)
-                    }
-                }
+            // One column per core, all sixteen in a single block — splitting them
+            // into two rows of eight implies a grouping the cores do not have.
+            DotField {
+                rows: 5
+                cell: 7.4
+                dotSize: 3.4
+                values: SysStats.cores
             }
         }
     }

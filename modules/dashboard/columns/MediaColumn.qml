@@ -3,149 +3,172 @@ import qs.components
 import qs.services
 import qs.theme
 
-Column {
+Item {
     id: root
 
-    readonly property real textWidth: 190
-
-    spacing: Theme.space(2)
-
-    SectionLabel {
-        text: Media.identity.length > 0 ? Media.identity : "media"
-    }
-
-    Row {
+    Column {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
         spacing: Theme.space(3)
 
-        DotImage {
-            width: 108
-            height: 108
-            cell: 4
-            source: Media.artUrl
-            visible: Media.artUrl.length > 0
+        SectionLabel {
+            text: Media.identity.length > 0 ? Media.identity : "media"
         }
 
-        Column {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Theme.space(1)
+        Row {
+            spacing: Theme.space(3)
 
-            // Title and artist stay in their own case. Everything else in the
-            // strip is a caps micro-label, but a track name is a name.
-            Text {
-                width: root.textWidth
-                elide: Text.ElideRight
-                text: Media.available ? Media.title : "Nothing playing"
-                color: Theme.fg
-                font.family: Theme.fontUi
-                font.pixelSize: 19
-                font.weight: Font.Medium
-                renderType: Text.NativeRendering
+            DotImage {
+                width: 104
+                height: 104
+                // Finer pitch and size-by-brightness: album art is the only
+                // photographic thing in the shell, and thresholding it at a 4px
+                // grid throws away the picture.
+                cell: 3
+                dotScale: 0.5
+                halftone: true
+                circular: true
+                source: Media.artUrl
+                visible: Media.artUrl.length > 0
             }
 
-            Text {
-                width: root.textWidth
-                elide: Text.ElideRight
-                text: Media.artist
-                visible: Media.artist.length > 0
-                color: Theme.fgDim
-                font.family: Theme.fontUi
-                font.pixelSize: 14
-                renderType: Text.NativeRendering
-            }
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.space(1)
 
-            Item {
-                width: root.textWidth
-                height: Theme.space(2)
-            }
-
-            DotBar {
-                count: 26
-                value: Media.progress
-                visible: Media.length > 0
-            }
-
-            Item {
-                width: root.textWidth
-                height: elapsed.implicitHeight
-                visible: Media.length > 0
-
-                DotText {
-                    id: elapsed
-
-                    anchors.left: parent.left
-                    text: Media.elapsedLabel
-                    size: 14
-                    color: Theme.fgFaint
+                // Title and artist keep their own case. Everything else in the
+                // strip is a caps micro-label, but a track name is a name.
+                Text {
+                    width: 200
+                    elide: Text.ElideRight
+                    text: Media.available ? Media.title : "Nothing playing"
+                    color: Theme.fg
+                    font.family: Theme.fontUi
+                    font.pixelSize: 20
+                    font.weight: Font.DemiBold
+                    renderType: Text.NativeRendering
                 }
 
-                DotText {
-                    anchors.right: parent.right
-                    text: Media.lengthLabel
-                    size: 14
-                    color: Theme.fgFaint
+                Text {
+                    width: 200
+                    elide: Text.ElideRight
+                    text: Media.artist
+                    visible: Media.artist.length > 0
+                    color: Theme.fgDim
+                    font.family: Theme.fontUi
+                    font.pixelSize: 15
+                    renderType: Text.NativeRendering
                 }
             }
         }
     }
 
-    Row {
-        anchors.horizontalCenter: parent.horizontalCenter
-        spacing: Theme.space(3)
-        visible: Media.available
+    Column {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        spacing: Theme.space(2)
 
-        Glyph {
-            anchors.verticalCenter: parent.verticalCenter
-            name: "skip-back"
-            size: 19
-            filled: true
-            color: Media.canPrevious ? Theme.fg : Theme.fgFaint
+        DotBar {
+            count: 38
+            dotSize: 3
+            litScale: 1.5
+            value: Media.progress
+            visible: Media.length > 0
+        }
 
-            MouseArea {
-                anchors.fill: parent
-                anchors.margins: -6
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Media.previous()
+        Item {
+            width: parent.width
+            height: elapsed.implicitHeight
+            visible: Media.length > 0
+
+            DotText {
+                id: elapsed
+
+                anchors.left: parent.left
+                text: Media.elapsedLabel
+                size: 15
+                color: Theme.fgFaint
+            }
+
+            DotText {
+                anchors.right: parent.right
+                text: Media.lengthLabel
+                size: 15
+                color: Theme.fgFaint
             }
         }
 
-        /*
-         * The one red thing on the strip. The accent marks the single primary
-         * action in a view; everything else here is a reading, not an action.
-         */
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            width: 38
-            height: 38
-            radius: width / 2
-            color: Theme.accent
+        Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Theme.space(4)
+            visible: Media.available
 
             Glyph {
-                anchors.centerIn: parent
-                name: Media.playing ? "pause" : "play"
-                size: 16
+                anchors.verticalCenter: parent.verticalCenter
+                name: "skip-back"
+                size: 19
                 filled: true
-                color: Theme.bg
+                color: Media.canPrevious ? Theme.fg : Theme.fgFaint
+
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -6
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Media.previous()
+                }
             }
 
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Media.playPause()
+            /*
+             * The one filled control on the strip: everything else here is a
+             * reading rather than an action. Solid white rather than the accent,
+             * which this shell spends on state, not on buttons.
+             */
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 44
+                height: 44
+                radius: width / 2
+                color: transport.containsMouse ? Qt.lighter(Theme.fg, 1.1) : Theme.fg
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.micro
+                    }
+                }
+
+                Glyph {
+                    anchors.centerIn: parent
+                    name: Media.playing ? "pause" : "play"
+                    size: 17
+                    filled: true
+                    color: Theme.bg
+                }
+
+                MouseArea {
+                    id: transport
+
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Media.playPause()
+                }
             }
-        }
 
-        Glyph {
-            anchors.verticalCenter: parent.verticalCenter
-            name: "skip-forward"
-            size: 19
-            filled: true
-            color: Media.canNext ? Theme.fg : Theme.fgFaint
+            Glyph {
+                anchors.verticalCenter: parent.verticalCenter
+                name: "skip-forward"
+                size: 19
+                filled: true
+                color: Media.canNext ? Theme.fg : Theme.fgFaint
 
-            MouseArea {
-                anchors.fill: parent
-                anchors.margins: -6
-                cursorShape: Qt.PointingHandCursor
-                onClicked: Media.next()
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -6
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Media.next()
+                }
             }
         }
     }

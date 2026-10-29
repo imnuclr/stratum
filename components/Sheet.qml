@@ -83,10 +83,10 @@ PanelWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: Theme.space(2)
-                width: 44
-                height: 4
-                radius: 2
-                color: grip.containsMouse ? Theme.fgFaint : Theme.lineHi
+                width: 9
+                height: 9
+                radius: width / 2
+                color: grip.containsMouse ? Theme.fg : Theme.fgFaint
 
                 Behavior on color {
                     ColorAnimation {

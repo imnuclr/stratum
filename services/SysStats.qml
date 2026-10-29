@@ -38,8 +38,8 @@ Singleton {
     readonly property string frequencyLabel: frequency > 0 ? `${(frequency / 1000000).toFixed(1)} GHz` : ""
 
     // Rolling CPU history for the dashboard's dot field, oldest first.
-    property var cpuHistory: []
-    readonly property int historyLength: 10
+    readonly property int historyLength: 22
+    property var cpuHistory: new Array(22).fill(0)
 
     property int lastIdle: 0
     property int lastTotal: 0

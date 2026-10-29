@@ -4,83 +4,105 @@ import qs.services
 import qs.theme
 import qs.utils
 
-Column {
+Item {
     id: root
 
-    spacing: Theme.space(2)
-
-    SectionLabel {
-        text: Weather.condition.length > 0
-            ? Weather.condition
-            : (Weather.error.length > 0 ? Weather.error : "loading")
-    }
-
-    Row {
+    Column {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
         spacing: Theme.space(2)
 
-        DotMatrix {
-            anchors.verticalCenter: parent.verticalCenter
-            pattern: WeatherGlyphs.forCode(Weather.code, Weather.day)
-            cell: 6.5
-            dotSize: 4.4
+        SectionLabel {
+            text: Weather.condition.length > 0
+                ? Weather.condition
+                : (Weather.error.length > 0 ? Weather.error : "loading")
         }
 
         Row {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 1
+            spacing: Theme.space(2)
 
-            DotText {
-                text: Weather.ready ? `${Math.round(Weather.temperature)}` : "--"
-                size: 40
+            DotMatrix {
+                anchors.verticalCenter: parent.verticalCenter
+                pattern: WeatherGlyphs.forCode(Weather.code, Weather.day)
+                cell: 6.5
+                dotSize: 4.4
             }
 
-            // Raised, not centred: a degree sign sits on the cap line.
-            DotText {
-                y: 2
-                text: "°"
-                size: 18
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 1
+
+                DotText {
+                    text: Weather.ready ? `${Math.round(Weather.temperature)}` : "--"
+                    size: 44
+                }
+
+                // Raised, not centred: a degree sign sits on the cap line.
+                DotText {
+                    y: 3
+                    text: "°"
+                    size: 19
+                }
             }
+        }
+
+        SectionLabel {
+            dim: true
+            visible: Weather.ready
+            text: `feels ${Math.round(Weather.apparent)}° · ${Math.round(Weather.windSpeed)} m/s`
         }
     }
 
-    SectionLabel {
-        dim: true
-        visible: Weather.ready
-        text: `feels ${Math.round(Weather.apparent)}° · ${Math.round(Weather.windSpeed)} m/s`
-    }
-
+    // Equal cells across the full width, each centred, so the four days read as
+    // one row rather than as a list that happens to be horizontal.
     Row {
-        spacing: Theme.space(3)
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
 
         Repeater {
             model: Weather.daily.slice(0, 4)
 
-            Column {
+            Item {
                 required property var modelData
 
-                spacing: Theme.space(1)
+                width: parent.width / 4
+                height: day.implicitHeight
 
-                SectionLabel {
-                    text: modelData.day
-                }
+                Column {
+                    id: day
 
-                DotMatrix {
-                    // Forecast glyphs always use the daytime variant; a row of
-                    // crescent moons for four consecutive days reads as a bug.
-                    pattern: WeatherGlyphs.forCode(modelData.code, true)
-                    cell: 4.4
-                    dotSize: 3
-                }
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: Theme.space(2)
 
-                DotText {
-                    text: `${Math.round(modelData.max)}°`
-                    size: 19
-                }
+                    SectionLabel {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: modelData.day
+                    }
 
-                DotText {
-                    text: `${Math.round(modelData.min)}°`
-                    size: 15
-                    color: Theme.fgFaint
+                    Glyph {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        // Always the daytime variant: a row of crescent moons
+                        // for four consecutive days reads as a bug.
+                        name: WeatherGlyphs.outlineForCode(modelData.code, true)
+                        size: 23
+                        stroke: 1.5
+                        color: Theme.fgDim
+                    }
+
+                    DotText {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: `${Math.round(modelData.max)}°`
+                        size: 20
+                    }
+
+                    DotText {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: `${Math.round(modelData.min)}°`
+                        size: 16
+                        color: Theme.fgFaint
+                    }
                 }
             }
         }

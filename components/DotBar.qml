@@ -11,6 +11,12 @@ Row {
     property real value: 0
     property int count: 16
     property real dotSize: 3.4
+    /*
+     * Lit dots drawn slightly larger than unlit ones. Colour alone separates
+     * them only while the two are side by side; the size difference is what
+     * makes the filled run readable at a glance across a long bar.
+     */
+    property real litScale: 1
     property color onColor: Theme.dotOn
     property color offColor: Theme.dotOff
 
@@ -21,17 +27,33 @@ Row {
     Repeater {
         model: root.count
 
-        Rectangle {
+        // Fixed-width cell with the dot centred inside it, so growing a lit dot
+        // does not push the rest of the bar along.
+        Item {
             required property int index
 
-            width: root.dotSize
-            height: root.dotSize
-            radius: root.dotSize / 2
-            color: index < root.lit ? root.onColor : root.offColor
+            readonly property bool on: index < root.lit
 
-            Behavior on color {
-                ColorAnimation {
-                    duration: Theme.micro
+            width: root.dotSize
+            height: root.dotSize * root.litScale
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.on ? root.dotSize * root.litScale : root.dotSize
+                height: width
+                radius: width / 2
+                color: parent.on ? root.onColor : root.offColor
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.micro
+                    }
+                }
+
+                Behavior on width {
+                    NumberAnimation {
+                        duration: Theme.micro
+                    }
                 }
             }
         }
