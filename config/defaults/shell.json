@@ -1,130 +1,134 @@
 {
-  "bar": {
-    "enabled": true,
-    "edge": "left",
-    "height": 38,
-    "margin": 10,
-    "gap": 8,
-    "layout": "edges",
-    "islands": {
-      "left": [
-        "workspaces",
-        "activeWindow"
-      ],
-      "centre": [
-        "clock",
-        "date"
-      ],
-      "right": [
-        "tray",
-        "status",
-        "controlCentre"
-      ]
+    "bar": {
+        "enabled": true,
+        "edge": "left",
+        "height": 38,
+        "margin": 10,
+        "gap": 8,
+        "layout": "edges",
+        "islands": {
+            "left": [
+                "workspaces",
+                "activeWindow"
+            ],
+            "centre": [
+                "clock",
+                "date"
+            ],
+            "right": [
+                "tray",
+                "status",
+                "controlCentre"
+            ]
+        },
+        "workspaces": {
+            "count": 6,
+            "slot": 15,
+            "gap": 4,
+            "dotSize": 5,
+            "trailFactor": 1.6
+        },
+        "orientation": "vertical",
+        "width": 56
     },
-    "workspaces": {
-      "count": 6,
-      "slot": 15,
-      "gap": 4,
-      "dotSize": 5,
-      "trailFactor": 1.6
+    "controlCentre": {
+        "width": 372,
+        "toggles": [
+            "dnd",
+            "night",
+            "airplane",
+            "caffeine",
+            "mic",
+            "record",
+            "vpn",
+            "theme"
+        ],
+        "sliders": [
+            "brightness",
+            "volume"
+        ],
+        "showProfiles": true,
+        "showMedia": true,
+        "notifications": 3
     },
-    "orientation": "vertical",
-    "width": 56
-  },
-  "controlCentre": {
-    "width": 372,
-    "toggles": [
-      "dnd",
-      "night",
-      "airplane",
-      "caffeine",
-      "mic",
-      "record",
-      "vpn",
-      "theme"
-    ],
-    "sliders": [
-      "brightness",
-      "volume"
-    ],
-    "showProfiles": true,
-    "showMedia": true,
-    "notifications": 3
-  },
-  "dashboard": {
-    "columns": [
-      "time",
-      "weather",
-      "system",
-      "network",
-      "media"
-    ],
-    "weights": {
-      "time": 21,
-      "weather": 18,
-      "system": 26,
-      "network": 15,
-      "media": 20
+    "dashboard": {
+        "columns": [
+            "time",
+            "weather",
+            "system",
+            "network",
+            "media"
+        ],
+        "weights": {
+            "time": 21,
+            "weather": 18,
+            "system": 26,
+            "network": 15,
+            "media": 20
+        },
+        "width": 1560,
+        "height": 314
     },
-    "width": 1560,
-    "height": 314
-  },
-  "lock": {
-    "greeting": {
-      "morning": [
-        "good morning",
-        "up early"
-      ],
-      "afternoon": [
-        "good afternoon"
-      ],
-      "evening": [
-        "good evening"
-      ],
-      "night": [
-        "still up?",
-        "good night"
-      ]
+    "lock": {
+        "greeting": {
+            "morning": [
+                "good morning",
+                "up early"
+            ],
+            "afternoon": [
+                "good afternoon"
+            ],
+            "evening": [
+                "good evening"
+            ],
+            "night": [
+                "still up?",
+                "good night"
+            ]
+        },
+        "notifications": "app",
+        "media": {
+            "controls": true,
+            "hideMetadata": false
+        }
     },
-    "notifications": "app",
-    "media": {
-      "controls": true,
-      "hideMetadata": false
+    "weather": {
+        "enabled": true,
+        "provider": "open-meteo",
+        "latitude": null,
+        "longitude": null,
+        "place": "",
+        "units": "metric"
+    },
+    "monitors": {},
+    "control": {
+        "width": 420,
+        "notifications": 4
+    },
+    "hotzones": {
+        "enabled": true,
+        "deckLength": 560,
+        "deckDepth": 14,
+        "deckDwell": 60,
+        "cornerLength": 320,
+        "cornerDepth": 24,
+        "cornerDwell": 70,
+        "notifyLength": 320,
+        "notifyDepth": 24,
+        "notifyDwell": 70
+    },
+    "session": {
+        "width": 300
+    },
+    "debug": {
+        "trace": true
+    },
+    "notifications": {
+        "width": 380,
+        "listHeight": 460
+    },
+    "wallpaper": {
+        "dir": "~/Pictures/Wallpapers",
+        "fadeMs": 600
     }
-  },
-  "weather": {
-    "enabled": true,
-    "provider": "open-meteo",
-    "latitude": null,
-    "longitude": null,
-    "place": "",
-    "units": "metric"
-  },
-  "monitors": {},
-  "control": {
-    "width": 420,
-    "notifications": 4
-  },
-  "hotzones": {
-    "enabled": true,
-    "deckLength": 560,
-    "deckDepth": 14,
-    "deckDwell": 60,
-    "cornerLength": 320,
-    "cornerDepth": 24,
-    "cornerDwell": 70,
-    "notifyLength": 320,
-    "notifyDepth": 24,
-    "notifyDwell": 70
-  },
-  "session": {
-    "width": 300
-  },
-  "debug": {
-    "trace": true
-  },
-  "notifications": {
-    "width": 380,
-    "listHeight": 460
-  }
 }

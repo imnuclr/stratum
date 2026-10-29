@@ -9,6 +9,7 @@ import qs.config
 import qs.theme
 import qs.services
 import qs.modules
+import qs.modules.background
 import qs.modules.bar
 import qs.modules.control
 import qs.modules.dashboard
@@ -67,6 +68,8 @@ ShellRoot {
         }
     }
 
+    // Bottom of the stack, so everything else draws over it.
+    Background {}
     Bar {}
     Dashboard {}
     Control {}
@@ -75,6 +78,41 @@ ShellRoot {
     HotZones {}
     Session {}
     Shortcuts {}
+
+    /*
+     * Wallpapers. A monitor name picks one display; empty means the desktop.
+     */
+    IpcHandler {
+        target: "wallpaper"
+
+        function set(path: string, monitor: string): void {
+            Wallpaper.set(Wallpaper.expand(path), monitor);
+        }
+
+        function next(monitor: string): void {
+            Wallpaper.cycle(1, monitor);
+        }
+
+        function prev(monitor: string): void {
+            Wallpaper.cycle(-1, monitor);
+        }
+
+        function random(monitor: string): void {
+            Wallpaper.random(monitor);
+        }
+
+        function current(monitor: string): string {
+            return Wallpaper.forMonitor(monitor);
+        }
+
+        function list(): string {
+            return Wallpaper.entries.join("\n");
+        }
+
+        function rescan(): void {
+            Wallpaper.scan();
+        }
+    }
 
     IpcHandler {
         target: "theme"
