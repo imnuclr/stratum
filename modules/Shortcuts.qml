@@ -105,6 +105,24 @@ Item {
 
     GlobalShortcut {
         appid: "stratum"
+        name: "record"
+        onPressed: Toggles.toggleRecording()
+    }
+
+    GlobalShortcut {
+        appid: "stratum"
+        name: "recordRegion"
+        onPressed: {
+            Diag.log("shortcut", "recordRegion pressed");
+            if (Toggles.recording)
+                Toggles.stopRecording();
+            else
+                Toggles.recordRegion();
+        }
+    }
+
+    GlobalShortcut {
+        appid: "stratum"
         name: "deck"
         onPressed: Shell.toggle("dashboard")
     }

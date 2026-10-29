@@ -11,6 +11,12 @@ import qs.services
  * Everything is shelled out through one `sh -c` rather than chained in QML: grim
  * piping into satty is a pipeline, and reproducing it as separate Processes
  * means buffering the image through the shell's memory for no gain.
+ *
+ * slurp reads its stdin when stdin is not a terminal, taking a list of candidate
+ * regions from it, so spawned from the shell — which hands a child a pipe — it
+ * blocked on a read that was never going to return. It never connected to
+ * Wayland at all and drew nothing, which looked exactly like a screenshot key
+ * that did nothing. Every slurp here reads from /dev/null.
  */
 Singleton {
     id: root
@@ -60,7 +66,7 @@ Singleton {
     function region() {
         const path = `${root.directory}/region-${root.stamp()}.png`;
         // slurp exits non-zero when cancelled, which must not leave an empty file.
-        root.run(`geom=$(slurp -d) || exit 0; grim -g "$geom" '${path}'`, path);
+        root.run(`geom=$(slurp -d </dev/null) || exit 0; grim -g "$geom" '${path}'`, path);
     }
 
     function window() {
@@ -71,11 +77,20 @@ Singleton {
     // Straight to the annotator; satty owns saving from there.
     function annotate() {
         const path = `${root.directory}/edit-${root.stamp()}.png`;
-        root.run(`geom=$(slurp -d) || exit 0; grim -g "$geom" - | satty --filename - --output-filename '${path}'`, path);
+        root.run(`geom=$(slurp -d </dev/null) || exit 0; grim -g "$geom" - | satty --filename - --output-filename '${path}'`, path);
     }
 
     Process {
         id: capture
+
+        // Anything the tools complain about, in the trace. Without this a capture
+        // that started and did nothing gave no reason at all.
+        stderr: StdioCollector {
+            onStreamFinished: {
+                if (text.trim().length > 0)
+                    Diag.log("screenshot", `stderr: ${text.trim()}`);
+            }
+        }
 
         onExited: (code, status) => {
             Diag.log("screenshot", `exited code=${code} status=${status} path=${root.lastPath}`);

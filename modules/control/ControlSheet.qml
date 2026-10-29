@@ -23,7 +23,8 @@ Sheet {
     originX: 1
     originY: 1
     sheetWidth: Config.get("control.width", 420)
-    sheetHeight: Math.min(monitor.height - Theme.space(4) * 4, body.implicitHeight + Theme.space(4) * 2)
+    // Clamped to the room actually available, not to a guess at it.
+    sheetHeight: Math.min(availableHeight, body.implicitHeight + Theme.space(4) * 2)
 
     onOpenChanged: {
         if (open) {

@@ -53,17 +53,53 @@ Singleton {
         }
     }
 
+    function recordingPath() {
+        const stamp = Qt.formatDateTime(new Date(), "yyyyMMdd-HHmmss");
+        return `${Quickshell.env("HOME")}/Videos/Recordings/stratum-${stamp}.mp4`;
+    }
+
+    function stopRecording() {
+        // SIGINT, so the recorder finalises the container. Killing it outright
+        // leaves an unplayable file.
+        recorder.signal(2);
+        root.recording = false;
+    }
+
+    /*
+     * Records the monitor being worked on, named explicitly. `-w screen` picks
+     * whichever output the recorder considers first, which on this desk is the
+     * secondary one — a recording of the wrong monitor every time. `-w focused`
+     * is not the fix either: it demands an explicit -s size and errors out
+     * without one, which is why nothing recorded at all. Naming the output gives
+     * its native resolution for free.
+     */
     function toggleRecording() {
         if (!root.hasRecorder)
             return;
         if (root.recording) {
-            recorder.signal(2);
-            root.recording = false;
+            root.stopRecording();
             return;
         }
-        const stamp = Qt.formatDateTime(new Date(), "yyyyMMdd-HHmmss");
-        recorder.command = ["gpu-screen-recorder", "-w", "screen", "-f", "60",
-            "-o", `${Quickshell.env("HOME")}/Videos/Recordings/stratum-${stamp}.mp4`];
+        const output = Hypr.focusedWorkspace?.monitor?.name ?? "screen";
+        recorder.command = ["gpu-screen-recorder", "-w", output, "-f", "60",
+            "-o", root.recordingPath()];
+        recorder.running = true;
+        root.recording = true;
+    }
+
+    /*
+     * Region recording. slurp is asked for the geometry in the recorder's own
+     * format rather than its default `X,Y WxH`, so nothing has to reformat it,
+     * and reads /dev/null because it blocks on a pipe for candidate regions
+     * otherwise.
+     */
+    function recordRegion() {
+        if (!root.hasRecorder || root.recording)
+            return;
+        recorder.command = ["sh", "-c",
+            `mkdir -p "$HOME/Videos/Recordings"; ` +
+            `geom=$(slurp -f '%wx%h+%x+%y' </dev/null) || exit 0; ` +
+            `exec gpu-screen-recorder -w region -region "$geom" -f 60 -o '${root.recordingPath()}'`];
         recorder.running = true;
         root.recording = true;
     }

@@ -27,6 +27,17 @@ PanelWindow {
     // 0 pins to the top edge, 1 to the bottom. A sheet reached from a corner has
     // to grow out of that corner, or the motion points the wrong way.
     property real originY: 0
+
+    /*
+     * How much vertical room a sheet has between the two edge gaps. A sheet that
+     * sizes itself from its content has to clamp to this: taller than this and it
+     * cannot be placed, which used to send it to the top of the screen.
+     */
+    readonly property real edgeGapTop: Config.get("bar.orientation", "vertical") === "vertical"
+        ? Config.get("bar.margin", 10) + Theme.space(1)
+        : Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
+    readonly property real edgeGapBottom: Config.get("bar.margin", 10) + Theme.space(1)
+    readonly property real availableHeight: monitor.height - edgeGapTop - edgeGapBottom
     property int sheetWidth: 400
     property int sheetHeight: 500
 
@@ -101,12 +112,20 @@ PanelWindow {
                 Math.min(parent.width - width - Theme.space(1),
                     barOffset + (parent.width - barOffset) * root.originX - width / 2)))
 
-            readonly property real edgeGap: Config.get("bar.orientation", "vertical") === "vertical"
-                ? Config.get("bar.margin", 10) + Theme.space(1)
-                : Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
+            readonly property real edgeGap: root.edgeGapTop
 
-            y: Math.round(edgeGap + Math.max(0, parent.height - height - edgeGap
-                - Config.get("bar.margin", 10) - Theme.space(1)) * root.originY)
+            /*
+             * A sheet anchored to the bottom pins its bottom edge, full stop. The
+             * old form derived y from the space left over and floored that at
+             * zero, so a sheet momentarily taller than the screen — which the
+             * control centre is on a 1080 monitor while its content settles —
+             * placed itself at the top and then travelled down as the height
+             * resolved. That is the "opens from the top" everyone could see and I
+             * could not reproduce: on a 1440 monitor it always fit.
+             */
+            y: root.originY >= 0.5
+                ? Math.round(parent.height - root.edgeGapBottom - height)
+                : Math.round(edgeGap + Math.max(0, root.availableHeight - height) * root.originY)
 
             width: root.sheetWidth
             height: root.sheetHeight

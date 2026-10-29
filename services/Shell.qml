@@ -57,9 +57,15 @@ Singleton {
         openPanel = name;
     }
 
-    // Where a pointerless open lands: the bar's screen if one is configured,
-    // otherwise the widest, which on a mixed setup is the one being worked on.
+    /*
+     * Where a pointerless open lands — a keybind or an IPC call, with no pointer
+     * to attribute it to. The focused monitor, because that is where the person
+     * is working; the widest only as a fallback before Hyprland has reported one.
+     */
     readonly property string fallbackScreen: {
+        const focused = Hypr.focusedWorkspace?.monitor?.name ?? "";
+        if (focused.length > 0)
+            return focused;
         const screens = Quickshell.screens;
         if (screens.length === 0)
             return "";
