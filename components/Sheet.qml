@@ -24,6 +24,9 @@ PanelWindow {
     // Fraction across the screen the sheet grows from, so it appears to come out
     // of whichever bar island opened it.
     property real originX: 0.5
+    // 0 pins to the top edge, 1 to the bottom. A sheet reached from a corner has
+    // to grow out of that corner, or the motion points the wrong way.
+    property real originY: 0
     property int sheetWidth: 400
     property int sheetHeight: 500
 
@@ -82,9 +85,12 @@ PanelWindow {
             x: Math.round(Math.max(barOffset + Theme.space(1),
                 Math.min(parent.width - width - Theme.space(1),
                     barOffset + (parent.width - barOffset) * root.originX - width / 2)))
-            y: Config.get("bar.orientation", "vertical") === "vertical"
+            readonly property real edgeGap: Config.get("bar.orientation", "vertical") === "vertical"
                 ? Config.get("bar.margin", 10) + Theme.space(1)
                 : Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
+
+            y: Math.round(edgeGap + Math.max(0, parent.height - height - edgeGap
+                - Config.get("bar.margin", 10) - Theme.space(1)) * root.originY)
 
             width: root.sheetWidth
             height: root.sheetHeight
@@ -136,7 +142,11 @@ PanelWindow {
                 }
             }
 
-            transformOrigin: Item.Top
+            transformOrigin: {
+                if (root.originY >= 0.5)
+                    return root.originX >= 0.75 ? Item.BottomRight : (root.originX <= 0.25 ? Item.BottomLeft : Item.Bottom);
+                return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
+            }
             opacity: root.open ? 1 : 0
             scale: root.open ? 1 : 0.96
 
@@ -145,19 +155,25 @@ PanelWindow {
                 anchors.fill: parent
             }
 
+            /*
+             * Leaving is quicker than arriving. A panel you have decided to
+             * dismiss should get out of the way, while one arriving has to be
+             * followed by the eye — the same duration both ways makes the exit
+             * feel like it is lingering.
+             */
             Behavior on opacity {
                 NumberAnimation {
-                    duration: Theme.sheetMs
+                    duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.enterEasing
+                    easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
                 }
             }
 
             Behavior on scale {
                 NumberAnimation {
-                    duration: Theme.sheetMs
+                    duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.enterEasing
+                    easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
                 }
             }
         }

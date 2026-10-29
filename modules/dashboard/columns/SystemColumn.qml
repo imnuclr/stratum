@@ -39,6 +39,10 @@ Item {
                         anchors.centerIn: parent
                         text: modelData.reading
                         size: 23
+                        // These change every second. The cascade is the shell's
+                        // signature on a value that changes occasionally; on one
+                        // that changes constantly it is a flicker.
+                        plain: true
                     }
                 }
 
@@ -99,6 +103,7 @@ Item {
                             anchors.right: parent.right
                             text: `${Math.round(modelData.usage * 100)}%`
                             size: 13
+                            plain: true
                         }
                     }
 

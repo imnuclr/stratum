@@ -18,7 +18,8 @@ Variants {
             panel: "dashboard"
             edge: "top"
             along: 0.5
-            zoneLength: Config.forMonitor(modelData.name, "hotzones.deckLength", 420)
+            zoneLength: Config.forMonitor(modelData.name, "hotzones.deckLength", 520)
+            zoneDepth: Config.forMonitor(modelData.name, "hotzones.deckDepth", 6)
         }
 
         // Bottom right, away from everything: the control centre is the panel you
@@ -28,7 +29,10 @@ Variants {
             panel: "control"
             edge: "bottom"
             along: 1
-            zoneLength: Config.forMonitor(modelData.name, "hotzones.cornerLength", 90)
+            // A genuine corner: deep and long enough to catch a flick toward it
+            // rather than needing the pointer parked in the last few pixels.
+            zoneLength: Config.forMonitor(modelData.name, "hotzones.cornerLength", 260)
+            zoneDepth: Config.forMonitor(modelData.name, "hotzones.cornerDepth", 10)
         }
     }
 }

@@ -18,7 +18,30 @@ Singleton {
     readonly property MprisPlayer active: players.find(p => p.isPlaying) ?? remembered ?? players[0] ?? null
 
     readonly property bool available: active !== null
-    readonly property bool playing: active?.isPlaying ?? false
+
+    /*
+     * MPRIS round trips before isPlaying changes, which on some players is long
+     * enough to look broken. The button shows what was asked for until the
+     * player agrees, so pressing it reads as instant.
+     */
+    readonly property bool actualPlaying: active?.isPlaying ?? false
+    property bool pending: false
+    property bool pendingTarget: false
+
+    readonly property bool playing: pending ? pendingTarget : actualPlaying
+
+    onActualPlayingChanged: {
+        if (pending && actualPlaying === pendingTarget)
+            pending = false;
+    }
+
+    // If the player never answers, stop pretending rather than showing the wrong
+    // state indefinitely.
+    Timer {
+        running: root.pending
+        interval: 1500
+        onTriggered: root.pending = false
+    }
 
     readonly property string title: active?.trackTitle ?? ""
     readonly property string artist: active?.trackArtist ?? ""
@@ -64,8 +87,11 @@ Singleton {
     }
 
     function playPause() {
-        if (active?.canTogglePlaying)
-            active.togglePlaying();
+        if (!active?.canTogglePlaying)
+            return;
+        root.pendingTarget = !root.playing;
+        root.pending = true;
+        active.togglePlaying();
     }
 
     function next() {

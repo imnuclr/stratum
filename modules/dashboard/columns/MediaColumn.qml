@@ -95,6 +95,7 @@ Item {
                 text: Media.elapsedLabel
                 size: 15
                 color: Theme.fgFaint
+                plain: true
             }
 
             DotText {

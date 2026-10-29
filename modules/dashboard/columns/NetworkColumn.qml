@@ -38,6 +38,8 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: Netstat.humanNumber(modelData.rate)
                     size: 22
+                    // Ticks every second; see SystemColumn.
+                    plain: true
                 }
 
                 SectionLabel {
