@@ -25,6 +25,17 @@ Column {
         visible: Keyboard.code.length > 0
     }
 
+    /*
+     * Holds every popout open while the pointer is anywhere over the status
+     * group. The icons sit apart from each other, and a pointer crossing from one
+     * to the next passes through gaps that belong to no trigger at all — which
+     * closed the popout just as you were moving to the next icon.
+     */
+    HoverHandler {
+        margin: Theme.space(1)
+        onHoveredChanged: Popouts.groupHovered = hovered
+    }
+
     Repeater {
         model: [
             { kind: "network", popout: "network" },

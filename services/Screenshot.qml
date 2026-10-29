@@ -20,11 +20,16 @@ Singleton {
     property string lastPath: ""
 
     /*
-     * Guards against one keypress firing twice, not against taking another
-     * screenshot. This used to be a plain `busy` flag held for the lifetime of
-     * the capture, which latched: anything that stopped the process without a
-     * clean exit left it true and every screenshot afterwards was silently
-     * dropped until the shell restarted.
+     * Held for the lifetime of the capture, so a second press cannot start a
+     * second selector while one is already waiting. Releasing it after a moment
+     * instead — which is what it did before — let two presses stack two slurps,
+     * and two selectors competing for the pointer meant neither ever resolved:
+     * one sat waiting for a selection for a quarter of an hour.
+     *
+     * The watchdog is what stops that becoming the other failure, where anything
+     * ending the capture without a clean exit latched the flag and every
+     * screenshot afterwards was dropped in silence. Generous, because a region
+     * selection legitimately waits as long as the person takes.
      */
     property bool busy: false
 
@@ -33,10 +38,12 @@ Singleton {
     }
 
     function run(script, path) {
-        if (root.busy)
+        if (root.busy) {
+            Diag.log("screenshot", "ignored: a capture is already waiting");
             return;
+        }
         root.busy = true;
-        unlatch.restart();
+        watchdog.restart();
         root.lastPath = path;
         capture.command = ["sh", "-c", `mkdir -p '${root.directory}'; ${script}`];
         Diag.log("screenshot", `running: ${script}`);
@@ -72,6 +79,7 @@ Singleton {
 
         onExited: (code, status) => {
             Diag.log("screenshot", `exited code=${code} status=${status} path=${root.lastPath}`);
+            watchdog.stop();
             root.busy = false;
         }
     }
@@ -83,9 +91,12 @@ Singleton {
      * block the next attempt for long.
      */
     Timer {
-        id: unlatch
+        id: watchdog
 
-        interval: 600
-        onTriggered: root.busy = false
+        interval: 120000
+        onTriggered: {
+            Diag.log("screenshot", "watchdog fired: releasing a capture that never exited");
+            root.busy = false;
+        }
     }
 }

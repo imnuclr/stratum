@@ -49,7 +49,15 @@ Singleton {
     // The trigger the pointer is currently inside, if any.
     property string hoveredTrigger: ""
 
-    readonly property bool anyHover: surfaceHovered || hoveredTrigger.length > 0
+    /*
+     * True while the pointer is anywhere in the group of triggers, including the
+     * gaps between them. Each icon claims `hoveredTrigger` for itself, so pausing
+     * between two of them left nothing holding the popout open and it closed
+     * under a pointer that was on its way to the next icon.
+     */
+    property bool groupHovered: false
+
+    readonly property bool anyHover: surfaceHovered || groupHovered || hoveredTrigger.length > 0
 
     onCurrentChanged: {
         if (current.length > 0)
@@ -57,6 +65,8 @@ Singleton {
     }
 
     onAnyHoverChanged: root.settle()
+
+    onGroupHoveredChanged: root.settle()
 
     onHoldChanged: root.settle()
 
