@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import qs.config
 import qs.services
@@ -56,9 +57,42 @@ PanelWindow {
     // the holds and closes once nothing is holding.
     property bool hoverDismiss: false
 
+    /*
+     * One hold per sheet, taken when the pointer arrives and given back only
+     * when it has demonstrably gone. Counting these rather than calling
+     * Shell.hold directly keeps the count balanced however the pointer behaves.
+     */
+    property bool holding: false
+
+    // The sheet's own screen in the layout, for comparing against a cursor
+    // position, which Hyprland reports across the whole desk.
+    readonly property real monitorX: monitor.x
+    readonly property real monitorY: monitor.y
+
+    function take() {
+        if (root.holding)
+            return;
+        root.holding = true;
+        Shell.hold();
+    }
+
+    function give() {
+        if (!root.holding)
+            return;
+        root.holding = false;
+        Shell.release();
+    }
+
     // The window stays mapped until the exit transition has finished, otherwise
     // the sheet vanishes instead of shrinking.
     visible: open || card.opacity > 0.001
+
+    onOpenChanged: {
+        if (!open) {
+            verify.stop();
+            root.give();
+        }
+    }
 
     screen: monitor
     color: "transparent"
@@ -94,10 +128,31 @@ PanelWindow {
      * against it, and the band is where the hot zone lives, so travelling from
      * the zone into the sheet never crosses dead ground.
      */
-    readonly property real reachX: Math.round(body.x - (root.originX < 0.5 ? root.bridge : 0))
-    readonly property real reachY: Math.round(body.y - (root.originY < 0.5 ? root.edgeGapTop : 0))
-    readonly property real reachW: Math.round(body.width + root.bridge)
-    readonly property real reachH: Math.round(body.height
+    readonly property real barOffset: Config.get("bar.orientation", "vertical") === "vertical"
+        ? Config.get("bar.width", 56) + Config.get("bar.margin", 10) + Theme.space(1)
+        : 0
+
+    // Clamped so a sheet growing from an item near the far edge stays on screen
+    // rather than hanging off it.
+    readonly property real cardX: Math.round(Math.max(root.barOffset + Theme.space(1),
+        Math.min(monitor.width - root.sheetWidth - Theme.space(1),
+            root.barOffset + (monitor.width - root.barOffset) * root.originX - root.sheetWidth / 2)))
+
+    /*
+     * A sheet anchored to the bottom pins its bottom edge, full stop. Deriving y
+     * from the space left over and flooring it at zero placed a sheet momentarily
+     * taller than the screen at the top, travelling down as its height resolved —
+     * the "opens from the top" that only ever happened on the shorter monitor,
+     * where the control centre does not fit while its content settles.
+     */
+    readonly property real cardY: root.originY >= 0.5
+        ? Math.round(monitor.height - root.edgeGapBottom - root.sheetHeight)
+        : Math.round(root.edgeGapTop + Math.max(0, root.availableHeight - root.sheetHeight) * root.originY)
+
+    readonly property real reachX: Math.round(root.cardX - (root.originX < 0.5 ? root.bridge : 0))
+    readonly property real reachY: Math.round(root.cardY - (root.originY < 0.5 ? root.edgeGapTop : 0))
+    readonly property real reachW: Math.round(root.sheetWidth + root.bridge)
+    readonly property real reachH: Math.round(root.sheetHeight
         + (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom))
 
     mask: Region {
@@ -126,19 +181,24 @@ PanelWindow {
          * moving instead.
          */
         /*
-         * Everything the mask lets through, as an actual item.
+         * Everything the mask lets through, as an actual item, with the sheet
+         * inside it.
          *
          * The mask decides what the compositor delivers to this surface, but an
          * event still has to land on an item before a handler sees it. The band
          * bridging the card to the screen edge had no item in it, so input
          * arrived and hit nothing — and that band is exactly where the hot zone
-         * sits. The sheet's mask covers the zone the moment it opens, so the zone
-         * loses the pointer, and nothing here picked it up: the trace showed the
-         * zone going false on the same frame the panel opened, no bodyHover at
-         * all, and the grace closing the sheet under a stationary cursor.
+         * sits. The sheet's mask covers the zone the moment it opens, so the
+         * zone loses the pointer, and nothing here picked it up: the trace
+         * showed the zone going false on the same frame the panel opened, no
+         * sheet hover at all, and the grace closing it under a stationary
+         * cursor.
          *
-         * Nothing but the handler lives here, so clicks and the controls' own
-         * hover pass straight through to the card beneath.
+         * The sheet is a child rather than this being laid over it. An item
+         * above the content, even one holding nothing but a hover handler, sits
+         * between every control and the pointer; as the parent it sees the
+         * hover across the whole reachable area and leaves the controls beneath
+         * it untouched.
          */
         Item {
             id: reach
@@ -147,7 +207,6 @@ PanelWindow {
             y: root.reachY
             width: root.reachW
             height: root.reachH
-            z: 1
 
             HoverHandler {
                 id: bodyHover
@@ -155,152 +214,165 @@ PanelWindow {
                 blocking: false
 
                 onHoveredChanged: {
-                    Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds} at=${Math.round(point.position.x)},${Math.round(point.position.y)} of ${Math.round(parent.width)}x${Math.round(parent.height)}`);
+                    Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds}`);
                     if (!root.hoverDismiss)
                         return;
                     if (hovered)
-                        Shell.hold();
+                        root.take();
                     else
-                        Shell.release();
-                }
-            }
-        }
-
-
-        Item {
-            id: body
-
-            readonly property real barOffset: Config.get("bar.orientation", "vertical") === "vertical"
-                ? Config.get("bar.width", 56) + Config.get("bar.margin", 10) + Theme.space(1)
-                : 0
-
-            // Clamped so a sheet growing from an item near the far edge stays on
-            // screen rather than hanging off it.
-            x: Math.round(Math.max(barOffset + Theme.space(1),
-                Math.min(parent.width - width - Theme.space(1),
-                    barOffset + (parent.width - barOffset) * root.originX - width / 2)))
-
-            readonly property real edgeGap: root.edgeGapTop
-
-            /*
-             * A sheet anchored to the bottom pins its bottom edge, full stop. The
-             * old form derived y from the space left over and floored that at
-             * zero, so a sheet momentarily taller than the screen — which the
-             * control centre is on a 1080 monitor while its content settles —
-             * placed itself at the top and then travelled down as the height
-             * resolved. That is the "opens from the top" everyone could see and I
-             * could not reproduce: on a 1440 monitor it always fit.
-             */
-            y: root.originY >= 0.5
-                ? Math.round(parent.height - root.edgeGapBottom - height)
-                : Math.round(edgeGap + Math.max(0, root.availableHeight - height) * root.originY)
-
-            width: root.sheetWidth
-            height: root.sheetHeight
-
-            /*
-             * A sheet that sizes itself from its content resizes rather than
-             * jumping. The mask and the hover item both read this, so they follow
-             * it frame by frame and input stays where the sheet is drawn.
-             */
-            Behavior on height {
-                NumberAnimation {
-                    duration: Theme.standard
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.smooth
+                        verify.restart();
                 }
             }
 
-            // Swallow clicks so they don't reach the dismiss layer underneath.
-            MouseArea {
-                anchors.fill: parent
+            /*
+             * A sheet does not let go until the pointer has actually left it.
+             *
+             * Losing hover is not the same as the pointer leaving. Qt can clear
+             * hover when a child takes a pointer grab, which is what a click on
+             * any control in the panel does — and the report was exactly that:
+             * click anything and the panel closes under you. Rather than guess at
+             * which grab does it, the release is checked against where the cursor
+             * really is, which is also proof against any other spurious loss.
+             *
+             * The cost is a poll, and only while hover is lost but the pointer is
+             * still inside — a window that should not normally exist at all.
+             */
+            Timer {
+                id: verify
+
+                interval: 160
+                repeat: true
+                onTriggered: cursor.running = true
             }
 
-            Rectangle {
-                id: card
+            Process {
+                id: cursor
 
-                /*
-                 * How far out of place the sheet sits while closed. One anchored
-                 * to the bottom starts below where it belongs and rises into
-                 * place; one anchored to the top starts above and comes down.
-                 */
-                property real slide: root.open ? 0 : (root.originY >= 0.5 ? 56 : -56)
+                command: ["hyprctl", "cursorpos"]
 
-                Behavior on slide {
-                    NumberAnimation {
-                        duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        const parts = text.trim().split(",");
+                        if (parts.length !== 2)
+                            return;
+                        const x = parseInt(parts[0], 10);
+                        const y = parseInt(parts[1], 10);
+                        const inside = x >= root.monitorX + root.reachX
+                            && x < root.monitorX + root.reachX + root.reachW
+                            && y >= root.monitorY + root.reachY
+                            && y < root.monitorY + root.reachY + root.reachH;
+                        if (inside)
+                            return;
+                        Diag.log("sheet", `${root.name} pointer left at ${x},${y}, releasing`);
+                        verify.stop();
+                        root.give();
                     }
                 }
+            }
 
-                x: 0
-                y: Math.round(slide)
-                width: parent.width
-                height: parent.height
-                radius: Theme.rSheet
-                color: Theme.surface
-                border.width: 1
-                border.color: Theme.lineHi
+            Item {
+                id: body
 
-                transformOrigin: {
-                    if (root.originY >= 0.5)
-                        return root.originX >= 0.75 ? Item.BottomRight : (root.originX <= 0.25 ? Item.BottomLeft : Item.Bottom);
-                    return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
+                // Where the card sits inside the reachable area: the whole of it,
+                // except for the band bridging to the screen edge.
+                x: Math.round(root.cardX - root.reachX)
+
+                y: Math.round(root.cardY - root.reachY)
+
+                width: root.sheetWidth
+                height: root.sheetHeight
+
+                // Swallow clicks so they don't reach the dismiss layer underneath.
+                MouseArea {
+                    anchors.fill: parent
                 }
 
-                opacity: root.open ? 1 : 0
-                scale: root.open ? 1 : 0.94
-
-                /*
-                 * Dismiss affordance at the bottom edge. Clicking outside already
-                 * closes the sheet, but nothing on the sheet itself said so.
-                 */
                 Rectangle {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: Theme.space(2)
-                    width: 9
-                    height: 9
-                    radius: width / 2
-                    color: grip.containsMouse ? Theme.fg : Theme.fgFaint
+                    id: card
 
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: Theme.micro
+                    /*
+                     * How far out of place the sheet sits while closed. One anchored
+                     * to the bottom starts below where it belongs and rises into
+                     * place; one anchored to the top starts above and comes down.
+                     */
+                    property real slide: root.open ? 0 : (root.originY >= 0.5 ? 56 : -56)
+
+                    Behavior on slide {
+                        NumberAnimation {
+                            duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
                         }
                     }
 
-                    MouseArea {
-                        id: grip
+                    x: 0
+                    y: Math.round(slide)
+                    width: parent.width
+                    height: parent.height
+                    radius: Theme.rSheet
+                    color: Theme.surface
+                    border.width: 1
+                    border.color: Theme.lineHi
 
-                        anchors.fill: parent
-                        anchors.margins: -8
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: Shell.close()
+                    transformOrigin: {
+                        if (root.originY >= 0.5)
+                            return root.originX >= 0.75 ? Item.BottomRight : (root.originX <= 0.25 ? Item.BottomLeft : Item.Bottom);
+                        return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
                     }
-                }
 
-                /*
-                 * Leaving is quicker than arriving. A panel you have decided to
-                 * dismiss should get out of the way, while one arriving has to be
-                 * followed by the eye — the same duration both ways makes the exit
-                 * feel like it is lingering.
-                 */
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                    opacity: root.open ? 1 : 0
+                    scale: root.open ? 1 : 0.94
+
+                    /*
+                     * Dismiss affordance at the bottom edge. Clicking outside already
+                     * closes the sheet, but nothing on the sheet itself said so.
+                     */
+                    Rectangle {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: Theme.space(2)
+                        width: 9
+                        height: 9
+                        radius: width / 2
+                        color: grip.containsMouse ? Theme.fg : Theme.fgFaint
+
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Theme.micro
+                            }
+                        }
+
+                        MouseArea {
+                            id: grip
+
+                            anchors.fill: parent
+                            anchors.margins: -8
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Shell.close()
+                        }
                     }
-                }
 
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                    /*
+                     * Leaving is quicker than arriving. A panel you have decided to
+                     * dismiss should get out of the way, while one arriving has to be
+                     * followed by the eye — the same duration both ways makes the exit
+                     * feel like it is lingering.
+                     */
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                        }
+                    }
+
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                        }
                     }
                 }
             }

@@ -67,10 +67,56 @@ Singleton {
             root.setFor(id, root.displays[i].value + delta);
     }
 
-    // Keys move every display together. Mapping a Hyprland output onto a ddcutil
-    // display number means matching on EDID strings, which is guesswork; until
-    // that is solid, a brightness key means "the desk", and per-display control
-    // lives in the control centre where each one is named.
+    /*
+     * Which ddcutil display is which Hyprland output.
+     *
+     * ddcutil reports a monitor's model from its EDID and Hyprland reports the
+     * same string, so the two line up exactly — "XG22VA" against HDMI-A-1,
+     * "34E6UC" against DP-2 here. An earlier note called this guesswork and left
+     * every display sharing one control; it is not guesswork, it is the same
+     * field read twice. A laptop panel has no model to match and is the only
+     * display anyway, so it answers for everything.
+     */
+    // Wayland's own output info, rather than Hyprland's. Hyprland reports the
+    // model for one of these two outputs and not the other, for reasons that do
+    // not matter: the compositor is not the only one holding the EDID, and the
+    // screen object the panel is already built around carries it.
+    function modelFor(name) {
+        return Quickshell.screens.find(s => s.name === name)?.model ?? "";
+    }
+
+    function forMonitor(name) {
+        if (root.internal)
+            return root.displays.length > 0 ? root.displays[0] : null;
+
+        const model = root.modelFor(name);
+        if (model)
+            for (const d of root.displays)
+                if (d.label === model)
+                    return d;
+
+        // Nothing matched: better one display's brightness than a dead control.
+        return root.displays.length > 0 ? root.displays[0] : null;
+    }
+
+    function valueFor(name) {
+        return root.forMonitor(name)?.value ?? 0.5;
+    }
+
+    function setForMonitor(name, v) {
+        const d = root.forMonitor(name);
+        if (d)
+            root.setFor(d.id, v);
+    }
+
+    function stepForMonitor(name, delta) {
+        const d = root.forMonitor(name);
+        if (d)
+            root.setFor(d.id, d.value + delta);
+    }
+
+    // Keys still move every display together: a brightness key is not aimed at
+    // anything, and per-display control lives where the pointer already is.
     function set(v) {
         for (const d of root.displays)
             root.setFor(d.id, v);

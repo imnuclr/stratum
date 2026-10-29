@@ -70,37 +70,25 @@ Sheet {
         }
 
         /*
-         * One slider per display, named, because two monitors do not agree about
-         * what looks right — and a single slider moving both meant setting the
-         * dimmer one correctly always overexposed the other. A single-display
-         * machine gets exactly one and looks no different to before.
+         * The brightness of the display this panel is on, and only that one.
+         *
+         * There was a slider per display before, named by model — which answered
+         * "they are not linked" but not the question behind it: the control
+         * centre is open on one monitor, and that is the one being looked at. A
+         * second slider for the other screen is a control for something that is
+         * not in front of you. The panel opens on whichever monitor the pointer
+         * reached for, so its own screen is the one to offer.
+         *
+         * Keys remain deliberately different: a brightness key is aimed at
+         * nothing in particular, so it moves the whole desk together.
          */
-        Repeater {
-            model: Brightness.displays
-
-            Column {
-                id: dim
-
-                required property var modelData
-
-                width: parent.width
-                spacing: Theme.space(1)
-
-                // Only worth naming when there is more than one to tell apart.
-                SectionLabel {
-                    text: dim.modelData.label
-                    visible: Brightness.displays.length > 1
-                }
-
-                SliderPill {
-                    width: parent.width
-                    icon: "brightness"
-                    value: dim.modelData.value
-                    label: `${Math.round(dim.modelData.value * 100)}`
-                    enabled: Brightness.ready
-                    onMoved: v => Brightness.setFor(dim.modelData.id, v)
-                }
-            }
+        SliderPill {
+            width: parent.width
+            icon: "brightness"
+            value: Brightness.valueFor(root.monitor.name)
+            label: `${Math.round(Brightness.valueFor(root.monitor.name) * 100)}`
+            enabled: Brightness.ready
+            onMoved: v => Brightness.setForMonitor(root.monitor.name, v)
         }
 
         SliderPill {

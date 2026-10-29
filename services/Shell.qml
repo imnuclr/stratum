@@ -114,9 +114,13 @@ Singleton {
 
         // Long enough to cross the gap between a bar item and the panel it
         // opened, short enough that leaving on purpose feels immediate.
-        // Long enough to cross a gap at a normal pointer speed. Short enough that
-        // a sheet left behind still goes away without being dismissed.
-        interval: 600
+        /*
+         * Short, because it no longer has to cover a pointer crossing dead
+         * ground — the mask reaches the screen edge, and a release is checked
+         * against where the cursor really is. What is left is just enough to
+         * absorb the handover between a hot zone and the sheet it opened.
+         */
+        interval: 220
         onTriggered: {
             if (root.holds === 0 && root.hoverOpened) {
                 Diag.log("shell", `grace elapsed, closing ${root.openPanel}`);
