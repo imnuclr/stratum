@@ -26,6 +26,23 @@ Item {
     // the rest of the session.
     readonly property bool active: Popouts.current === "network"
 
+    /*
+     * The list this popout shows, frozen the moment it stops being the live one.
+     * Signal strengths move constantly and the list is capped, so a re-sort while
+     * the panel is fading out drops a row — which read as a network vanishing
+     * just as you dismissed it. RestoreNone because the point is to keep the last
+     * value, not hand back the empty one it started with.
+     */
+    property var rows: []
+
+    Binding {
+        target: root
+        property: "rows"
+        value: Wifi.enabled ? Wifi.networks : []
+        when: root.active
+        restoreMode: Binding.RestoreNone
+    }
+
     onActiveChanged: Wifi.setScanning(active)
     Component.onCompleted: Wifi.setScanning(active)
     Component.onDestruction: Wifi.setScanning(false)
@@ -74,7 +91,7 @@ Item {
         }
 
         Repeater {
-            model: Wifi.enabled ? Wifi.networks : []
+            model: root.rows
 
             Row {
                 id: entry

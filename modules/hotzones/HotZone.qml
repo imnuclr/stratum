@@ -23,6 +23,7 @@ PanelWindow {
     property real along: 0.5
     property int zoneLength: 320
     property int zoneDepth: 3
+    property int dwell: 120
 
     readonly property bool vertical: edge === "left" || edge === "right"
 
@@ -60,12 +61,26 @@ PanelWindow {
         HoverHandler {
             onHoveredChanged: {
                 if (hovered) {
-                    Shell.openOnHover(root.panel);
                     Shell.hold();
+                    dwell.restart();
                 } else {
+                    dwell.stop();
                     Shell.release();
                 }
             }
+        }
+
+        /*
+         * The pointer has to mean it. Crossing between monitors drags the
+         * pointer straight through the corner zone of the one being left, which
+         * was opening the control centre on every switch. A short dwell ignores
+         * a pass-through without making a deliberate move feel sluggish.
+         */
+        Timer {
+            id: dwell
+
+            interval: root.dwell
+            onTriggered: Shell.openOnHover(root.panel, root.monitor.name)
         }
     }
 }

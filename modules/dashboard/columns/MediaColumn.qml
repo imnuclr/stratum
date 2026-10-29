@@ -17,11 +17,14 @@ Item {
         }
 
         Row {
+            width: parent.width
             spacing: Theme.space(3)
 
             DotImage {
-                width: 104
-                height: 104
+                id: art
+
+                width: 88
+                height: 88
                 // Finer pitch and size-by-brightness: album art is the only
                 // photographic thing in the shell, and thresholding it at a 4px
                 // grid throws away the picture.
@@ -34,13 +37,16 @@ Item {
             }
 
             Column {
+                // Whatever the art leaves. A fixed width here ran the title off
+                // the end of the deck.
+                width: parent.width - (art.visible ? art.width + parent.spacing : 0)
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: Theme.space(1)
 
                 // Title and artist keep their own case. Everything else in the
                 // strip is a caps micro-label, but a track name is a name.
                 Text {
-                    width: 200
+                    width: parent.width
                     elide: Text.ElideRight
                     text: Media.available ? Media.title : "Nothing playing"
                     color: Theme.fg
@@ -51,7 +57,7 @@ Item {
                 }
 
                 Text {
-                    width: 200
+                    width: parent.width
                     elide: Text.ElideRight
                     text: Media.artist
                     visible: Media.artist.length > 0

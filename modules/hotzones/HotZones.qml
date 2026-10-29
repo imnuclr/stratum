@@ -20,6 +20,7 @@ Variants {
             along: 0.5
             zoneLength: Config.forMonitor(modelData.name, "hotzones.deckLength", 520)
             zoneDepth: Config.forMonitor(modelData.name, "hotzones.deckDepth", 6)
+            dwell: Config.forMonitor(modelData.name, "hotzones.deckDwell", 90)
         }
 
         // Bottom right, away from everything: the control centre is the panel you
@@ -33,6 +34,9 @@ Variants {
             // rather than needing the pointer parked in the last few pixels.
             zoneLength: Config.forMonitor(modelData.name, "hotzones.cornerLength", 260)
             zoneDepth: Config.forMonitor(modelData.name, "hotzones.cornerDepth", 10)
+            // Longer than the deck's: this corner sits mid-desktop on a
+            // multi-monitor layout and gets crossed, not aimed at.
+            dwell: Config.forMonitor(modelData.name, "hotzones.cornerDwell", 180)
         }
     }
 }

@@ -30,7 +30,14 @@ PanelWindow {
     property int sheetWidth: 400
     property int sheetHeight: 500
 
+    /*
+     * Built per screen, so the panel being open is not enough — it has to be
+     * open *here*. An empty openScreen means no pointer was involved (IPC, a
+     * keybind) and every screen would be as good as another, so the monitor the
+     * bar is on takes it.
+     */
     readonly property bool open: Shell.openPanel === name
+        && (Shell.openScreen.length === 0 ? monitor.name === Shell.fallbackScreen : Shell.openScreen === monitor.name)
 
     // Panels opened by hover keep themselves alive while hovered; Shell counts
     // the holds and closes once nothing is holding.
@@ -89,7 +96,27 @@ PanelWindow {
                 ? Config.get("bar.margin", 10) + Theme.space(1)
                 : Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
 
-            y: Math.round(edgeGap + Math.max(0, parent.height - height - edgeGap
+            /*
+             * How far out of place the sheet sits while closed. A sheet anchored
+             * to the bottom starts below where it belongs and rises; one anchored
+             * to the top starts above and comes down.
+             *
+             * This moves the item's own y rather than applying a transform. A
+             * transform moves what is drawn but not the input region, so the
+             * pointer and the picture disagree for the length of the animation —
+             * which made hover-opened panels flap open and shut.
+             */
+            property real slide: root.open ? 0 : (root.originY >= 0.5 ? 40 : -40)
+
+            Behavior on slide {
+                NumberAnimation {
+                    duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                }
+            }
+
+            y: Math.round(slide + edgeGap + Math.max(0, parent.height - height - edgeGap
                 - Config.get("bar.margin", 10) - Theme.space(1)) * root.originY)
 
             width: root.sheetWidth
@@ -148,24 +175,6 @@ PanelWindow {
                 return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
             }
 
-            /*
-             * Travel, not just a scale origin. A sheet anchored to the bottom
-             * rises into place and drops back out; one anchored to the top comes
-             * down and goes back up. The scale origin alone was too subtle to
-             * read as a direction, which is why a bottom sheet still looked like
-             * it was unfolding downward.
-             */
-            transform: Translate {
-                y: root.open ? 0 : (root.originY >= 0.5 ? 22 : -22)
-
-                Behavior on y {
-                    NumberAnimation {
-                        duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: root.open ? Theme.expressive : Theme.exitEasing
-                    }
-                }
-            }
             opacity: root.open ? 1 : 0
             scale: root.open ? 1 : 0.94
 

@@ -212,7 +212,32 @@ Item {
                     }
                 }
 
-                opacity: root.shown ? 1 : 0
+                /*
+                 * Hidden while the frame is resizing to fit what is coming. The
+                 * frame already animates its size, but swapping the content in
+                 * the same instant meant the old layout was visible inside a box
+                 * travelling to the new size, which read as a jump rather than
+                 * one panel becoming another. Fading out first lets the frame
+                 * morph empty and the new content arrive into a settled box.
+                 */
+                property bool swapping: false
+
+                opacity: root.shown && !swapping ? 1 : 0
+
+                onSourceChanged: {
+                    if (root.shown)
+                        swapping = true;
+                    settle.restart();
+                }
+
+                Timer {
+                    id: settle
+
+                    // Tracks the frame's own size animation, so the content
+                    // arrives as the box stops moving.
+                    interval: Theme.expressiveMs
+                    onTriggered: loader.swapping = false
+                }
 
                 Behavior on opacity {
                     NumberAnimation {

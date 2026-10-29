@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# stratum — start, stop and inspect the Stratum shell.
+#
+# The lifecycle half of the CLI. `stratumctl` talks to a shell that is already
+# running; this one decides whether it is running at all.
+set -euo pipefail
+
+CONFIG=stratum
+PATTERN="qs -c $CONFIG"
+LOG="${XDG_STATE_HOME:-$HOME/.local/state}/stratum/shell.log"
+
+say()  { printf '  %s\n' "$1"; }
+die()  { printf '  %s\n' "$1" >&2; exit 1; }
+
+# pgrep -f matches this script's own command line, and the shell that invoked it,
+# so both are excluded explicitly. Without that, `stratum status` reports a
+# running shell whenever it is asked.
+pids() {
+  pgrep -f "$PATTERN" 2>/dev/null | grep -vx -e "$$" -e "$PPID" || true
+}
+
+running() { [ -n "$(pids)" ]; }
+
+start() {
+  running && { say "already running"; return 0; }
+  command -v qs >/dev/null || die "quickshell is not installed"
+  mkdir -p "$(dirname "$LOG")"
+  # Detached with its own log, so the shell outlives the terminal that
+  # started it and there is somewhere to look when it does not.
+  qs -c "$CONFIG" >>"$LOG" 2>&1 &
+  disown
+  sleep 1
+  running && say "started" || die "failed to start — see: stratum log"
+}
+
+stop() {
+  running || { say "not running"; return 0; }
+  # SIGTERM first: Quickshell releases its layer surfaces on the way out, and
+  # killing it outright can leave the compositor holding them.
+  pids | xargs -r kill
+  for _ in $(seq 20); do
+    running || { say "stopped"; return 0; }
+    sleep 0.1
+  done
+  pids | xargs -r kill -9
+  say "stopped (forced)"
+}
+
+case "${1:-help}" in
+  start)   start ;;
+  stop)    stop ;;
+  restart) stop; start ;;
+  status)
+    if running; then
+      say "running — pid $(pids | tr '\n' ' ')"
+    else
+      say "not running"
+      exit 1
+    fi
+    ;;
+  log)     mkdir -p "$(dirname "$LOG")"; touch "$LOG"; tail -n "${2:-60}" -f "$LOG" ;;
+  ipc)     shift; exec qs -c "$CONFIG" ipc call "$@" ;;
+  *)
+    cat <<USAGE
+
+  stratum — run the Stratum shell
+
+    stratum start              start it, detached, logging to
+                               $LOG
+    stratum stop
+    stratum restart
+    stratum status             exit 0 if running
+    stratum log [N]            follow the log
+    stratum ipc ...            raw IPC, e.g. stratum ipc panel toggle control
+
+  See also: stratumctl (panels), shellctl (switch between installed shells)
+
+USAGE
+    ;;
+esac
