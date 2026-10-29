@@ -59,7 +59,9 @@ Singleton {
         "battery-vertical": "M9.5 7.5h5v13h-5zM10.5 5.5h3v2h-3",
         "power": "M12 3.5v8M7.8 6.4a7 7 0 1 0 8.4 0",
         "bell": "M12 4a5.5 5.5 0 0 1 5.5 5.5v4l1.5 2.5h-14L6.5 13.5v-4A5.5 5.5 0 0 1 12 4M10 18.5a2 2 0 0 0 4 0",
-        "bolt": "M13 3 7 13h4l-1 8 6-10h-4z"
+        "bolt": "M13 3 7 13h4l-1 8 6-10h-4z",
+        "brightness": "M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6 7.4 7.4M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8",
+        "close": "M6.5 6.5l11 11M17.5 6.5l-11 11"
     })
 
     // The battery outline is drawn once and filled by Glyph, so it isn't a path.

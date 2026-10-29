@@ -9,6 +9,7 @@ import qs.config
 import qs.theme
 import qs.services
 import qs.modules.bar
+import qs.modules.control
 import qs.modules.dashboard
 
 ShellRoot {
@@ -55,4 +56,5 @@ ShellRoot {
 
     Bar {}
     Dashboard {}
+    Control {}
 }

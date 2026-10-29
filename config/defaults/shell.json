@@ -100,5 +100,8 @@
     "place": "",
     "units": "metric"
   },
-  "monitors": {}
+  "monitors": {},
+  "control": {
+    "width": 460
+  }
 }
