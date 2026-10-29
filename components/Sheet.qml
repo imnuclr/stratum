@@ -38,6 +38,8 @@ PanelWindow {
         : Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
     readonly property real edgeGapBottom: Config.get("bar.margin", 10) + Theme.space(1)
     readonly property real availableHeight: monitor.height - edgeGapTop - edgeGapBottom
+    // How far the sheet reaches sideways past its card, toward the screen edge.
+    readonly property real bridge: Theme.space(1)
     property int sheetWidth: 400
     property int sheetHeight: 500
 
@@ -77,8 +79,26 @@ PanelWindow {
         right: true
     }
 
+    /*
+     * Input reaches the sheet across the gap between it and the screen edge it
+     * came from, not just over the card itself.
+     *
+     * A HoverHandler margin cannot do this: the mask is what the compositor
+     * delivers pointer events into, so a handler claiming hover past the mask
+     * gets an enter it is immediately told to take back. Tracing showed exactly
+     * that — hovered going true then false at one unchanging position, inside the
+     * margin, with the pointer not moving at all.
+     *
+     * Bridging to the edge is also the behaviour people expect: running the
+     * pointer to the edge of the screen should not drop the panel that is sitting
+     * against it, and the band is where the hot zone lives, so travelling from
+     * the zone into the sheet never crosses dead ground.
+     */
     mask: Region {
-        item: body
+        x: Math.round(body.x - (root.originX < 0.5 ? root.bridge : 0))
+        y: Math.round(body.y - (root.originY < 0.5 ? root.edgeGapTop : 0))
+        width: Math.round(body.width + root.bridge)
+        height: Math.round(body.height + (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom))
     }
 
 
@@ -156,7 +176,7 @@ PanelWindow {
                     blocking: false
 
                     onHoveredChanged: {
-                        Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds}`);
+                        Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds} at=${Math.round(point.position.x)},${Math.round(point.position.y)} of ${Math.round(parent.width)}x${Math.round(parent.height)}`);
                         if (!root.hoverDismiss)
                             return;
                         if (hovered)

@@ -112,12 +112,19 @@
     "deckDwell": 60,
     "cornerLength": 320,
     "cornerDepth": 24,
-    "cornerDwell": 70
+    "cornerDwell": 70,
+    "notifyLength": 320,
+    "notifyDepth": 24,
+    "notifyDwell": 70
   },
   "session": {
     "width": 300
   },
   "debug": {
     "trace": true
+  },
+  "notifications": {
+    "width": 380,
+    "listHeight": 460
   }
 }

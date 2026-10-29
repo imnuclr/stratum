@@ -114,7 +114,9 @@ Singleton {
 
         // Long enough to cross the gap between a bar item and the panel it
         // opened, short enough that leaving on purpose feels immediate.
-        interval: 380
+        // Long enough to cross a gap at a normal pointer speed. Short enough that
+        // a sheet left behind still goes away without being dismissed.
+        interval: 600
         onTriggered: {
             if (root.holds === 0 && root.hoverOpened) {
                 Diag.log("shell", `grace elapsed, closing ${root.openPanel}`);

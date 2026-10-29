@@ -15,9 +15,6 @@ import qs.utils
 Sheet {
     id: root
 
-    // Notifications are the only unbounded part, so they are what gets capped.
-    readonly property int notificationLimit: Config.get("control.notifications", 4)
-
     name: "control"
     hoverDismiss: true
     originX: 1
@@ -26,15 +23,9 @@ Sheet {
     // Clamped to the room actually available, not to a guess at it.
     sheetHeight: Math.min(availableHeight, body.implicitHeight + Theme.space(4) * 2)
 
-    onOpenChanged: {
-        if (open) {
-            Media.watch();
-            Notifs.watch();
-        } else {
-            Media.unwatch();
-            Notifs.unwatch();
-        }
-    }
+    // Media only: no notification ages are shown here any more, so nothing on
+    // this panel needs a ticking clock.
+    onOpenChanged: open ? Media.watch() : Media.unwatch()
 
     Column {
         id: body
@@ -172,23 +163,27 @@ Sheet {
             }
         }
 
-        Repeater {
-            model: Notifs.list.slice(0, root.notificationLimit)
-
-            NotificationRow {
-                required property var modelData
-
-                width: body.width
-                notification: modelData
-            }
-        }
-
+        /*
+         * The notifications themselves live on their own page. An unbounded list
+         * at the bottom of a fixed panel was always the part that got cut, and a
+         * panel you open to change a setting is not where you want to be reading.
+         * This is the way across.
+         */
         SectionLabel {
-            dim: true
-            text: Notifs.count > root.notificationLimit
-                ? `${Notifs.count - root.notificationLimit} more`
-                : "nothing to show"
-            visible: !Notifs.any || Notifs.count > root.notificationLimit
+            dim: !Notifs.any
+            text: Notifs.any ? "open page" : "nothing to show"
+            color: Notifs.any && openHover.hovered ? Theme.fg : (Notifs.any ? Theme.fgDim : Theme.fgFaint)
+
+            HoverHandler {
+                id: openHover
+
+                cursorShape: Notifs.any ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+
+            TapHandler {
+                enabled: Notifs.any
+                onTapped: Shell.open("notifications", root.monitor.name)
+            }
         }
     }
 }

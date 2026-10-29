@@ -43,6 +43,18 @@ Variants {
              */
             dwell: Config.forMonitor(modelData.name, "hotzones.cornerDwell", 70)
         }
+
+        // Top right, the corner notifications arrive in, so the page and the
+        // toasts share a direction.
+        HotZone {
+            monitor: modelData
+            panel: "notifications"
+            edge: "top"
+            along: 1
+            zoneLength: Config.forMonitor(modelData.name, "hotzones.notifyLength", 320)
+            zoneDepth: Config.forMonitor(modelData.name, "hotzones.notifyDepth", 24)
+            dwell: Config.forMonitor(modelData.name, "hotzones.notifyDwell", 70)
+        }
     
 }
 }

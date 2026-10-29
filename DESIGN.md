@@ -852,15 +852,17 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    takes two screenshots or moves the volume twice. `hl.unbind` has to drop the
    original first; it is guarded with `type(...) == "function"` since it is not
    in every version.
-38. **A child MouseArea with hoverEnabled makes an ancestor's HoverHandler report
-   false.** The sheet's hold was driven by a HoverHandler on its body, and every
-   control inside it — sliders, switches, buttons — is a MouseArea with hover
-   enabled. Tracing showed `bodyHover` flapping true and false with no hot-zone
-   events in between, which is the pointer moving onto a toggle rather than
-   leaving the panel; resting on one for longer than the grace closed the sheet
-   under the pointer. The handler now lives on a transparent overlay above the
-   content with `blocking: false`, which reports the hover without taking it from
-   the controls beneath.
+38. **A HoverHandler margin past the input mask makes hover oscillate.** The mask
+   is what the compositor delivers pointer events into, so a handler claiming
+   hover beyond it gets an enter it is immediately told to take back. Logging the
+   pointer position in the handler showed it exactly: hovered going true then
+   false at one unchanging position, inside the margin, with the pointer not
+   moving at all. Reaching past the card is a job for the mask, which now bridges
+   the gap between the sheet and the screen edge it came from — which is also
+   where the hot zone lives, so travelling from the zone into the sheet crosses no
+   dead ground. **Log the pointer position, not just the hover state:** three
+   rounds of guessing at why hover dropped ended the moment the trace carried a
+   coordinate.
 39. **slurp blocks on stdin when stdin is a pipe.** It takes a list of candidate
    regions that way, so spawned from the shell — which hands a child a pipe — it
    never connected to Wayland and drew nothing: 0 open sockets, blocked in
