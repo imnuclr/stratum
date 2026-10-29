@@ -82,13 +82,19 @@ Item {
     GlobalShortcut {
         appid: "stratum"
         name: "screenshot"
-        onPressed: Screenshot.screen()
+        onPressed: {
+            Diag.log("shortcut", "screenshot pressed");
+            Screenshot.screen();
+        }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "screenshotRegion"
-        onPressed: Screenshot.region()
+        onPressed: {
+            Diag.log("shortcut", "screenshotRegion pressed");
+            Screenshot.region();
+        }
     }
 
     GlobalShortcut {

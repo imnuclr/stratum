@@ -115,6 +115,7 @@ PanelWindow {
                 id: bodyHover
 
                 onHoveredChanged: {
+                    Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds}`);
                     if (!root.hoverDismiss)
                         return;
                     if (hovered)

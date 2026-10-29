@@ -86,11 +86,13 @@ Singleton {
 
     function hold() {
         root.holds++;
+        Diag.log("shell", `hold -> ${root.holds} (${root.openPanel})`);
         grace.stop();
     }
 
     function release() {
         root.holds = Math.max(0, root.holds - 1);
+        Diag.log("shell", `release -> ${root.holds} (${root.openPanel})`);
         if (root.holds === 0 && root.hoverOpened)
             grace.restart();
     }
@@ -106,10 +108,12 @@ Singleton {
 
         // Long enough to cross the gap between a bar item and the panel it
         // opened, short enough that leaving on purpose feels immediate.
-        interval: 260
+        interval: 380
         onTriggered: {
-            if (root.holds === 0 && root.hoverOpened)
+            if (root.holds === 0 && root.hoverOpened) {
+                Diag.log("shell", `grace elapsed, closing ${root.openPanel}`);
                 root.close();
+            }
         }
     }
 }

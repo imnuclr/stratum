@@ -35,6 +35,20 @@ Singleton {
         Hyprland.dispatch(lua ? `hl.dsp.focus({ workspace = "${target}" })` : `workspace ${target}`);
     }
 
+    /*
+     * Focus one window by address. The wayland handle's activate() looked like
+     * the tidier route — it is what the capture source is taken from, so it is
+     * known good — but it does not move Hyprland's focus, so clicking a window in
+     * the overview did nothing. A dispatch does.
+     */
+    function focusWindow(address) {
+        if (!address)
+            return;
+        Hyprland.dispatch(lua
+            ? `hl.dsp.focus({ window = "address:${address}" })`
+            : `focuswindow address:${address}`);
+    }
+
     function toggleSpecial(name) {
         Hyprland.dispatch(lua ? `hl.dsp.workspace.toggle_special("${name}")` : `togglespecialworkspace ${name}`);
     }

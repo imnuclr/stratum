@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.services
 
 /*
  * Screen capture via grim, with slurp for a region and satty for annotation.
@@ -38,6 +39,7 @@ Singleton {
         unlatch.restart();
         root.lastPath = path;
         capture.command = ["sh", "-c", `mkdir -p '${root.directory}'; ${script}`];
+        Diag.log("screenshot", `running: ${script}`);
         capture.running = true;
     }
 
@@ -68,7 +70,10 @@ Singleton {
     Process {
         id: capture
 
-        onExited: root.busy = false
+        onExited: (code, status) => {
+            Diag.log("screenshot", `exited code=${code} status=${status} path=${root.lastPath}`);
+            root.busy = false;
+        }
     }
 
     /*

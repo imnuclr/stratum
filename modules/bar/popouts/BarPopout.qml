@@ -76,9 +76,38 @@ Item {
             ? root.barEdge + Theme.space(1)
             : Math.max(Theme.space(1), Math.min(root.width - targetWidth - Theme.space(1),
                 Popouts.anchorX - targetWidth / 2))
+        /*
+         * Where the top edge sits. Latched when the popout opens or moves to a
+         * different trigger, and deliberately not recomputed when the content
+         * changes size. Centring on the trigger means half of any height change
+         * becomes a slide, so switching between popouts of different heights
+         * moved the panel as well as resizing it — which is most of what read as
+         * a jump. Growing downward from a fixed top is one panel becoming
+         * another.
+         */
+        property real latchedTop: 0
+
+        function relatch() {
+            frame.latchedTop = Popouts.anchorY - frame.targetHeight / 2;
+        }
+
+        onVisibleChanged: if (visible) frame.relatch()
+
+        Connections {
+            target: Popouts
+
+            // A different trigger is a new position; the same trigger showing
+            // different content is not.
+            function onAnchorYChanged() {
+                frame.relatch();
+            }
+        }
+
+        // Still clamped, so taller content grows upward rather than off the
+        // bottom of the screen.
         y: root.vertical
             ? Math.max(Theme.space(1), Math.min(root.height - targetHeight - Theme.space(1),
-                Popouts.anchorY - targetHeight / 2))
+                frame.latchedTop))
             : root.barBottom + Theme.space(1)
 
         width: targetWidth
@@ -192,56 +221,85 @@ Item {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.margins: Theme.space(3)
-            implicitWidth: loader.item?.implicitWidth ?? 200
-            implicitHeight: loader.item?.implicitHeight ?? 90
+
+            /*
+             * Two loaders, crossfading. One loader meant the old layout was still
+             * on screen inside a frame already travelling to the new size, which
+             * read as a jump; hiding it first instead left the frame empty for
+             * the length of the resize, which read as a flicker. Overlapping the
+             * two is the only arrangement where the panel actually becomes the
+             * other panel: the outgoing content fades as the incoming one arrives,
+             * both while the frame is still moving.
+             */
+            property bool useA: true
+
+            readonly property Loader front: useA ? a : b
+            readonly property Loader back: useA ? b : a
+
+            // The frame sizes itself to what is arriving, not what is leaving.
+            implicitWidth: front.item?.implicitWidth ?? 200
+            implicitHeight: front.item?.implicitHeight ?? 90
+
+            function sourceFor(name) {
+                switch (name) {
+                case "network":
+                    return "NetworkPopout.qml";
+                case "bluetooth":
+                    return "BluetoothPopout.qml";
+                case "audio":
+                    return "AudioPopout.qml";
+                default:
+                    return "";
+                }
+            }
+
+            function show(name) {
+                const src = content.sourceFor(name);
+                if (src === content.front.source)
+                    return;
+                // Load into whichever slot is currently invisible, then swap which
+                // one is on top. The outgoing slot keeps its content until its
+                // fade finishes, so there is never a frame with nothing in it.
+                content.back.source = src;
+                content.useA = !content.useA;
+            }
+
+            Component.onCompleted: a.source = content.sourceFor(Popouts.content)
+
+            Connections {
+                target: Popouts
+
+                function onContentChanged() {
+                    content.show(Popouts.content);
+                }
+            }
 
             Loader {
-                id: loader
+                id: a
 
-                anchors.fill: parent
-                source: {
-                    switch (Popouts.content) {
-                    case "network":
-                        return "NetworkPopout.qml";
-                    case "bluetooth":
-                        return "BluetoothPopout.qml";
-                    case "audio":
-                        return "AudioPopout.qml";
-                    default:
-                        return "";
-                    }
-                }
-
-                /*
-                 * Hidden while the frame is resizing to fit what is coming. The
-                 * frame already animates its size, but swapping the content in
-                 * the same instant meant the old layout was visible inside a box
-                 * travelling to the new size, which read as a jump rather than
-                 * one panel becoming another. Fading out first lets the frame
-                 * morph empty and the new content arrive into a settled box.
-                 */
-                property bool swapping: false
-
-                opacity: root.shown && !swapping ? 1 : 0
-
-                onSourceChanged: {
-                    if (root.shown)
-                        swapping = true;
-                    settle.restart();
-                }
-
-                Timer {
-                    id: settle
-
-                    // Tracks the frame's own size animation, so the content
-                    // arrives as the box stops moving.
-                    interval: Theme.expressiveMs
-                    onTriggered: loader.swapping = false
-                }
+                opacity: root.shown && content.useA ? 1 : 0
+                visible: opacity > 0.001
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: Theme.micro
+                        duration: Theme.standard
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
+                    }
+                }
+            }
+
+            Loader {
+                id: b
+
+                opacity: root.shown && !content.useA ? 1 : 0
+                visible: opacity > 0.001
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Theme.standard
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
                     }
                 }
             }

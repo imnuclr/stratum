@@ -93,10 +93,7 @@ Rectangle {
 
     TapHandler {
         onTapped: {
-            // The wayland handle rather than a dispatch: activating a toplevel is
-            // what this means, and it does not need the address formatting that
-            // a focuswindow dispatch does.
-            root.client?.wayland?.activate();
+            Hypr.focusWindow(root.ipc?.address ?? root.client?.address ?? "");
             Shell.close();
         }
     }

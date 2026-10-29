@@ -77,4 +77,30 @@ ShellRoot {
             return Theme.dark ? "dark" : "light";
         }
     }
+
+    /*
+     * Popouts by name, for scripting and for testing them without a pointer —
+     * they are hover-driven, so there is otherwise no way to put one on screen
+     * from outside the shell.
+     */
+    IpcHandler {
+        target: "popout"
+
+        function at(name: string, monitor: string, along: int): void {
+            // hold, because nothing is hovering it: the popout would otherwise be
+            // dismissed by its own grace timer the moment it appeared.
+            Popouts.hold = true;
+            Popouts.showAtY(name, along, monitor.length > 0 ? monitor : Quickshell.screens[0].name);
+        }
+
+        function hide(): void {
+            Popouts.hold = false;
+            Popouts.release(Popouts.current);
+            Popouts.current = "";
+        }
+
+        function current(): string {
+            return Popouts.current;
+        }
+    }
 }
