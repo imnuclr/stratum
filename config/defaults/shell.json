@@ -84,9 +84,11 @@
     }
   },
   "weather": {
+    "enabled": true,
     "provider": "open-meteo",
     "latitude": null,
     "longitude": null,
+    "place": "",
     "units": "metric"
   },
   "monitors": {}

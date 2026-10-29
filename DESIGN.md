@@ -615,7 +615,7 @@ Deliberately ordered so something looks good on screen at the end of every phase
 | **0 — Skeleton** | repo, `shell.qml`, `Config` + `Theme` with live reload, `Sheet`/`Tile`/`Pill`/`DotText`, fonts vendored | a floating pill shows the real clock in Doto, and editing `theme.json` changes it without a reload |
 | **0 — done** | verified on the real hardware: bar renders on both monitors, Doto clock live, per-monitor height override applied, config and theme hot-reload from JSON, `panel` IPC round-trips | &check; |
 | **1 — Bar** | three islands, workspaces, active window, tray, status cluster, per-monitor, `thirds` layout | daily-drivable bar on both displays |
-| **2 — Services** | remaining services: Media, Notifications, SysStats, Gpu, Weather | every number in the dashboard is real |
+| **2 — Services** | SysStats, Media, Netstat, Weather &mdash; done. Notifications and Gpu remain | every number in the dashboard is real |
 | **3 — Dashboard + Control** | both sheets, in-place tile expansion, all 8 categories | you stop opening the old shell |
 | **4 — Wallpaper + depth** | wallpaper layer, cutout parallax, depth shader, transitions | the subject sits in front of a widget |
 | **5 — Widget canvas** | registry, grid, edit mode, first 8 widgets | you can lay out a desktop with the mouse |

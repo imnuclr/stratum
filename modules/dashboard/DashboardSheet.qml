@@ -4,25 +4,47 @@ import qs.components
 import qs.config
 import qs.services
 import qs.theme
+import qs.modules.dashboard.columns
 
 /*
  * The wide strip: categories divided by vertical hairlines, no scrolling.
- * Columns are placeholders until phase 3; the time column is already live.
+ *
+ * Each column is its own file, loaded by the name it appears under in
+ * dashboard.columns, so reordering or dropping one is a config change.
  */
 Sheet {
     id: root
+
+    readonly property var columnNames: Config.get("dashboard.columns", ["time", "weather", "system", "network", "media"])
 
     name: "dashboard"
     originX: 0.5
     sheetWidth: Math.min(Config.get("dashboard.width", 1900), monitor.width - Theme.space(4) * 2)
     sheetHeight: 220
 
+    /*
+     * The polled services idle at a slow tick and speed up while something is
+     * reading them. Counting watchers rather than starting and stopping outright
+     * means two panels showing the same number don't fight over the timer.
+     */
+    onOpenChanged: {
+        if (open) {
+            SysStats.watch();
+            Netstat.watch();
+            Media.watch();
+        } else {
+            SysStats.unwatch();
+            Netstat.unwatch();
+            Media.unwatch();
+        }
+    }
+
     Row {
         anchors.fill: parent
         anchors.margins: 1
 
         Repeater {
-            model: Config.get("dashboard.columns", ["time", "weather", "system", "network", "media"])
+            model: root.columnNames
 
             Item {
                 id: column
@@ -30,9 +52,9 @@ Sheet {
                 required property int index
                 required property string modelData
 
-                readonly property bool last: index === Config.get("dashboard.columns", []).length - 1
+                readonly property bool last: index === root.columnNames.length - 1
 
-                width: (root.sheetWidth - 2) / Config.get("dashboard.columns", []).length
+                width: (root.sheetWidth - 2) / root.columnNames.length
                 height: parent.height
 
                 Rectangle {
@@ -54,72 +76,22 @@ Sheet {
                     }
 
                     Loader {
-                        active: column.modelData === "time"
-                        visible: active
-
-                        sourceComponent: Column {
-                            spacing: Theme.space(2)
-
-                            DotText {
-                                text: Time.format("HH:mm")
-                                size: 52
-                            }
-
-                            SectionLabel {
-                                dim: true
-                                text: `${Time.format("d MMMM")} · week ${Time.weekNumber()}`
-                            }
-
-                            DotBar {
-                                count: 30
-                                value: Time.dayProgress
-                            }
-                        }
-                    }
-
-                    // Phase 3 fills the rest. Until then each column shows the
-                    // primitive it will be built from, driven by real values where
-                    // one exists, so a regression in a primitive is visible here.
-                    Loader {
-                        active: column.modelData === "media"
-                        visible: active
-
-                        sourceComponent: DotImage {
-                            width: 104
-                            height: 104
-                            cell: 4
-                            // Phase 3 replaces this with Mpris track artwork.
-                            source: Config.get("dashboard.artPlaceholder", "")
-                        }
-                    }
-
-                    Loader {
-                        active: column.modelData !== "time" && column.modelData !== "media"
-                        visible: active
-
-                        sourceComponent: Row {
-                            spacing: Theme.space(3)
-
-                            DotRing {
-                                width: 74
-                                height: 74
-                                count: 40
-                                dotSize: 3.2
-                                value: 0.43
-
-                                DotText {
-                                    anchors.centerIn: parent
-                                    text: "43"
-                                    size: 17
-                                }
-                            }
-
-                            DotField {
-                                anchors.verticalCenter: parent.verticalCenter
-                                rows: 6
-                                cell: 7
-                                dotSize: 4
-                                values: [0.2, 0.5, 0.35, 0.8, 0.6, 0.9, 0.45, 0.7, 0.3, 0.55]
+                        // A name with no column file renders nothing rather than
+                        // failing the whole sheet.
+                        source: {
+                            switch (column.modelData) {
+                            case "time":
+                                return "columns/TimeColumn.qml";
+                            case "weather":
+                                return "columns/WeatherColumn.qml";
+                            case "system":
+                                return "columns/SystemColumn.qml";
+                            case "network":
+                                return "columns/NetworkColumn.qml";
+                            case "media":
+                                return "columns/MediaColumn.qml";
+                            default:
+                                return "";
                             }
                         }
                     }
