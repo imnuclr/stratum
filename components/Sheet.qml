@@ -16,7 +16,7 @@ import qs.theme
 PanelWindow {
     id: root
 
-    default property alias content: body.data
+    default property alias content: card.data
 
     required property string name
     required property ShellScreen monitor
@@ -45,7 +45,7 @@ PanelWindow {
 
     // The window stays mapped until the exit transition has finished, otherwise
     // the sheet vanishes instead of shrinking.
-    visible: open || body.opacity > 0.001
+    visible: open || card.opacity > 0.001
 
     screen: monitor
     color: "transparent"
@@ -77,84 +77,39 @@ PanelWindow {
 
         Keys.onEscapePressed: Shell.close()
 
-        Rectangle {
+        /*
+         * Fixed geometry: where the sheet sits when it is open, and nowhere else.
+         * The input mask and the hover that holds the sheet open both read this
+         * item, so neither moves while the sheet animates.
+         *
+         * That matters because the sheet is reached from a hot zone at the screen
+         * edge. Animating this item's own position put its mask over that zone
+         * for the length of the slide, the zone lost the pointer, and the panel
+         * closed and reopened on a stationary cursor. The card inside does the
+         * moving instead.
+         */
+        Item {
             id: body
 
-            // Clamped so a sheet growing from an island near the screen edge stays
-            // on screen rather than hanging off it.
-            // Offset from whichever edge the bar occupies, and clamped so a sheet
-            // growing from an item near the far edge stays on screen rather than
-            // hanging off it.
             readonly property real barOffset: Config.get("bar.orientation", "vertical") === "vertical"
                 ? Config.get("bar.width", 56) + Config.get("bar.margin", 10) + Theme.space(1)
                 : 0
 
+            // Clamped so a sheet growing from an item near the far edge stays on
+            // screen rather than hanging off it.
             x: Math.round(Math.max(barOffset + Theme.space(1),
                 Math.min(parent.width - width - Theme.space(1),
                     barOffset + (parent.width - barOffset) * root.originX - width / 2)))
+
             readonly property real edgeGap: Config.get("bar.orientation", "vertical") === "vertical"
                 ? Config.get("bar.margin", 10) + Theme.space(1)
                 : Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(1)
 
-            /*
-             * How far out of place the sheet sits while closed. A sheet anchored
-             * to the bottom starts below where it belongs and rises; one anchored
-             * to the top starts above and comes down.
-             *
-             * This moves the item's own y rather than applying a transform. A
-             * transform moves what is drawn but not the input region, so the
-             * pointer and the picture disagree for the length of the animation —
-             * which made hover-opened panels flap open and shut.
-             */
-            property real slide: root.open ? 0 : (root.originY >= 0.5 ? 40 : -40)
-
-            Behavior on slide {
-                NumberAnimation {
-                    duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
-                }
-            }
-
-            y: Math.round(slide + edgeGap + Math.max(0, parent.height - height - edgeGap
+            y: Math.round(edgeGap + Math.max(0, parent.height - height - edgeGap
                 - Config.get("bar.margin", 10) - Theme.space(1)) * root.originY)
 
             width: root.sheetWidth
             height: root.sheetHeight
-            radius: Theme.rSheet
-            color: Theme.surface
-            border.width: 1
-            border.color: Theme.lineHi
-
-            /*
-             * Dismiss affordance at the bottom edge. Clicking outside already
-             * closes the sheet, but nothing on the sheet itself said so.
-             */
-            Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: Theme.space(2)
-                width: 9
-                height: 9
-                radius: width / 2
-                color: grip.containsMouse ? Theme.fg : Theme.fgFaint
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Theme.micro
-                    }
-                }
-
-                MouseArea {
-                    id: grip
-
-                    anchors.fill: parent
-                    anchors.margins: -8
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Shell.close()
-                }
-            }
 
             HoverHandler {
                 id: bodyHover
@@ -169,39 +124,97 @@ PanelWindow {
                 }
             }
 
-            transformOrigin: {
-                if (root.originY >= 0.5)
-                    return root.originX >= 0.75 ? Item.BottomRight : (root.originX <= 0.25 ? Item.BottomLeft : Item.Bottom);
-                return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
-            }
-
-            opacity: root.open ? 1 : 0
-            scale: root.open ? 1 : 0.94
-
             // Swallow clicks so they don't reach the dismiss layer underneath.
             MouseArea {
                 anchors.fill: parent
             }
 
-            /*
-             * Leaving is quicker than arriving. A panel you have decided to
-             * dismiss should get out of the way, while one arriving has to be
-             * followed by the eye — the same duration both ways makes the exit
-             * feel like it is lingering.
-             */
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
-                }
-            }
+            Rectangle {
+                id: card
 
-            Behavior on scale {
-                NumberAnimation {
-                    duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                /*
+                 * How far out of place the sheet sits while closed. One anchored
+                 * to the bottom starts below where it belongs and rises into
+                 * place; one anchored to the top starts above and comes down.
+                 */
+                property real slide: root.open ? 0 : (root.originY >= 0.5 ? 56 : -56)
+
+                Behavior on slide {
+                    NumberAnimation {
+                        duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                    }
+                }
+
+                x: 0
+                y: Math.round(slide)
+                width: parent.width
+                height: parent.height
+                radius: Theme.rSheet
+                color: Theme.surface
+                border.width: 1
+                border.color: Theme.lineHi
+
+                transformOrigin: {
+                    if (root.originY >= 0.5)
+                        return root.originX >= 0.75 ? Item.BottomRight : (root.originX <= 0.25 ? Item.BottomLeft : Item.Bottom);
+                    return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
+                }
+
+                opacity: root.open ? 1 : 0
+                scale: root.open ? 1 : 0.94
+
+                /*
+                 * Dismiss affordance at the bottom edge. Clicking outside already
+                 * closes the sheet, but nothing on the sheet itself said so.
+                 */
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: Theme.space(2)
+                    width: 9
+                    height: 9
+                    radius: width / 2
+                    color: grip.containsMouse ? Theme.fg : Theme.fgFaint
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Theme.micro
+                        }
+                    }
+
+                    MouseArea {
+                        id: grip
+
+                        anchors.fill: parent
+                        anchors.margins: -8
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Shell.close()
+                    }
+                }
+
+                /*
+                 * Leaving is quicker than arriving. A panel you have decided to
+                 * dismiss should get out of the way, while one arriving has to be
+                 * followed by the eye — the same duration both ways makes the exit
+                 * feel like it is lingering.
+                 */
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                    }
+                }
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
+                    }
                 }
             }
         }

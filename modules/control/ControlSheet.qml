@@ -77,13 +77,38 @@ Sheet {
             width: parent.width
         }
 
-        SliderPill {
-            width: parent.width
-            icon: "brightness"
-            value: Brightness.value
-            label: `${Math.round(Brightness.value * 100)}`
-            enabled: Brightness.ready
-            onMoved: v => Brightness.set(v)
+        /*
+         * One slider per display, named, because two monitors do not agree about
+         * what looks right — and a single slider moving both meant setting the
+         * dimmer one correctly always overexposed the other. A single-display
+         * machine gets exactly one and looks no different to before.
+         */
+        Repeater {
+            model: Brightness.displays
+
+            Column {
+                id: dim
+
+                required property var modelData
+
+                width: parent.width
+                spacing: Theme.space(1)
+
+                // Only worth naming when there is more than one to tell apart.
+                SectionLabel {
+                    text: dim.modelData.label
+                    visible: Brightness.displays.length > 1
+                }
+
+                SliderPill {
+                    width: parent.width
+                    icon: "brightness"
+                    value: dim.modelData.value
+                    label: `${Math.round(dim.modelData.value * 100)}`
+                    enabled: Brightness.ready
+                    onMoved: v => Brightness.setFor(dim.modelData.id, v)
+                }
+            }
         }
 
         SliderPill {

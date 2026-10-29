@@ -17,6 +17,14 @@ Singleton {
     readonly property string directory: `${Quickshell.env("HOME")}/Pictures/Screenshots`
 
     property string lastPath: ""
+
+    /*
+     * Guards against one keypress firing twice, not against taking another
+     * screenshot. This used to be a plain `busy` flag held for the lifetime of
+     * the capture, which latched: anything that stopped the process without a
+     * clean exit left it true and every screenshot afterwards was silently
+     * dropped until the shell restarted.
+     */
     property bool busy: false
 
     function stamp() {
@@ -27,6 +35,7 @@ Singleton {
         if (root.busy)
             return;
         root.busy = true;
+        unlatch.restart();
         root.lastPath = path;
         capture.command = ["sh", "-c", `mkdir -p '${root.directory}'; ${script}`];
         capture.running = true;
@@ -60,5 +69,18 @@ Singleton {
         id: capture
 
         onExited: root.busy = false
+    }
+
+    /*
+     * The capture can outlive the process that started it — slurp waits for a
+     * selection for as long as it takes — so the guard is released on a timer
+     * rather than on exit alone. Short enough that a cancelled selection does not
+     * block the next attempt for long.
+     */
+    Timer {
+        id: unlatch
+
+        interval: 600
+        onTriggered: root.busy = false
     }
 }
