@@ -1,0 +1,65 @@
+{
+  "name": "nothing-light",
+  "mode": "light",
+  "color": {
+    "bg": "#F2F2F3",
+    "panel": "#FFFFFF",
+    "surface": "#FFFFFF",
+    "surfaceHi": "#EBEBED",
+    "surfaceTop": "#DEDEE1",
+    "line": "#14000000",
+    "lineHi": "#26000000",
+    "fg": "#0A0A0B",
+    "fgDim": "#5C5C62",
+    "fgFaint": "#9A9AA0",
+    "dotOn": "#0A0A0B",
+    "dotOff": "#21000000",
+    "accent": "#E5252B",
+    "ok": "#4ADE80",
+    "warn": "#FBBF24",
+    "crit": "#EF4444"
+  },
+  "radius": {
+    "tile": 20,
+    "sheet": 28,
+    "inner": 12
+  },
+  "space": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48
+  ],
+  "blur": {
+    "sheet": 32,
+    "lock": 48,
+    "strength": 0.9
+  },
+  "font": {
+    "display": "Doto",
+    "ui": "Geist",
+    "mono": "JetBrainsMono Nerd Font"
+  },
+  "motion": {
+    "micro": 120,
+    "standard": 200,
+    "sheet": 320,
+    "ambient": 500,
+    "dotStagger": 8,
+    "enterEasing": [
+      0.2,
+      0,
+      0,
+      1
+    ],
+    "exitEasing": [
+      0.3,
+      0,
+      0.8,
+      0.15
+    ]
+  }
+}

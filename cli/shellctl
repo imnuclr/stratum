@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# shellctl — switch between installed Quickshell desktop shells.
+#
+# Stratum is built alongside caelestia rather than replacing it, so this picks
+# which one owns the session. The choice persists to ~/.config/stratum/active-shell
+# and is what the Hyprland autostart reads.
+set -euo pipefail
+
+STATE="${XDG_CONFIG_HOME:-$HOME/.config}/stratum/active-shell"
+QS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
+
+# name|launch command|detection pattern
+SHELLS=(
+  "stratum|qs -c stratum|qs -c stratum"
+  "caelestia|caelestia shell|caelestia"
+)
+
+dim()  { printf '\033[2m%s\033[0m' "$1"; }
+bold() { printf '\033[1m%s\033[0m' "$1"; }
+red()  { printf '\033[31m%s\033[0m' "$1"; }
+
+field() { echo "$1" | cut -d'|' -f"$2"; }
+
+running_shell() {
+  for entry in "${SHELLS[@]}"; do
+    if pgrep -f "$(field "$entry" 3)" 2>/dev/null | grep -qv -e "^$$\$" -e "^$PPID\$"; then
+      field "$entry" 1
+      return 0
+    fi
+  done
+  return 1
+}
+
+installed() {
+  local name=$1
+  case "$name" in
+    stratum)   [[ -e "$QS_DIR/stratum" ]] && command -v qs >/dev/null ;;
+    caelestia) command -v caelestia >/dev/null ;;
+    *)         return 1 ;;
+  esac
+}
+
+cmd_list() {
+  local current; current=$(running_shell || echo "")
+  echo
+  dim "  ACTIVE SHELL"; echo
+  for entry in "${SHELLS[@]}"; do
+    local name; name=$(field "$entry" 1)
+    local mark="  " state
+    [[ "$name" == "$current" ]] && mark="$(printf '\033[1m●\033[0m ')"
+    if installed "$name"; then
+      state=$([[ "$name" == "$current" ]] && echo "running" || echo "available")
+    else
+      state="not installed"
+    fi
+    printf '  %s%-14s %s\n' "$mark" "$(bold "$name")" "$(dim "$state")"
+  done
+  echo
+}
+
+cmd_use() {
+  local target=${1:-}
+  [[ -z "$target" ]] && { red "  need a shell name"; echo; exit 1; }
+
+  local found=""
+  for entry in "${SHELLS[@]}"; do
+    [[ "$(field "$entry" 1)" == "$target" ]] && found=$entry
+  done
+  [[ -z "$found" ]] && { red "  unknown shell: $target"; echo; exit 1; }
+
+  if ! installed "$target"; then
+    red "  $target is not installed"; echo
+    [[ "$target" == stratum ]] && dim "  run: ln -s $PWD $QS_DIR/stratum" && echo
+    exit 1
+  fi
+
+  # Stop whatever is running, including a shell this script didn't start.
+  # pgrep/pkill -f match this script's own command line too, so filter out our
+  # own pid and our parent's rather than killing the caller.
+  for entry in "${SHELLS[@]}"; do
+    for pid in $(pgrep -f "$(field "$entry" 3)" 2>/dev/null || true); do
+      [[ "$pid" == "$$" || "$pid" == "$PPID" ]] && continue
+      kill "$pid" 2>/dev/null || true
+    done
+  done
+  sleep 0.4
+
+  mkdir -p "$(dirname "$STATE")"
+  echo "$target" > "$STATE"
+
+  local launch; launch=$(field "$found" 2)
+  dim "  starting $target"; echo
+  setsid nohup $launch >/dev/null 2>&1 &
+  sleep 0.6
+
+  if running_shell >/dev/null; then
+    printf '  %s %s\n' "$(bold '●')" "$(bold "$target")"
+  else
+    red "  $target failed to start"; echo
+    dim "  try running '$launch' directly to see the error"; echo
+    exit 1
+  fi
+}
+
+cmd_restart() {
+  local current; current=$(running_shell || cat "$STATE" 2>/dev/null || echo "stratum")
+  cmd_use "$current"
+}
+
+cmd_pick() {
+  local names=() entry
+  for entry in "${SHELLS[@]}"; do
+    installed "$(field "$entry" 1)" && names+=("$(field "$entry" 1)")
+  done
+  [[ ${#names[@]} -eq 0 ]] && { red "  no shells installed"; echo; exit 1; }
+
+  if command -v fzf >/dev/null; then
+    local choice
+    choice=$(printf '%s\n' "${names[@]}" | fzf --height 8 --reverse --prompt 'shell > ' --border=none) || exit 0
+    cmd_use "$choice"
+    return
+  fi
+
+  cmd_list
+  local i=1
+  for entry in "${names[@]}"; do printf '  %d) %s\n' "$i" "$entry"; i=$((i+1)); done
+  echo
+  read -rp "  shell > " pick
+  [[ "$pick" =~ ^[0-9]+$ ]] && cmd_use "${names[$((pick-1))]}"
+}
+
+case "${1:-pick}" in
+  list|ls)      cmd_list ;;
+  use|switch)   shift; cmd_use "${1:-}" ;;
+  restart)      cmd_restart ;;
+  status)       running_shell || { dim "  no shell running"; echo; exit 1; } ;;
+  pick|"")      cmd_pick ;;
+  -h|--help|help)
+    cat <<USAGE
+
+  shellctl — switch desktop shells
+
+    shellctl              interactive picker
+    shellctl list         show installed shells and which is running
+    shellctl use NAME     switch to NAME
+    shellctl restart      restart the running shell
+    shellctl status       print the running shell's name
+
+USAGE
+    ;;
+  *) red "  unknown command: $1"; echo; exit 1 ;;
+esac

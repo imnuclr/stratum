@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# stratumctl — talk to a running Stratum over Quickshell IPC.
+set -euo pipefail
+
+ipc() { qs -c stratum ipc call "$@"; }
+
+case "${1:-help}" in
+  toggle)  ipc panel toggle "${2:?panel name required}" ;;
+  open)    ipc panel open "${2:?panel name required}" ;;
+  close)   ipc panel close ;;
+  current) ipc panel current ;;
+  reload)  pkill -USR1 -f "qs -c stratum" || { echo "stratum is not running" >&2; exit 1; } ;;
+  *)
+    cat <<USAGE
+
+  stratumctl — control a running Stratum
+
+    stratumctl toggle PANEL    dashboard | controlCentre | launcher
+    stratumctl open PANEL
+    stratumctl close
+    stratumctl current         print the open panel, if any
+    stratumctl reload
+
+USAGE
+    ;;
+esac

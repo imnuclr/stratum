@@ -1,0 +1,6 @@
+build/
+*.qmlc
+*.jsc
+.qmlls.ini
+assets/fonts/*.ttf
+assets/fonts/*.otf
