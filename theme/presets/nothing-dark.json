@@ -17,7 +17,8 @@
     "accent": "#E5252B",
     "ok": "#4ADE80",
     "warn": "#FBBF24",
-    "crit": "#EF4444"
+    "crit": "#EF4444",
+    "fgBright": "#D2D2D8"
   },
   "radius": {
     "tile": 20,

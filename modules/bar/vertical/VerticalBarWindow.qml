@@ -64,6 +64,9 @@ PanelWindow {
     Tile {
         id: column
 
+        // Matches the popout surface: a panel growing out of the bar should be the
+        // same material as the bar, and level 1 is a shade lighter.
+        level: 0
         x: root.onLeft ? 0 : parent.width - width
         width: root.barWidth
         anchors.top: parent.top

@@ -122,15 +122,16 @@ Item {
 
             /*
              * The one filled control on the strip: everything else here is a
-             * reading rather than an action. Solid white rather than the accent,
-             * which this shell spends on state, not on buttons.
+             * reading rather than an action. It shares the accent with the dot at
+             * the head of the bar, which is the shell's other control — the two
+             * are the only places the accent appears, so they match.
              */
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 44
                 height: 44
                 radius: width / 2
-                color: transport.containsMouse ? Qt.lighter(Theme.fg, 1.1) : Theme.fg
+                color: transport.containsMouse ? Qt.lighter(Theme.accent, 1.15) : Theme.accent
 
                 Behavior on color {
                     ColorAnimation {

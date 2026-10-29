@@ -14,16 +14,19 @@ Column {
     spacing: -2
 
     DotText {
+        anchors.horizontalCenter: parent.horizontalCenter
         text: Time.format("HH")
         size: 26
     }
 
     DotText {
+        anchors.horizontalCenter: parent.horizontalCenter
         text: Time.format("mm")
         size: 26
     }
 
     SectionLabel {
+        anchors.horizontalCenter: parent.horizontalCenter
         topPadding: Theme.space(1)
         text: Time.format("ddd d")
     }

@@ -90,7 +90,9 @@ Item {
 
         opacity: root.shown ? 1 : 0
         scale: root.shown ? 1 : 0.96
-        transformOrigin: Item.Top
+        // Grows out of the edge it hangs off, so the motion reads as the panel
+        // emerging from the bar rather than appearing in place.
+        transformOrigin: root.vertical ? Item.Left : Item.Top
         visible: opacity > 0.001
         // Content is laid out at full size while the frame is still animating to
         // it, so without this it spills above and below the panel for a frame or

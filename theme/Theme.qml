@@ -31,6 +31,7 @@ Singleton {
     readonly property color lineHi: pick("color.lineHi", "#24FFFFFF")
     readonly property color fg: pick("color.fg", "#F4F4F5")
     readonly property color fgDim: pick("color.fgDim", "#9A9AA0")
+    readonly property color fgBright: pick("color.fgBright", "#D2D2D8")
     readonly property color fgFaint: pick("color.fgFaint", "#5C5C62")
     readonly property color dotOn: pick("color.dotOn", "#FFFFFF")
     readonly property color dotOff: pick("color.dotOff", "#21FFFFFF")

@@ -60,7 +60,7 @@ Column {
                     visible: item.modelData.kind === "network" && !Network.wiredActive && Wifi.enabled
                     size: 17
                     strength: Network.strength
-                    color: item.lit ? Theme.fg : Theme.fgDim
+                    color: item.lit ? Theme.fg : Theme.fgBright
                 }
 
                 Glyph {
@@ -68,7 +68,7 @@ Column {
                     visible: item.modelData.kind === "network" && Network.wiredActive
                     name: "ethernet"
                     size: 17
-                    color: item.lit ? Theme.fg : Theme.fgDim
+                    color: item.lit ? Theme.fg : Theme.fgBright
                 }
 
                 Glyph {
@@ -76,7 +76,7 @@ Column {
                     visible: item.modelData.kind === "bluetooth"
                     name: Bt.enabled ? "bluetooth" : "bluetooth-off"
                     size: 17
-                    color: item.lit ? Theme.fg : Theme.fgDim
+                    color: item.lit ? Theme.fg : Theme.fgBright
                 }
 
                 Glyph {
@@ -84,16 +84,16 @@ Column {
                     visible: item.modelData.kind === "audio"
                     name: Icons.volume(Audio.volume, Audio.muted)
                     size: 17
-                    color: item.lit ? Theme.fg : Theme.fgDim
+                    color: item.lit ? Theme.fg : Theme.fgBright
                 }
 
-                Glyph {
+                ProfileGlyph {
                     anchors.horizontalCenter: parent.horizontalCenter
                     visible: item.modelData.kind === "profile"
-                    name: "bolt"
-                    size: 16
-                    filled: Power.profile === "performance"
-                    color: Power.profile === "power-saver" ? Theme.fgFaint : (item.lit ? Theme.fg : Theme.fgDim)
+                    size: 17
+                    count: Power.profiles.length
+                    level: Power.profiles.indexOf(Power.profile) + 1
+                    color: item.lit ? Theme.fg : Theme.fgBright
                 }
 
                 Glyph {
@@ -109,7 +109,7 @@ Column {
                     visible: item.modelData.kind === "battery" && Power.hasBattery
                     text: `${Math.round(Power.percentage * 100)}`
                     size: 13
-                    color: Power.critical ? Theme.accent : Theme.fgDim
+                    color: Power.critical ? Theme.accent : Theme.fgBright
                 }
 
                 Glyph {
