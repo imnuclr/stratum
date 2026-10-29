@@ -794,13 +794,35 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    pill — `Icons.trayIcon` rewrites it to a `file://` URL, and anything that still
    fails falls back to a glyph rather than rendering nothing. Pixmaps also need
    `sourceSize` at the drawn size; upscaling a 16px pixmap to 34px turns it to mush.
-28. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+28. **A child `MouseArea` with `hoverEnabled` takes hover from its parent** and
+   fires the parent's `onExited` as it does. Every switch, radio and button inside
+   a popout therefore read as the pointer leaving the panel, and it closed as soon
+   as you stopped moving or went to click something. A `HoverHandler` stays
+   hovered while the pointer is over a child, and because it exposes hover as
+   bound state rather than as events, the close decision no longer depends on
+   which event arrived last. The window `mask` has to cover the gap between the
+   bar and the panel too: input outside the mask never reaches the client, so a
+   HoverHandler `margin` over unmasked space does nothing.
+29. **One `Binding` per monitor writing the same singleton property fight each
+   other.** `Variants` builds a popout per screen, so both were driving
+   `Popouts.surfaceHovered` and the screen with nothing hovered clamped it to
+   false. Shared state written from a per-monitor component needs a `when` guard
+   naming the monitor that owns it.
+30. **Warping the cursor is not a substitute for hovering.**
+   `hl.dsp.cursor.move({x, y})` is the only way to move the pointer here, and a
+   teleport produces enter and leave sequences that real motion does not — it made
+   popouts look like they opened and closed on their own long after the behaviour
+   had been fixed, and sent me chasing a bug the user could not reproduce. Useful
+   for confirming that a hover path fires at all; worthless for judging whether
+   hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
+   timer, so a sampled state reads as closed when it is merely closing.
+31. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-29. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+32. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-30. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+33. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

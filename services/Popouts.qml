@@ -8,16 +8,20 @@ import Quickshell
  *
  * Separate from Shell.openPanel on purpose: popouts are transient and
  * hover-driven, they never grab keyboard focus, and one may replace another
- * without closing first — which is what lets the container slide and resize
- * between them instead of blinking.
+ * without closing first — which is what lets the container morph between them
+ * instead of blinking.
  *
- * Closing is decided by how many hover sources are active rather than by the last
- * event received. Qt can deliver the new item's enter before the old item's
- * leave, so a close request from whichever element was left most recently would
- * cancel the popout that had just opened — the menu appeared and immediately
- * shut. Counting sources makes the outcome independent of delivery order, and
- * covers the popout body as a source too, so travelling from a bar item into the
- * panel and back out to a different item never drops the popout.
+ * Whether to close is decided from hover *state*, never from the last enter or
+ * leave event received. Two things make event-driven logic wrong here:
+ *
+ *  - Qt may deliver the new item's enter before the old item's leave, so acting
+ *    on the most recent leave closes the popout that was just opened.
+ *  - A child MouseArea with hoverEnabled takes hover from its parent and fires
+ *    the parent's onExited, so every control inside a panel reads as leaving it.
+ *
+ * The panel therefore reports a continuously bound `surfaceHovered` from a
+ * HoverHandler, which stays true while the pointer is over a child, and triggers
+ * report which one of them is hovered rather than that one was left.
  */
 Singleton {
     id: root
@@ -39,59 +43,53 @@ Singleton {
     // being pinned, so it still closes on an explicit dismiss.
     property bool hold: false
 
-    // Names of everything the pointer is currently inside: trigger items by their
-    // popout name, and the panel body as "surface".
-    property var sources: ({})
+    // Bound by the panel from a HoverHandler, so it stays true over its controls.
+    property bool surfaceHovered: false
+    // The trigger the pointer is currently inside, if any.
+    property string hoveredTrigger: ""
+
+    readonly property bool anyHover: surfaceHovered || hoveredTrigger.length > 0
 
     onCurrentChanged: {
         if (current.length > 0)
             content = current;
     }
 
-    // Releasing the hold after the pointer has already left would otherwise leave
-    // the popout up with nothing to close it.
-    onHoldChanged: {
-        if (!hold && Object.keys(sources).length === 0)
+    onAnyHoverChanged: root.settle()
+
+    onHoldChanged: root.settle()
+
+    function settle() {
+        if (anyHover || hold)
+            hideTimer.stop();
+        else
             hideTimer.restart();
     }
 
-    // A trigger was entered: show its popout and register it as a hover source.
+    // A trigger was entered.
     function show(name, x, monitor) {
         hideTimer.stop();
-        sources[name] = true;
-        sources = sources;
+        hoveredTrigger = name;
         current = name;
         anchorX = x;
         monitorName = monitor;
     }
 
-    // The panel body was entered. It holds the popout open without changing which
-    // popout is shown.
-    function enterSurface() {
-        hideTimer.stop();
-        sources.surface = true;
-        sources = sources;
-    }
-
-    function leaveSurface() {
-        root.release("surface");
-    }
-
-    // Something was left. Only the last source leaving starts the countdown.
+    /*
+     * A trigger was left. Ignored unless it is still the hovered one: when the
+     * pointer moves straight to the next trigger, that one has already claimed
+     * `hoveredTrigger` and this leave is stale.
+     */
     function release(name) {
-        delete sources[name];
-        sources = sources;
-
-        if (hold)
-            return;
-        if (Object.keys(sources).length === 0)
-            hideTimer.restart();
+        if (hoveredTrigger === name)
+            hoveredTrigger = "";
     }
 
     function hide() {
         hideTimer.stop();
         hold = false;
-        sources = ({});
+        surfaceHovered = false;
+        hoveredTrigger = "";
         current = "";
     }
 
@@ -100,6 +98,11 @@ Singleton {
         id: hideTimer
 
         interval: 180
-        onTriggered: root.hide()
+        // Re-checked rather than trusted: the timer may have been started before
+        // the pointer landed somewhere that holds the popout open.
+        onTriggered: {
+            if (!root.anyHover && !root.hold)
+                root.hide();
+        }
     }
 }

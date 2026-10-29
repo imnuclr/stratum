@@ -27,29 +27,48 @@ Item {
 
     // The bar window masks input to this rect, so it must be empty when closed.
     readonly property alias maskItem: maskRect
-    readonly property bool shown: Popouts.open && Popouts.monitorName === monitorName
+    readonly property bool mine: Popouts.monitorName === monitorName
+    readonly property bool shown: Popouts.open && mine
 
     anchors.fill: parent
+
+    // Bridges the gap between the bar strip and the panel. The HoverHandler's
+    // margin is worthless on its own: input outside the window's mask never
+    // reaches the client, so the pointer would cross unmasked space on the way
+    // down and the popout would close before reaching the panel.
+    readonly property real bridge: Theme.space(1) + Theme.space(2)
 
     Item {
         id: maskRect
 
         x: frame.x
-        y: frame.y
+        y: frame.y - root.bridge
         width: root.shown ? frame.width : 0
-        height: root.shown ? frame.height : 0
+        height: root.shown ? frame.height + root.bridge : 0
     }
 
     Tile {
         id: frame
 
+        /*
+         * Size the content wants, before the Behaviors smooth it. The clamp below
+         * has to use this rather than `width`: computing it from the animating
+         * width positions the panel for the size it is leaving, so switching to a
+         * wider popout settled slightly off screen and then visibly corrected
+         * itself once the width animation caught up. Driving x and width from the
+         * same instant target makes the two animate in lockstep — the panel
+         * morphs from one shape to the next.
+         */
+        readonly property real targetWidth: content.implicitWidth + Theme.space(3) * 2
+        readonly property real targetHeight: content.implicitHeight + Theme.space(3) * 2
+
         // Clamped so a popout under an item near the edge stays on screen.
-        x: Math.max(Theme.space(1), Math.min(root.width - width - Theme.space(1),
-            Popouts.anchorX - width / 2))
+        x: Math.max(Theme.space(1), Math.min(root.width - targetWidth - Theme.space(1),
+            Popouts.anchorX - targetWidth / 2))
         y: root.barBottom + Theme.space(1)
 
-        width: content.implicitWidth + Theme.space(3) * 2
-        height: content.implicitHeight + Theme.space(3) * 2
+        width: targetWidth
+        height: targetHeight
 
         level: 0
         floating: true
@@ -117,14 +136,36 @@ Item {
             }
         }
 
-        // Extends up into the gap between the bar and the frame, so travelling
-        // from the bar item into the popout never crosses unhovered space.
-        MouseArea {
-            anchors.fill: parent
-            anchors.topMargin: -(Theme.space(1) + Theme.space(2))
-            hoverEnabled: true
-            onEntered: Popouts.enterSurface()
-            onExited: Popouts.leaveSurface()
+        /*
+         * A HoverHandler rather than a MouseArea: a parent MouseArea loses hover
+         * to any child MouseArea that has hoverEnabled set, and fires its own
+         * onExited when it does — so every switch, radio and button in the panel
+         * read as the pointer leaving, and the popout closed under the cursor as
+         * soon as you stopped moving or went to click something. A HoverHandler
+         * stays hovered while the pointer is over a child.
+         *
+         * The margin also extends the region up into the gap between the bar and
+         * the panel, so travelling down from the bar item never crosses
+         * unhovered space.
+         */
+        HoverHandler {
+            id: surfaceHover
+
+            margin: Theme.space(1) + Theme.space(2)
+        }
+
+        /*
+         * Only the monitor showing the popout drives the shared hover state.
+         * There is one of these per screen, so without the guard the other
+         * monitor's binding — permanently false, since nothing is hovered there —
+         * fights this one and whichever evaluates last wins.
+         */
+        Binding {
+            target: Popouts
+            property: "surfaceHovered"
+            value: surfaceHover.hovered
+            when: root.mine
+            restoreMode: Binding.RestoreNone
         }
 
         Item {
