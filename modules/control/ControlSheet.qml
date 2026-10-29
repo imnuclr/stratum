@@ -37,6 +37,63 @@ Sheet {
         }
     }
 
+    /*
+     * The networks or devices, in a card of their own above the panel.
+     *
+     * Reaching for a network used to close the control centre and put the list in
+     * a bar popout at the other end of the screen, which is a strange thing to do
+     * to someone who has just said they want to pick one: the thing they clicked
+     * disappears. Putting the list inside the panel instead made the panel grow
+     * and shrink, and collapsing it dragged the panel's own edge past the pointer
+     * that had just clicked — so it closed. Above the panel, the panel never
+     * moves.
+     */
+    satelliteHeight: Shell.expandedChip.length > 0 ? Math.round(listLoader.implicitHeight + Theme.space(4) * 2) : 0
+
+    satellite: Rectangle {
+        id: listCard
+
+        anchors.fill: parent
+        radius: Theme.rSheet
+        color: Theme.surface
+        opacity: Shell.expandedChip.length > 0 ? 1 : 0
+
+        /*
+         * Grows out of the chip rather than appearing over it: anchored to the
+         * bottom edge it shares with the panel, so it unfolds upward from the
+         * control that opened it and folds back into it.
+         */
+        transformOrigin: Item.Bottom
+        scale: Shell.expandedChip.length > 0 ? 1 : 0.82
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Theme.sheetMs
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.gentle
+            }
+        }
+
+        Behavior on scale {
+            NumberAnimation {
+                duration: Theme.sheetMs
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.gentle
+            }
+        }
+
+        Loader {
+            id: listLoader
+
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: Theme.space(4)
+            active: Shell.expandedChip.length > 0
+            sourceComponent: Shell.expandedChip === "network" ? networkList : deviceList
+        }
+    }
+
     Component {
         id: networkList
 
@@ -87,22 +144,6 @@ Sheet {
                 onToggled: Bt.toggle()
                 onExpanded: Shell.expand("bluetooth")
             }
-        }
-
-        /*
-         * The networks or devices, in the panel itself.
-         *
-         * Reaching for a network used to close the control centre and put the
-         * list in a bar popout at the other end of the screen, which is a strange
-         * thing to do to someone who has just said they want to pick a network:
-         * the thing they clicked disappears. The list opens here instead, under
-         * the chip it belongs to, and the panel stays where it is.
-         */
-        Loader {
-            width: parent.width
-            active: Shell.expandedChip.length > 0
-            visible: active
-            sourceComponent: Shell.expandedChip === "network" ? networkList : deviceList
         }
 
         QuickToggles {

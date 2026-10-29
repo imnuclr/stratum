@@ -19,6 +19,23 @@ PanelWindow {
 
     default property alias content: card.data
 
+    /*
+     * A second card above this one, for a list a control in the sheet opens.
+     *
+     * It sits outside the sheet rather than inside it because a sheet that grows
+     * and shrinks to fit an expanding section moves its own edges under the
+     * pointer: collapsing the section pulled the panel's boundary past the
+     * pointer that had just clicked, hover ended, and the whole thing closed. A
+     * separate card leaves the sheet exactly where it is.
+     */
+    property alias satellite: halo.data
+    property real satelliteHeight: 0
+
+    readonly property real satelliteGap: Theme.space(2)
+    readonly property real satelliteRoom: root.satelliteHeight > 0
+        ? root.satelliteHeight + root.satelliteGap
+        : 0
+
     required property string name
     required property ShellScreen monitor
 
@@ -172,9 +189,10 @@ PanelWindow {
         : Math.round(root.edgeGapTop + Math.max(0, root.availableHeight - root.sheetHeight) * root.originY)
 
     readonly property real reachX: Math.round(root.cardX - (root.originX < 0.5 ? root.bridge : 0))
-    readonly property real reachY: Math.round(root.cardY - (root.originY < 0.5 ? root.edgeGapTop : 0))
+    readonly property real reachY: Math.round(root.cardY
+        - (root.originY < 0.5 ? root.edgeGapTop : 0) - root.satelliteRoom)
     readonly property real reachW: Math.round(root.sheetWidth + root.bridge)
-    readonly property real reachH: Math.round(root.sheetHeight
+    readonly property real reachH: Math.round(root.sheetHeight + root.satelliteRoom
         + (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom))
 
     mask: Region {
@@ -307,6 +325,20 @@ PanelWindow {
                         root.give();
                     }
                 }
+            }
+
+            /*
+             * Where a satellite is drawn: directly above the card, growing out of
+             * the edge nearest the control that opened it.
+             */
+            Item {
+                id: halo
+
+                x: Math.round(root.cardX - root.reachX)
+                y: 0
+                width: root.sheetWidth
+                height: root.satelliteHeight
+                visible: root.satelliteHeight > 0
             }
 
             Item {

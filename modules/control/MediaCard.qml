@@ -13,7 +13,19 @@ Rectangle {
     implicitHeight: 88
 
     radius: Theme.rTile
-    color: Theme.surfaceHi
+    // Answers the pointer like every other tile in the shell does. Nothing here
+    // said it could be interacted with at all until it was clicked.
+    color: cardHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+
+    Behavior on color {
+        ColorAnimation {
+            duration: Theme.micro
+        }
+    }
+
+    HoverHandler {
+        id: cardHover
+    }
 
     Row {
         anchors.fill: parent
@@ -67,9 +79,35 @@ Rectangle {
                 name: "skip-back"
                 size: 15
                 filled: true
-                color: Media.canPrevious ? Theme.fgBright : Theme.fgFaint
+                color: !Media.canPrevious
+                    ? Theme.fgFaint
+                    : (prevHover.hovered ? Theme.fg : Theme.fgBright)
+                scale: prevTap.pressed ? 0.86 : 1
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.micro
+                    }
+                }
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Theme.micro
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.gentle
+                    }
+                }
+
+                HoverHandler {
+                    id: prevHover
+
+                    enabled: Media.canPrevious
+                    cursorShape: Qt.PointingHandCursor
+                }
 
                 TapHandler {
+                    id: prevTap
+
                     onTapped: Media.previous()
                 }
             }
@@ -80,6 +118,17 @@ Rectangle {
                 height: 44
                 radius: width / 2
                 color: Theme.accent
+                // The one red thing on the panel, so it carries the clearest
+                // response: lifts under the pointer, gives when held.
+                scale: playTap.pressed ? 0.9 : (playHover.hovered ? 1.07 : 1)
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Theme.standard
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.gentle
+                    }
+                }
 
                 Glyph {
                     anchors.centerIn: parent
@@ -89,7 +138,15 @@ Rectangle {
                     color: Theme.bg
                 }
 
+                HoverHandler {
+                    id: playHover
+
+                    cursorShape: Qt.PointingHandCursor
+                }
+
                 TapHandler {
+                    id: playTap
+
                     onTapped: Media.playPause()
                 }
             }
@@ -99,9 +156,35 @@ Rectangle {
                 name: "skip-forward"
                 size: 15
                 filled: true
-                color: Media.canNext ? Theme.fgBright : Theme.fgFaint
+                color: !Media.canNext
+                    ? Theme.fgFaint
+                    : (nextHover.hovered ? Theme.fg : Theme.fgBright)
+                scale: nextTap.pressed ? 0.86 : 1
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.micro
+                    }
+                }
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Theme.micro
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.gentle
+                    }
+                }
+
+                HoverHandler {
+                    id: nextHover
+
+                    enabled: Media.canNext
+                    cursorShape: Qt.PointingHandCursor
+                }
 
                 TapHandler {
+                    id: nextTap
+
                     onTapped: Media.next()
                 }
             }

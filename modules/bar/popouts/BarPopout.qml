@@ -225,25 +225,34 @@ Item {
             implicitHeight: loader.item?.implicitHeight ?? 90
 
             /*
-             * One loader, and the content changes the instant the popout does.
-             * What makes this read as a morph rather than a jump is the frame
-             * around it: its top edge is latched, so a taller or shorter panel
-             * grows downward instead of re-centring, and its width and height
-             * animate from the same instant target.
+             * One loader, swapped in three steps rather than one.
+             *
+             * Changing the source the instant the popout changes puts the new
+             * content on screen at the old content's size, and the frame then
+             * resizes around it — which is the jump. So: fade out quickly, adopt
+             * the new content while nothing is visible, and fade back in slowly
+             * enough that the frame has arrived at its new size by the time there
+             * is anything to look at. The resize happens, as it must, but never
+             * under something the eye is tracking.
              *
              * Two fancier versions were tried and both failed. Two loaders
              * crossfading needed a flag to say which was live, and the flag and
              * the source assignment did not commute — the old content stayed on
              * screen with Popouts.current already changed. Capturing the outgoing
              * layout into a ShaderEffectSource and fading that out left the frame
-             * rendering empty. Neither was worth more attempts than the thing it
-             * was improving.
+             * rendering empty.
              */
             Loader {
                 id: loader
 
+                // What the bar is asking for, and what is actually loaded.
+                readonly property string want: Popouts.content
+                property string have: Popouts.content
+
+                onWantChanged: adopt.restart()
+
                 source: {
-                    switch (Popouts.content) {
+                    switch (loader.have) {
                     case "network":
                         return "NetworkPopout.qml";
                     case "bluetooth":
@@ -255,12 +264,22 @@ Item {
                     }
                 }
 
-                opacity: root.shown ? 1 : 0
+                opacity: root.shown && loader.have === loader.want ? 1 : 0
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: Theme.micro
+                        // Out fast, in over the length of the frame's resize.
+                        duration: loader.have === loader.want ? Theme.popoutMs : Theme.micro
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.gentle
                     }
+                }
+
+                Timer {
+                    id: adopt
+
+                    interval: Theme.micro
+                    onTriggered: loader.have = loader.want
                 }
             }
         }

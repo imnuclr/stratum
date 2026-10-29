@@ -873,7 +873,18 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    longer duration, with nothing abrupt at either end, is what "smooth" means
    here. The old enter curve, [0.2, 0, 0, 1], put almost all of the travel in the
    first few frames and then crawled, which had the same effect.
-41. **A window that only exists while open has no settled layout when it opens.**
+41. **A section that grows inside a panel moves the panel's own edge.** The
+   networks list expanding inside the control centre pushed its boundary out, and
+   collapsing it pulled that boundary back past the pointer that had just
+   clicked — hover ended, and the panel closed on the second click of a pair. A
+   list a control opens belongs in a card of its own, outside the panel, so the
+   panel never moves.
+42. **Swapping a popout's content is a resize under the eye.** Changing the
+   loader's source the instant the popout changes puts new content on screen at
+   the old content's size, and the frame then resizes around it. Fade out, adopt
+   the new content while nothing is visible, and fade back in over the length of
+   the resize: it still resizes, but never under something being looked at.
+43. **A window that only exists while open has no settled layout when it opens.**
    The control centre's rect went 428x398 and then 428x704 across consecutive
    opens — the first before its content had measured itself. That moves the input
    mask under a stationary pointer, the compositor has to re-decide what the
@@ -882,40 +893,40 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    that keeps closing never gets past it, so it looked like a property of the
    smaller screen. Keep the window mapped with an empty input region instead, so
    layout settles at launch and an open is a single region change.
-42. **An animation that fights a fade is not read as motion.** A sheet rising 56px
+44. **An animation that fights a fade is not read as motion.** A sheet rising 56px
    while fading in was described as arriving from the top, four times, because the
    travel was swamped by the opacity. The geometry was right the whole time —
    origin at the bottom corner, slide positive, rising. 255px of travel reads as a
    direction; 56 reads as materialising. Verified by logging the animated value
    rather than by looking: pixel-sampling a fading panel measures the fade, not
    the position, which sent two separate investigations the wrong way.
-43. **A JavaScript array as a model also kills a drag.** A Repeater over an array
+45. **A JavaScript array as a model also kills a drag.** A Repeater over an array
    rebuilds every delegate when the array is replaced, and a brightness slider
    replaced the array on each step of its own drag — so the delegate under the
    pointer was destroyed mid-gesture, taking the MouseArea's grab with it. The
    slider moved once per press and then went dead, while the volume slider, which
    is not in a Repeater, dragged perfectly. Same cause as the notifications not
    animating, two symptoms that looked nothing alike.
-44. **ddcutil's model and the output's model are the same EDID field.** Matching a
+46. **ddcutil's model and the output's model are the same EDID field.** Matching a
    ddcutil display to a Hyprland output is not the guesswork an earlier note here
    claimed: "XG22VA" against HDMI-A-1, "34E6UC" against DP-2, read straight off
    both. Take it from `Quickshell.screens`, not from Hyprland's monitor object —
    that reports the model for one of these two outputs and not the other.
-45. **A JavaScript array as a view's model resets it on every change.** A new
+47. **A JavaScript array as a view's model resets it on every change.** A new
    array is a whole new model, so the view is never told that one row went — it
    is told to start again, and a reset destroys and rebuilds every delegate. No
    add, remove or displaced transition can run across one, and the rows simply
    blink from one arrangement to the next. It looks like the transitions were
    written wrong. Give a view the server's own object model and keep the array
    for counting and walking.
-46. **Drive the pointer instead of asking.** Four rounds were spent on a hover
+48. **Drive the pointer instead of asking.** Four rounds were spent on a hover
    fault that could not be reproduced by reading code, each one shipping a
    different theory. `hl.dsp.cursor.move` walked in small steps — 20ms apart,
    not teleported — reproduces a real approach well enough to watch a panel open,
    hold and close, and found the cause in one pass. A teleport is still no good
    for judging whether a hover path *feels* right, but for whether it fires at
    all it is decisive, and far better than another round-trip.
-47. **A HoverHandler margin past the input mask makes hover oscillate.** The mask
+49. **A HoverHandler margin past the input mask makes hover oscillate.** The mask
    is what the compositor delivers pointer events into, so a handler claiming
    hover beyond it gets an enter it is immediately told to take back. Logging the
    pointer position in the handler showed it exactly: hovered going true then
@@ -926,32 +937,32 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    dead ground. **Log the pointer position, not just the hover state:** three
    rounds of guessing at why hover dropped ended the moment the trace carried a
    coordinate.
-48. **slurp blocks on stdin when stdin is a pipe.** It takes a list of candidate
+50. **slurp blocks on stdin when stdin is a pipe.** It takes a list of candidate
    regions that way, so spawned from the shell — which hands a child a pipe — it
    never connected to Wayland and drew nothing: 0 open sockets, blocked in
    `anon_pipe_read`, alive for a quarter of an hour. From a terminal it worked
    perfectly, which is what made it look like a keybind fault for three rounds.
    `</dev/null` on every slurp. Check `/proc/<pid>/wchan` and the socket count
    before blaming the thing that launched a process.
-49. **A sheet that cannot fit goes to the top.** Deriving y from the space left
+51. **A sheet that cannot fit goes to the top.** Deriving y from the space left
    over and flooring it at zero places a too-tall sheet at `edgeGap`, so the
    control centre — momentarily taller than a 1080 screen while its content
    settles — appeared at the top and travelled down. A bottom-anchored sheet pins
    its bottom edge unconditionally. It never showed on the 1440 monitor, where it
    always fit, which is why it could not be reproduced from the desk it was
    reported on.
-50. **`gpu-screen-recorder -w focused` demands `-s WxH`** and errors out without
+52. **`gpu-screen-recorder -w focused` demands `-s WxH`** and errors out without
    it, recording nothing at all. Naming the output (`-w DP-2`) gives its native
    resolution for free; `-w screen` picks whichever output it considers first,
    which is not the one being worked on.
-51. **Hyprland's modmask has SHIFT at 1 and ALT at 8, not the other way round.**
+53. **Hyprland's modmask has SHIFT at 1 and ALT at 8, not the other way round.**
    `SUPER + SHIFT` is 65; 72 is `SUPER + ALT`. Counting binds at mask 72 to decide
    who owned `SUPER + SHIFT + S` compared two different key combinations and
    produced a confident, wrong conclusion that `hl.unbind` cannot reclaim modified
    keys. It can: at mask 65 the unbind works and the surviving bind is ours. The
    actual screenshot fault was the latched busy flag below. Read the mask before
    trusting a bind count.
-52. **A flag held for the lifetime of an external capture latches.** Screenshot
+54. **A flag held for the lifetime of an external capture latches.** Screenshot
    guarded re-entry with a `busy` flag cleared on process exit. Anything that
    ended the capture without that exit left it set and every screenshot
    afterwards was dropped in silence — which is why restarting the shell appeared
@@ -963,11 +974,11 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    key meant removing one side and counting binds again. Screenshot actions moved
    to `Print`, `SUPER + Print` and `CTRL + Print`; `SHIFT + Print` is not usable
    because that combination emits SysRq rather than Print.
-53. **A transform moves what is drawn but not where input lands.** Sliding a sheet
+55. **A transform moves what is drawn but not where input lands.** Sliding a sheet
    in with `transform: Translate` left the picture and the pointer disagreeing for
    the length of the animation, and hover-opened panels flapped open and shut.
    Animating the item's own `y` keeps the mask with it.
-54. **Warping the cursor is not a substitute for hovering** — and after changing
+56. **Warping the cursor is not a substitute for hovering** — and after changing
    an item's size, recompute where it actually is before concluding a hover is
    broken. Two rounds were spent on a popout that was opening correctly the whole
    time, off the edge of the crop being captured.
@@ -978,13 +989,13 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    for confirming that a hover path fires at all; worthless for judging whether
    hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
    timer, so a sampled state reads as closed when it is merely closing.
-55. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+57. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-56. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+58. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-57. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+59. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.
