@@ -22,7 +22,30 @@ import qs.utils
 Row {
     id: root
 
-    property bool expanded: false
+    // Hover-driven, with a grace period so the row doesn't collapse while the
+    // pointer is crossing into it.
+    readonly property bool expanded: hover.hovered || closing.running
+
+    HoverHandler {
+        id: hover
+
+        // Collapsed, the row is only as wide as the chevron, which is a small
+        // target to ask someone to hit.
+        margin: Theme.space(2)
+
+        onHoveredChanged: {
+            if (hovered)
+                closing.stop();
+            else
+                closing.restart();
+        }
+    }
+
+    Timer {
+        id: closing
+
+        interval: 220
+    }
 
     readonly property var items: SystemTray.items?.values ?? []
     readonly property bool hasItems: items.length > 0
@@ -56,6 +79,8 @@ Row {
             }
         }
 
+        // Hover is handled for the row as a whole, above. A click toggle here
+        // would fight it: collapsing while still hovered reopens immediately.
         MouseArea {
             id: mouse
 
@@ -63,7 +88,6 @@ Row {
             anchors.margins: -4
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.expanded = !root.expanded
         }
     }
 
