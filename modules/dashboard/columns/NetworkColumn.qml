@@ -51,13 +51,13 @@ Item {
 
     // Spans the column: the history is the only thing in here with a shape, and
     // a narrow field beside empty space reads as unfinished.
-    DotField {
+    DotFieldDual {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
-        anchors.right: parent.right
-        rows: 7
-        cell: 6.2
-        dotSize: 3.4
-        values: Netstat.rxHistory
+        rows: 8
+        cell: 9.4
+        dotSize: 4.4
+        upper: Netstat.txHistory
+        lower: Netstat.rxHistory
     }
 }

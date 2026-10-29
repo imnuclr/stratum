@@ -25,8 +25,8 @@ Item {
             DotMatrix {
                 anchors.verticalCenter: parent.verticalCenter
                 pattern: WeatherGlyphs.forCode(Weather.code, Weather.day)
-                cell: 6.5
-                dotSize: 4.4
+                cell: 7
+                dotSize: 5
             }
 
             Row {
@@ -81,13 +81,13 @@ Item {
                         text: modelData.day
                     }
 
-                    Glyph {
+                    DotMatrix {
                         anchors.horizontalCenter: parent.horizontalCenter
                         // Always the daytime variant: a row of crescent moons
                         // for four consecutive days reads as a bug.
-                        name: WeatherGlyphs.outlineForCode(modelData.code, true)
-                        size: 23
-                        stroke: 1.5
+                        pattern: WeatherGlyphs.forCode(modelData.code, true)
+                        cell: 4.2
+                        dotSize: 3
                         color: Theme.fgDim
                     }
 

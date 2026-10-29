@@ -71,9 +71,9 @@ Item {
         spacing: Theme.space(2)
 
         DotBar {
-            count: 38
-            dotSize: 3
-            litScale: 1.5
+            count: 24
+            dotSize: 5.6
+            litScale: 1.15
             value: Media.progress
             visible: Media.length > 0
         }

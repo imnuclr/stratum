@@ -28,17 +28,17 @@ Item {
                 spacing: Theme.space(2)
 
                 DotRing {
-                    width: 86
-                    height: 86
+                    width: 92
+                    height: 92
                     count: 44
-                    dotSize: 3.4
+                    dotSize: 4.2
 
                     value: modelData.value
 
                     DotText {
                         anchors.centerIn: parent
                         text: modelData.reading
-                        size: 21
+                        size: 23
                     }
                 }
 
@@ -123,9 +123,9 @@ Item {
             // One column per core, all sixteen in a single block — splitting them
             // into two rows of eight implies a grouping the cores do not have.
             DotField {
-                rows: 5
-                cell: 7.4
-                dotSize: 3.4
+                rows: 7
+                cell: 9.4
+                dotSize: 4.4
                 values: SysStats.cores
             }
         }

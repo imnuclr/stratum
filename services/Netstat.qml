@@ -33,6 +33,7 @@ Singleton {
 
     readonly property int historyLength: 22
     property var rxHistory: new Array(22).fill(0)
+    property var txHistory: new Array(22).fill(0)
 
     property int watchers: 0
 
@@ -100,6 +101,7 @@ Singleton {
             root.txRate = (tx - root.lastTx) / dt;
             root.peak = Math.max(root.peak, root.rxRate, root.txRate);
             root.rxHistory = [...root.rxHistory, root.rxScaled].slice(-root.historyLength);
+            root.txHistory = [...root.txHistory, root.txScaled].slice(-root.historyLength);
         }
 
         root.lastRx = rx;
