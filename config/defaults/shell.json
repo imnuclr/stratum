@@ -111,5 +111,8 @@
     "deckDepth": 6,
     "cornerLength": 260,
     "cornerDepth": 10
+  },
+  "session": {
+    "width": 300
   }
 }

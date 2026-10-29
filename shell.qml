@@ -8,10 +8,12 @@ import Quickshell.Io
 import qs.config
 import qs.theme
 import qs.services
+import qs.modules
 import qs.modules.bar
 import qs.modules.control
 import qs.modules.dashboard
 import qs.modules.hotzones
+import qs.modules.session
 
 ShellRoot {
     id: root
@@ -59,4 +61,6 @@ ShellRoot {
     Dashboard {}
     Control {}
     HotZones {}
+    Session {}
+    Shortcuts {}
 }

@@ -842,7 +842,17 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    while that Column was `anchors.centerIn` the item. Nothing warns, the glyphs
    still draw, and the item is left with no hover area at all. Size from the
    child directly, with a floor.
-36. **Warping the cursor is not a substitute for hovering** — and after changing
+36. **`hyprctl dispatch global stratum:x` does nothing under a Lua config.**
+   Dispatch arguments are evaluated as Lua, so the global dispatcher has to be
+   called as `hyprctl dispatch "hl.dsp.global('stratum:x')"`. The plain form
+   returns `ok` and fires nothing, which cost a round of chasing a shortcut that
+   was registered and working.
+37. **Hyprland keeps both bindings when a key is bound twice.** Binding a key
+   already bound in keybinds.lua does not replace it — both fire, so a press
+   takes two screenshots or moves the volume twice. `hl.unbind` has to drop the
+   original first; it is guarded with `type(...) == "function"` since it is not
+   in every version.
+38. **Warping the cursor is not a substitute for hovering** — and after changing
    an item's size, recompute where it actually is before concluding a hover is
    broken. Two rounds were spent on a popout that was opening correctly the whole
    time, off the edge of the crop being captured.
@@ -853,13 +863,13 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    for confirming that a hover path fires at all; worthless for judging whether
    hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
    timer, so a sampled state reads as closed when it is merely closing.
-37. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+39. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-38. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+40. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-39. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+41. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.
