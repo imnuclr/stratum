@@ -46,6 +46,8 @@ Item {
         id: hover
     }
 
+    // The deck is reached from the top edge; this pins it open for when you want
+    // it to stay up without holding the pointer there.
     TapHandler {
         onTapped: Shell.toggle("dashboard")
     }

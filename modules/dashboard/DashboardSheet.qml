@@ -28,6 +28,7 @@ Sheet {
     }
 
     name: "dashboard"
+    hoverDismiss: true
     originX: 0.5
     sheetWidth: Math.min(Config.get("dashboard.width", 1900), monitor.width - Theme.space(4) * 2)
     sheetHeight: Config.get("dashboard.height", 360)

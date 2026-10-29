@@ -13,7 +13,12 @@ Item {
     id: root
 
     property int level: 1
-    property int count: 3
+    /*
+     * Always four bars, whatever the machine offers. The glyph is a scale, and a
+     * scale that changes length between machines is not one — the active level is
+     * mapped onto the four rather than the bars being counted out.
+     */
+    property int count: 4
     property real size: 17
     property color color: Theme.fg
     property color dimColor: Qt.alpha(Theme.fgFaint, 0.5)

@@ -26,6 +26,17 @@ Singleton {
     readonly property int count: list.length
     readonly property bool any: count > 0
 
+    /*
+     * Do not disturb. Notifications are still accepted and still listed — the
+     * flag suppresses the interruption, not the record, so nothing is lost while
+     * it is on.
+     */
+    property bool dnd: false
+
+    function toggleDnd() {
+        root.dnd = !root.dnd;
+    }
+
     // id -> epoch ms. Pruned on close rather than swept, so it cannot grow.
     property var arrivals: ({})
 

@@ -29,6 +29,10 @@ PanelWindow {
 
     readonly property bool open: Shell.openPanel === name
 
+    // Panels opened by hover keep themselves alive while hovered; Shell counts
+    // the holds and closes once nothing is holding.
+    property bool hoverDismiss: false
+
     // The window stays mapped until the exit transition has finished, otherwise
     // the sheet vanishes instead of shrinking.
     visible: open || body.opacity > 0.001
@@ -37,7 +41,13 @@ PanelWindow {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    /*
+     * Never Exclusive. A sheet that grabs the keyboard takes it from the focused
+     * window for as long as it is up, which for a panel opened by hover means
+     * typing stops working by accident. OnDemand still lets a text field inside
+     * take focus once it is clicked.
+     */
+    WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     anchors {
         top: true
@@ -46,11 +56,10 @@ PanelWindow {
         right: true
     }
 
-    // Click anywhere outside the sheet dismisses it.
-    MouseArea {
-        anchors.fill: parent
-        onClicked: Shell.close()
+    mask: Region {
+        item: body
     }
+
 
     FocusScope {
         anchors.fill: parent
@@ -111,6 +120,19 @@ PanelWindow {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Shell.close()
+                }
+            }
+
+            HoverHandler {
+                id: bodyHover
+
+                onHoveredChanged: {
+                    if (!root.hoverDismiss)
+                        return;
+                    if (hovered)
+                        Shell.hold();
+                    else
+                        Shell.release();
                 }
             }
 

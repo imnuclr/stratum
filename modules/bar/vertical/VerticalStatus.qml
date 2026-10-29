@@ -30,6 +30,7 @@ Column {
             { kind: "network", popout: "network" },
             { kind: "bluetooth", popout: "bluetooth" },
             { kind: "audio", popout: "audio" },
+            { kind: "dnd", popout: "" },
             { kind: "profile", popout: "" },
             { kind: "battery", popout: "" },
             { kind: "power", popout: "" }
@@ -87,13 +88,27 @@ Column {
                     color: item.lit ? Theme.fg : Theme.fgBright
                 }
 
+                Glyph {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: item.modelData.kind === "dnd"
+                    name: Notifs.dnd ? "bell-off" : "bell"
+                    size: 17
+                    color: Notifs.dnd ? Theme.accent : (item.lit ? Theme.fg : Theme.fgBright)
+                }
+
+                /*
+                 * A reading, not a control: the profile is set in the control
+                 * centre, where the four levels are named and the consequence of
+                 * each is legible. A click target that silently cycles through
+                 * them is how you end up on power-saver without knowing.
+                 */
                 ProfileGlyph {
                     anchors.horizontalCenter: parent.horizontalCenter
                     visible: item.modelData.kind === "profile"
                     size: 17
-                    count: Power.profiles.length
-                    level: Power.profiles.indexOf(Power.profile) + 1
-                    color: item.lit ? Theme.fg : Theme.fgBright
+                    level: Math.max(1, Math.round((Power.profiles.indexOf(Power.profile) + 1)
+                        / Math.max(1, Power.profiles.length) * 4))
+                    color: Theme.fgBright
                 }
 
                 Glyph {
@@ -138,8 +153,8 @@ Column {
 
             TapHandler {
                 onTapped: {
-                    if (item.modelData.kind === "profile")
-                        Power.cycleProfile();
+                    if (item.modelData.kind === "dnd")
+                        Notifs.toggleDnd();
                     else if (item.modelData.kind === "power")
                         Shell.toggle("session");
                 }

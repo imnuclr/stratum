@@ -71,7 +71,12 @@ Item {
         spacing: Theme.space(2)
 
         DotBar {
-            count: 24
+            id: progress
+
+            // A fixed count stops wherever it stops; deriving it from the width
+            // means the run spans the column whatever the column is.
+            readonly property real pitch: dotSize * 2
+            count: Math.max(8, Math.floor((parent.width + dotSize) / pitch))
             dotSize: 5.6
             litScale: 1.15
             value: Media.progress

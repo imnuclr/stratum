@@ -11,6 +11,7 @@ import qs.services
 import qs.modules.bar
 import qs.modules.control
 import qs.modules.dashboard
+import qs.modules.hotzones
 
 ShellRoot {
     id: root
@@ -57,4 +58,5 @@ ShellRoot {
     Bar {}
     Dashboard {}
     Control {}
+    HotZones {}
 }

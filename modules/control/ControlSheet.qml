@@ -17,6 +17,7 @@ Sheet {
     id: root
 
     name: "control"
+    hoverDismiss: true
     originX: 0
     sheetWidth: Config.get("control.width", 460)
     sheetHeight: Math.min(monitor.height - Theme.space(4) * 4, body.implicitHeight + Theme.space(4) * 2)
