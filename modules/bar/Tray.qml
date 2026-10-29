@@ -8,10 +8,16 @@ import qs.utils
 /*
  * System tray, collapsed behind a chevron and expanding in place.
  *
- * Items reveal on a stagger rather than all at once, and the order reverses on
- * close so the row folds back toward the chevron it came from. A single
- * simultaneous fade behind a width animation reads as a glitch, because the
- * icons appear at full opacity in a container that is still growing.
+ * The reveal runs in two phases, and the order reverses between them. Opening
+ * widens the container first and then staggers the icons in; closing clears the
+ * icons first and only then collapses the container.
+ *
+ * Overlapping the two is what made it snap at both ends. The container clips, so
+ * while its width is still animating it is cutting a hard edge through whatever
+ * is inside: on the way out the icons were uncovered by the clip faster than they
+ * could fade in, and on the way back the width reached zero while the last icons
+ * were still fading, which chopped them off mid-fade. Sequencing the phases means
+ * the clip edge never crosses a visible icon.
  */
 Row {
     id: root
@@ -20,7 +26,13 @@ Row {
 
     readonly property var items: SystemTray.items?.values ?? []
     readonly property bool hasItems: items.length > 0
-    readonly property int stagger: 34
+
+    // Per-icon reveal, and how long the whole staggered run takes.
+    readonly property int itemMs: 170
+    readonly property int itemStagger: 30
+    readonly property int itemsSpan: Math.max(0, items.length - 1) * itemStagger + itemMs
+
+    readonly property int widthMs: 240
 
     spacing: Theme.space(1)
     visible: hasItems
@@ -59,14 +71,23 @@ Row {
         anchors.verticalCenter: parent.verticalCenter
         clip: true
         height: 18
-        // Leading padding so the first icon isn't clipped mid-slide.
+        // Leading padding so the first icon isn't clipped against the edge.
         width: root.expanded ? icons.implicitWidth + Theme.space(1) : 0
 
+        // Opens immediately; on close, waits for the icons to clear first.
         Behavior on width {
-            NumberAnimation {
-                duration: root.expanded ? Theme.expressiveMs : Theme.standard
-                easing.type: Easing.Bezier
-                easing.bezierCurve: root.expanded ? Theme.enterEasing : Theme.exitEasing
+            SequentialAnimation {
+                PauseAnimation {
+                    duration: root.expanded ? 0 : root.itemsSpan
+                }
+                NumberAnimation {
+                    duration: root.widthMs
+                    easing.type: Easing.Bezier
+                    // Eased both ends in both directions: the container changing
+                    // size is the most visible part of this, and a decelerating
+                    // curve front-loads it into something that looks like a snap.
+                    easing.bezierCurve: Theme.smooth
+                }
             }
         }
 
@@ -85,11 +106,15 @@ Row {
                     required property var modelData
                     required property int index
 
-                    // Forward on open, reverse on close, so the row folds back
-                    // toward the chevron.
+                    /*
+                     * Opening waits until the container is most of the way out,
+                     * then runs left to right. Closing runs right to left and
+                     * starts at once, so the row folds back toward the chevron
+                     * before the container follows it.
+                     */
                     readonly property int delay: root.expanded
-                        ? index * root.stagger
-                        : (root.items.length - 1 - index) * Math.round(root.stagger * 0.6)
+                        ? Math.round(root.widthMs * 0.4) + index * root.itemStagger
+                        : (root.items.length - 1 - index) * root.itemStagger
 
                     width: 17
                     height: 17
@@ -108,8 +133,6 @@ Row {
                      * positioner produce a warning.
                      */
                     transform: Translate {
-                        id: slide
-
                         x: root.expanded ? 0 : -Theme.space(3)
 
                         Behavior on x {
@@ -118,7 +141,7 @@ Row {
                                     duration: entry.delay
                                 }
                                 NumberAnimation {
-                                    duration: root.expanded ? Theme.expressiveMs : Theme.standard
+                                    duration: root.itemMs
                                     easing.type: Easing.Bezier
                                     easing.bezierCurve: root.expanded ? Theme.expressive : Theme.exitEasing
                                 }
@@ -132,7 +155,7 @@ Row {
                                 duration: entry.delay
                             }
                             NumberAnimation {
-                                duration: Theme.standard
+                                duration: root.itemMs
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -144,7 +167,7 @@ Row {
                                 duration: entry.delay
                             }
                             NumberAnimation {
-                                duration: root.expanded ? Theme.expressiveMs : Theme.standard
+                                duration: root.itemMs
                                 easing.type: Easing.Bezier
                                 easing.bezierCurve: root.expanded ? Theme.expressive : Theme.exitEasing
                             }

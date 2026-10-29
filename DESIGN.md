@@ -815,7 +815,17 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    `Popouts.surfaceHovered` and the screen with nothing hovered clamped it to
    false. Shared state written from a per-monitor component needs a `when` guard
    naming the monitor that owns it.
-31. **Warping the cursor is not a substitute for hovering.**
+31. **A clipping container must not resize while its contents are animating.** The
+   tray snapped at both ends. Opening, the clip edge uncovered icons faster than
+   they could fade in; closing, the container reached zero width at 200ms while
+   the last icons were still fading until 240ms, so they were chopped off
+   mid-fade — which is exactly the "snaps in at the last moment" in the recording.
+   The two phases are now sequenced: open widens the container and then staggers
+   the icons in, close clears the icons and only then collapses the container, so
+   the clip edge never crosses a visible icon. A decelerating curve on the width
+   also front-loads the change into the first third and reads as a pop on its own,
+   so size changes use an eased-both-ends curve instead.
+32. **Warping the cursor is not a substitute for hovering.**
    `hl.dsp.cursor.move({x, y})` is the only way to move the pointer here, and a
    teleport produces enter and leave sequences that real motion does not — it made
    popouts look like they opened and closed on their own long after the behaviour
@@ -823,13 +833,13 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    for confirming that a hover path fires at all; worthless for judging whether
    hover *feels* right. `grim` captures and IPC queries also race the 180ms grace
    timer, so a sampled state reads as closed when it is merely closing.
-32. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+33. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-33. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+34. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-34. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+35. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

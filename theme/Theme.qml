@@ -74,6 +74,9 @@ Singleton {
     readonly property var exitEasing: pick("motion.exitEasing", [0.3, 0, 0.8, 0.15, 1, 1])
     // Overshoots slightly. For things that appear rather than merely move.
     readonly property var expressive: pick("motion.expressive", [0.34, 1.26, 0.38, 1, 1, 1])
+    // Eased at both ends. For something changing size, where enterEasing's hard
+    // decelerate puts most of the change in the first third and reads as a pop.
+    readonly property var smooth: pick("motion.smooth", [0.4, 0, 0.2, 1, 1, 1])
     readonly property int expressiveMs: pick("motion.expressiveMs", 420)
 
     function pick(keyPath, fallback) {
