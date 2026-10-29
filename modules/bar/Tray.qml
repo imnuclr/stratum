@@ -97,8 +97,34 @@ Row {
 
                     opacity: root.expanded ? 1 : 0
                     scale: root.expanded ? 1 : 0.55
-                    // Slides out of the chevron rather than fading in place.
-                    x: root.expanded ? 0 : -Theme.space(3)
+
+                    /*
+                     * Slides out of the chevron rather than fading in place.
+                     *
+                     * Applied as a transform, not by assigning x: a Row owns its
+                     * children's x, and writing to it from the delegate fights
+                     * the positioner and stacks every icon at the same place —
+                     * which it does silently, since only anchors inside a
+                     * positioner produce a warning.
+                     */
+                    transform: Translate {
+                        id: slide
+
+                        x: root.expanded ? 0 : -Theme.space(3)
+
+                        Behavior on x {
+                            SequentialAnimation {
+                                PauseAnimation {
+                                    duration: entry.delay
+                                }
+                                NumberAnimation {
+                                    duration: root.expanded ? Theme.expressiveMs : Theme.standard
+                                    easing.type: Easing.Bezier
+                                    easing.bezierCurve: root.expanded ? Theme.expressive : Theme.exitEasing
+                                }
+                            }
+                        }
+                    }
 
                     Behavior on opacity {
                         SequentialAnimation {
@@ -113,19 +139,6 @@ Row {
                     }
 
                     Behavior on scale {
-                        SequentialAnimation {
-                            PauseAnimation {
-                                duration: entry.delay
-                            }
-                            NumberAnimation {
-                                duration: root.expanded ? Theme.expressiveMs : Theme.standard
-                                easing.type: Easing.Bezier
-                                easing.bezierCurve: root.expanded ? Theme.expressive : Theme.exitEasing
-                            }
-                        }
-                    }
-
-                    Behavior on x {
                         SequentialAnimation {
                             PauseAnimation {
                                 duration: entry.delay
