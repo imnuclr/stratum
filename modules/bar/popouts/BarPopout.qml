@@ -59,8 +59,23 @@ Item {
         scale: root.shown ? 1 : 0.96
         transformOrigin: Item.Top
         visible: opacity > 0.001
+        // Content is laid out at full size while the frame is still animating to
+        // it, so without this it spills above and below the panel for a frame or
+        // two. Corners stay clean because the content is inset by its padding.
+        clip: true
+
+        /*
+         * True only once the frame is already on screen. Position and size are
+         * animated when moving between two triggers, but jumped to when the
+         * popout first appears — otherwise the first open slides in from the
+         * clamped default position at the left edge of the screen, and grows
+         * from the placeholder content size.
+         */
+        readonly property bool settled: opacity > 0.5
 
         Behavior on x {
+            enabled: frame.settled
+
             NumberAnimation {
                 duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
@@ -69,6 +84,8 @@ Item {
         }
 
         Behavior on width {
+            enabled: frame.settled
+
             NumberAnimation {
                 duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
@@ -77,6 +94,8 @@ Item {
         }
 
         Behavior on height {
+            enabled: frame.settled
+
             NumberAnimation {
                 duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
@@ -99,19 +118,23 @@ Item {
         }
 
         // Extends up into the gap between the bar and the frame, so travelling
-        // from the bar item into the popout never crosses dead space.
+        // from the bar item into the popout never crosses unhovered space.
         MouseArea {
             anchors.fill: parent
             anchors.topMargin: -(Theme.space(1) + Theme.space(2))
             hoverEnabled: true
-            onEntered: Popouts.keepOpen()
-            onExited: Popouts.requestHide()
+            onEntered: Popouts.enterSurface()
+            onExited: Popouts.leaveSurface()
         }
 
         Item {
             id: content
 
-            anchors.centerIn: parent
+            // Anchored to the top rather than centred, so a change in height
+            // grows the panel downwards instead of moving the content.
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.margins: Theme.space(3)
             implicitWidth: loader.item?.implicitWidth ?? 200
             implicitHeight: loader.item?.implicitHeight ?? 90
 

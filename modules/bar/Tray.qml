@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Services.SystemTray
 import qs.components
 import qs.theme
+import qs.utils
 
 /*
  * System tray, collapsed behind a chevron and expanding in place.
@@ -33,11 +34,13 @@ Row {
         color: mouse.containsMouse || root.expanded ? Theme.fg : Theme.fgFaint
         rotation: root.expanded ? 90 : 0
 
+        // Overshoot on the way out, settle on the way back. An overshooting curve
+        // run in reverse undershoots and snaps at the end.
         Behavior on rotation {
             NumberAnimation {
-                duration: Theme.expressiveMs
+                duration: root.expanded ? Theme.expressiveMs : Theme.standard
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.expressive
+                easing.bezierCurve: root.expanded ? Theme.expressive : Theme.exitEasing
             }
         }
 
@@ -61,9 +64,9 @@ Row {
 
         Behavior on width {
             NumberAnimation {
-                duration: Theme.expressiveMs
+                duration: root.expanded ? Theme.expressiveMs : Theme.standard
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.enterEasing
+                easing.bezierCurve: root.expanded ? Theme.enterEasing : Theme.exitEasing
             }
         }
 
@@ -115,9 +118,9 @@ Row {
                                 duration: entry.delay
                             }
                             NumberAnimation {
-                                duration: Theme.expressiveMs
+                                duration: root.expanded ? Theme.expressiveMs : Theme.standard
                                 easing.type: Easing.Bezier
-                                easing.bezierCurve: Theme.expressive
+                                easing.bezierCurve: root.expanded ? Theme.expressive : Theme.exitEasing
                             }
                         }
                     }
@@ -128,20 +131,37 @@ Row {
                                 duration: entry.delay
                             }
                             NumberAnimation {
-                                duration: Theme.expressiveMs
+                                duration: root.expanded ? Theme.expressiveMs : Theme.standard
                                 easing.type: Easing.Bezier
-                                easing.bezierCurve: Theme.expressive
+                                easing.bezierCurve: root.expanded ? Theme.expressive : Theme.exitEasing
                             }
                         }
                     }
 
                     Image {
+                        id: icon
+
                         anchors.fill: parent
-                        source: entry.modelData.icon
-                        sourceSize.width: 34
-                        sourceSize.height: 34
+                        source: Icons.trayIcon(entry.modelData.icon)
+                        // Matching the drawn size keeps small pixmaps from being
+                        // upscaled into mush; mipmap covers the oversized ones.
+                        sourceSize.width: Math.round(width * 2)
+                        sourceSize.height: Math.round(height * 2)
+                        fillMode: Image.PreserveAspectFit
                         smooth: true
+                        mipmap: true
                         asynchronous: true
+                        visible: status === Image.Ready
+                    }
+
+                    // An icon that fails to resolve would otherwise leave an empty
+                    // slot in the row that reads as a gap in the pill.
+                    Glyph {
+                        anchors.centerIn: parent
+                        name: "app"
+                        size: 13
+                        color: Theme.fgFaint
+                        visible: icon.status !== Image.Ready
                     }
 
                     MouseArea {

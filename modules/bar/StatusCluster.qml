@@ -108,7 +108,7 @@ Row {
                 Popouts.show(item.popout, centre.x, root.monitorName);
             }
 
-            onExited: Popouts.requestHide()
+            onExited: Popouts.release(item.popout)
             onClicked: item.activated()
             onWheel: event => item.scrolled(event.angleDelta.y)
         }

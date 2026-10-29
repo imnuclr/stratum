@@ -56,6 +56,24 @@ Singleton {
     }
 
     // 0..1 volume to one of three speaker glyphs.
+    /*
+     * Tray items hand over a themed icon name, a pixmap, or — for apps that
+     * should know better — an absolute file path pushed through the themed-icon
+     * provider as `image://icon//usr/...`. That last form resolves to nothing and
+     * leaves a silent gap in the row, so rewrite it to a file URL.
+     */
+    function trayIcon(icon) {
+        if (!icon)
+            return "";
+        const marker = "image://icon/";
+        if (icon.startsWith(marker)) {
+            const rest = icon.slice(marker.length);
+            if (rest.startsWith("/"))
+                return `file://${rest}`;
+        }
+        return icon;
+    }
+
     // BlueZ reports freedesktop icon names; map the ones that actually show up.
     function bluetoothDevice(name) {
         if (!name)

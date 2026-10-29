@@ -764,13 +764,43 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    transition, but it was only assigned in `onCurrentChanged` — so a popout open
    across a config reload rendered an empty frame. Initialising it from `current`
    gives the right value and the first assignment replaces the binding.
-23. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+23. **Qt can deliver a new item's `onEntered` before the old item's `onExited`.**
+   Hover popouts that decide to close from the most recent leave event therefore
+   close the popout that was just opened — moving between the network, bluetooth
+   and audio glyphs made each menu appear and immediately shut. `Popouts` counts
+   hover sources instead, including the panel body, so the outcome does not depend
+   on delivery order. Reproduced directly by calling show/show/release in that
+   order over IPC.
+24. **An overshooting easing curve must not be run in reverse.** The tray used the
+   expressive curve in both directions; played backwards its overshoot becomes an
+   undershoot that returns to the target at the very end, which reads as a snap
+   after an otherwise smooth close. Opening keeps the overshoot, closing uses the
+   exit curve, selected on `expanded` inside the Behavior.
+25. **Position and size must not animate on first appearance.** The popout frame
+   animates x, width and height so it can travel between triggers, but on its
+   first open those animated from the clamped default — the panel slid in from the
+   left edge of the screen and grew out of the placeholder content size. The
+   Behaviors are gated on the frame already being visible, so the first open jumps
+   to position and only later moves animate.
+26. **A panel whose frame animates to fit its content must clip.** Content is laid
+   out at full size while the frame is still resizing, so the audio popout's
+   headings rendered outside the panel for a few frames. Clipping plus anchoring
+   the content to the top, rather than centring it, keeps a height change growing
+   downwards instead of pushing content out of both ends.
+27. **Tray icons arrive in three shapes, one of them broken.** Items hand over a
+   themed icon name, a pixmap (`image://qspixmap/...`), or an absolute file path
+   pushed through the themed-icon provider as `image://icon//usr/...`. The last
+   resolves to nothing and leaves a silent empty slot that reads as a gap in the
+   pill — `Icons.trayIcon` rewrites it to a `file://` URL, and anything that still
+   fails falls back to a glyph rather than rendering nothing. Pixmaps also need
+   `sourceSize` at the drawn size; upscaling a 16px pixmap to 34px turns it to mush.
+28. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
    Test launches accumulated until IPC could not resolve a single target. Scripts
    that restart the shell must stop existing instances by PID first.
-24. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+29. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
    already documented it in §8: the pattern appears in the invoking command line,
    so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
    signal explicit PIDs.
-25. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+30. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.
