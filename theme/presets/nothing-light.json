@@ -2,22 +2,23 @@
   "name": "nothing-light",
   "mode": "light",
   "color": {
-    "bg": "#F2F2F3",
-    "panel": "#FFFFFF",
-    "surface": "#FFFFFF",
-    "surfaceHi": "#EBEBED",
-    "surfaceTop": "#DEDEE1",
+    "bg": "#DBDBD8",
+    "panel": "#E6E6E3",
+    "surface": "#FAFAF8",
+    "surfaceHi": "#ECECE8",
+    "surfaceTop": "#E0E0DC",
     "line": "#14000000",
     "lineHi": "#26000000",
-    "fg": "#0A0A0B",
-    "fgDim": "#5C5C62",
-    "fgFaint": "#9A9AA0",
-    "dotOn": "#0A0A0B",
-    "dotOff": "#21000000",
+    "fg": "#17171A",
+    "fgDim": "#6B6B72",
+    "fgFaint": "#A6A6AC",
+    "dotOn": "#17171A",
+    "dotOff": "#24000000",
     "accent": "#E5252B",
-    "ok": "#4ADE80",
-    "warn": "#FBBF24",
-    "crit": "#EF4444"
+    "ok": "#16A34A",
+    "warn": "#CA8A04",
+    "crit": "#DC2626",
+    "fgBright": "#2E2E34"
   },
   "radius": {
     "tile": 20,
@@ -53,13 +54,34 @@
       0.2,
       0,
       0,
+      1,
+      1,
       1
     ],
     "exitEasing": [
       0.3,
       0,
       0.8,
-      0.15
+      0.15,
+      1,
+      1
+    ],
+    "expressive": [
+      0.34,
+      1.26,
+      0.38,
+      1,
+      1,
+      1
+    ],
+    "expressiveMs": 420,
+    "smooth": [
+      0.4,
+      0,
+      0.2,
+      1,
+      1,
+      1
     ]
   }
 }

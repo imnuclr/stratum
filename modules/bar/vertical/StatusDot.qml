@@ -11,7 +11,7 @@ import qs.theme
 Item {
     id: root
 
-    readonly property bool active: Shell.openPanel === "dashboard"
+    readonly property bool active: Shell.openPanel.length > 0
 
     implicitWidth: 42
     implicitHeight: 42
@@ -46,9 +46,5 @@ Item {
         id: hover
     }
 
-    // The deck is reached from the top edge; this pins it open for when you want
-    // it to stay up without holding the pointer there.
-    TapHandler {
-        onTapped: Shell.toggle("dashboard")
-    }
+
 }

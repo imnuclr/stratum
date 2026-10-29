@@ -2,12 +2,14 @@ import QtQuick
 import qs.theme
 
 /*
- * Two sparklines sharing one grid: `upper` hangs down from the top edge,
- * `lower` rises from the bottom. For a pair of readings that belong together
- * and move independently, like upload against download.
+ * Two sparklines mirrored about a centre line: `upper` grows up from the middle,
+ * `lower` grows down. For a pair of readings that belong together and move
+ * independently, like upload against download.
  *
- * Drawing them as two separate fields would imply two separate measurements;
- * sharing the grid and meeting in the middle says they are one link.
+ * Growing from the centre rather than hanging off the two edges puts the
+ * baseline where the eye reads it — at rest the graph is a flat line through the
+ * middle, and each series departs from the same place, so their sizes can be
+ * compared directly.
  */
 Row {
     id: root
@@ -20,9 +22,12 @@ Row {
     property color onColor: Theme.dotOn
     property color offColor: Theme.dotOff
 
-    // Odd row counts leave an unreachable middle row, which reads as a dead
-    // line through the graph.
-    readonly property int half: Math.floor(rows / 2)
+    /*
+     * An odd row count so there is a true middle row to act as the baseline; the
+     * halves above and below it are what the two series fill.
+     */
+    readonly property int oddRows: rows % 2 === 0 ? rows + 1 : rows
+    readonly property int half: (oddRows - 1) / 2
     readonly property int columns: Math.max(upper.length, lower.length)
 
     spacing: cell - dotSize
@@ -41,15 +46,16 @@ Row {
             spacing: root.cell - root.dotSize
 
             Repeater {
-                model: root.rows
+                model: root.oddRows
 
                 Rectangle {
                     required property int index
 
-                    readonly property bool isUpper: index < root.half
-                    readonly property bool on: isUpper
-                        ? index < column.upLit
-                        : (root.rows - index) <= column.downLit
+                    // Distance from the centre row, which is always lit.
+                    readonly property int fromCentre: index - root.half
+                    readonly property bool on: fromCentre === 0
+                        || (fromCentre < 0 && -fromCentre <= column.upLit)
+                        || (fromCentre > 0 && fromCentre <= column.downLit)
 
                     width: root.dotSize
                     height: root.dotSize

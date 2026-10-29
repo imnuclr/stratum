@@ -17,6 +17,13 @@ Singleton {
 
     readonly property string dir: `${Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config"}/stratum`
 
+    /*
+     * Which variant of the configured preset is live. The dark/light toggle sets
+     * this, so the shell changes with it rather than only handing GTK apps a
+     * gsettings key and staying dark itself.
+     */
+    property bool dark: true
+
     property bool ready: false
     property string error: ""
     property var tokens: ({})
@@ -115,13 +122,26 @@ Singleton {
         root.ready = true;
     }
 
+    /*
+     * Swap a preset's variant suffix to match the current mode, so one setting
+     * names a family ("nothing") and the toggle picks the half of it that is
+     * live. A preset with no suffix is taken as mode-agnostic and left alone.
+     */
+    function variantOf(name) {
+        const suffix = root.dark ? "-dark" : "-light";
+        if (name.endsWith("-dark") || name.endsWith("-light"))
+            return name.replace(/-(dark|light)$/, suffix);
+        return name;
+    }
+
     readonly property string presetName: {
+        const fallback = root.variantOf("nothing-dark");
         if (userFile.text().trim().length === 0)
-            return "nothing-dark";
+            return fallback;
         try {
-            return JSON.parse(userFile.text()).preset ?? "nothing-dark";
+            return root.variantOf(JSON.parse(userFile.text()).preset ?? "nothing-dark");
         } catch (e) {
-            return "nothing-dark";
+            return fallback;
         }
     }
 

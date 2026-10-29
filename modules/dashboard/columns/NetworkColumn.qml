@@ -56,9 +56,9 @@ Item {
     DotFieldDual {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
-        rows: 8
-        cell: 9.4
-        dotSize: 4.4
+        rows: 11
+        cell: 7.4
+        dotSize: 3.6
         upper: Netstat.txHistory
         lower: Netstat.rxHistory
     }

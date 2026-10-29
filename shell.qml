@@ -63,4 +63,16 @@ ShellRoot {
     HotZones {}
     Session {}
     Shortcuts {}
+
+    IpcHandler {
+        target: "theme"
+
+        function dark(on: bool): void {
+            Toggles.setDark(on);
+        }
+
+        function mode(): string {
+            return Theme.dark ? "dark" : "light";
+        }
+    }
 }

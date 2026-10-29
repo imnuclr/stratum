@@ -104,7 +104,7 @@ Column {
                  */
                 ProfileGlyph {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    visible: item.modelData.kind === "profile"
+                    visible: item.modelData.kind === "profile" && Power.hasBattery
                     size: 17
                     level: Math.max(1, Math.round((Power.profiles.indexOf(Power.profile) + 1)
                         / Math.max(1, Power.profiles.length) * 4))

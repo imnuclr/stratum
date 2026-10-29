@@ -99,7 +99,9 @@ Sheet {
             height: profiles.height
             radius: height / 2
             color: Theme.surfaceHi
-            visible: Power.profiles.length > 1
+            // A machine with no battery has nothing to trade runtime against, so
+            // the control is not worth the room it takes.
+            visible: Power.profiles.length > 1 && Power.hasBattery
 
             SegmentedProfiles {
                 id: profiles

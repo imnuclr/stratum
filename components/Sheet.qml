@@ -147,8 +147,27 @@ PanelWindow {
                     return root.originX >= 0.75 ? Item.BottomRight : (root.originX <= 0.25 ? Item.BottomLeft : Item.Bottom);
                 return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
             }
+
+            /*
+             * Travel, not just a scale origin. A sheet anchored to the bottom
+             * rises into place and drops back out; one anchored to the top comes
+             * down and goes back up. The scale origin alone was too subtle to
+             * read as a direction, which is why a bottom sheet still looked like
+             * it was unfolding downward.
+             */
+            transform: Translate {
+                y: root.open ? 0 : (root.originY >= 0.5 ? 22 : -22)
+
+                Behavior on y {
+                    NumberAnimation {
+                        duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: root.open ? Theme.expressive : Theme.exitEasing
+                    }
+                }
+            }
             opacity: root.open ? 1 : 0
-            scale: root.open ? 1 : 0.96
+            scale: root.open ? 1 : 0.94
 
             // Swallow clicks so they don't reach the dismiss layer underneath.
             MouseArea {

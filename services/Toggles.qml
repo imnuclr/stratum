@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.theme
 
 /*
  * The quick toggles that do not belong to a service of their own.
@@ -67,11 +68,17 @@ Singleton {
         root.recording = true;
     }
 
-    function toggleDark() {
-        root.dark = !root.dark;
+    function setDark(value) {
+        if (root.dark === value)
+            return;
+        root.dark = value;
         scheme.command = ["gsettings", "set", "org.gnome.desktop.interface",
             "color-scheme", root.dark ? "prefer-dark" : "default"];
         scheme.running = true;
+    }
+
+    function toggleDark() {
+        root.setDark(!root.dark);
     }
 
     function toggleVpn() {
@@ -167,5 +174,16 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: root.dark = text.includes("dark")
         }
+    }
+
+    /*
+     * The shell follows the same setting it hands GTK apps. Toggling dark mode
+     * and watching Firefox change while the bar stayed black made the toggle
+     * look like it only half worked.
+     */
+    Binding {
+        target: Theme
+        property: "dark"
+        value: root.dark
     }
 }
