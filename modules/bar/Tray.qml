@@ -19,7 +19,7 @@ Row {
 
     readonly property var items: SystemTray.items?.values ?? []
     readonly property bool hasItems: items.length > 0
-    readonly property int stagger: 38
+    readonly property int stagger: 34
 
     spacing: Theme.space(1)
     visible: hasItems
@@ -35,9 +35,9 @@ Row {
 
         Behavior on rotation {
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.enterEasing
+                easing.bezierCurve: Theme.expressive
             }
         }
 
@@ -61,7 +61,7 @@ Row {
 
         Behavior on width {
             NumberAnimation {
-                duration: Theme.standard + root.items.length * 12
+                duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Theme.enterEasing
             }
@@ -115,9 +115,9 @@ Row {
                                 duration: entry.delay
                             }
                             NumberAnimation {
-                                duration: Theme.standard
+                                duration: Theme.expressiveMs
                                 easing.type: Easing.Bezier
-                                easing.bezierCurve: Theme.enterEasing
+                                easing.bezierCurve: Theme.expressive
                             }
                         }
                     }
@@ -128,9 +128,9 @@ Row {
                                 duration: entry.delay
                             }
                             NumberAnimation {
-                                duration: Theme.standard
+                                duration: Theme.expressiveMs
                                 easing.type: Easing.Bezier
-                                easing.bezierCurve: Theme.enterEasing
+                                easing.bezierCurve: Theme.expressive
                             }
                         }
                     }

@@ -28,14 +28,14 @@ Row {
             return Network.online ? Theme.fgDim : Theme.warn;
         }
 
-        onActivated: Network.toggleWifi()
+        onActivated: Wifi.toggle()
 
         Glyph {
             anchors.fill: parent
             name: Network.wiredActive ? "ethernet" : "wifi-off"
             size: 16
             color: parent.tint
-            visible: Network.wiredActive || !Network.wifiEnabled
+            visible: Network.wiredActive || !Wifi.enabled
         }
 
         WifiGlyph {
@@ -43,7 +43,7 @@ Row {
             strength: Network.strength
             size: 16
             color: parent.tint
-            visible: !Network.wiredActive && Network.wifiEnabled
+            visible: !Network.wiredActive && Wifi.enabled
         }
     }
 
@@ -107,6 +107,7 @@ Row {
                 const centre = item.mapToItem(null, item.width / 2, 0);
                 Popouts.show(item.popout, centre.x, root.monitorName);
             }
+
             onExited: Popouts.requestHide()
             onClicked: item.activated()
             onWheel: event => item.scrolled(event.angleDelta.y)

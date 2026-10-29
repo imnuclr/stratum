@@ -78,10 +78,26 @@ Singleton {
     readonly property string mac: active?.address ?? ""
     property string ipv4: ""
     readonly property int linkSpeed: active?.linkSpeed ?? 0
-    readonly property string address: active?.address ?? ""
 
-    readonly property bool wifiEnabled: !!Networking.wifiEnabled
-    readonly property bool wifiAvailable: !!Networking.wifiHardwareEnabled
+    // The wifi device itself, shared with the Wifi service which owns scanning,
+    // the network list and connecting.
+    readonly property WifiDevice wifiDevice: devices.find(d => d.type === DeviceType.Wifi) ?? null
+
+    readonly property list<NetworkDevice> wiredDevices: devices.filter(d => d.type === DeviceType.Wired)
+
+    // Wired bring-up and tear-down, like the wifi disconnect, has no native
+    // equivalent. Acting on the interface rather than a connection name works for
+    // a device whose profile is auto-generated.
+    function setWiredConnected(device, value) {
+        if (!device?.name)
+            return;
+        wiredProc.command = ["nmcli", "device", value ? "connect" : "disconnect", device.name];
+        wiredProc.running = true;
+    }
+
+    Process {
+        id: wiredProc
+    }
 
     // Label for the bar and the dashboard's network column.
     readonly property string label: {
@@ -112,11 +128,5 @@ Singleton {
 
     onActiveChanged: addrProc.running = true
 
-    function setWifiEnabled(enabled) {
-        Networking.wifiEnabled = enabled;
-    }
 
-    function toggleWifi() {
-        Networking.wifiEnabled = !Networking.wifiEnabled;
-    }
 }

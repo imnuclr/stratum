@@ -64,8 +64,17 @@ Singleton {
     readonly property int sheetMs: pick("motion.sheet", 320)
     readonly property real dotStagger: pick("motion.dotStagger", 8)
 
-    readonly property var enterEasing: pick("motion.enterEasing", [0.2, 0, 0, 1])
-    readonly property var exitEasing: pick("motion.exitEasing", [0.3, 0, 0.8, 0.15])
+    /*
+     * Bezier easing points. Qt requires these in multiples of six — two control
+     * points plus the end point (1,1) per cubic segment. A list of any other
+     * length is discarded outright and the curve silently animates linearly,
+     * with no warning, which is what these did for their first few commits.
+     */
+    readonly property var enterEasing: pick("motion.enterEasing", [0.2, 0, 0, 1, 1, 1])
+    readonly property var exitEasing: pick("motion.exitEasing", [0.3, 0, 0.8, 0.15, 1, 1])
+    // Overshoots slightly. For things that appear rather than merely move.
+    readonly property var expressive: pick("motion.expressive", [0.34, 1.26, 0.38, 1, 1, 1])
+    readonly property int expressiveMs: pick("motion.expressiveMs", 420)
 
     function pick(keyPath, fallback) {
         let node = tokens;

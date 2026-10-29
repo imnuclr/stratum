@@ -1,16 +1,16 @@
 import QtQuick
+import Quickshell.Services.Pipewire
 import qs.components
 import qs.services
 import qs.theme
 
 /*
- * Output device and volume. The dot bar is draggable, so the popout is a control
- * rather than a readout.
+ * Output and input device pickers plus the output level.
  */
 Item {
     id: root
 
-    implicitWidth: 224
+    implicitWidth: 286
     implicitHeight: body.implicitHeight
 
     Column {
@@ -20,69 +20,42 @@ Item {
         spacing: Theme.space(2)
 
         SectionLabel {
-            text: "Output"
+            text: "Output device"
         }
 
-        Text {
-            text: Audio.sinkName.length > 0 ? Audio.sinkName : "No output"
-            color: Theme.fg
-            font.family: Theme.fontUi
-            font.pixelSize: 14
-            font.weight: Font.Medium
-            width: root.width
-            elide: Text.ElideRight
-            renderType: Text.NativeRendering
-        }
+        Repeater {
+            model: Audio.sinks
 
-        Row {
-            spacing: Theme.space(2)
+            Radio {
+                required property PwNode modelData
 
-            DotText {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Audio.muted ? "──" : `${Math.round(Audio.volume * 100)}`
-                size: 24
-                color: Audio.muted ? Theme.fgFaint : Theme.fg
-            }
-
-            SectionLabel {
-                anchors.verticalCenter: parent.verticalCenter
-                dim: true
-                text: Audio.muted ? "muted" : "%"
+                width: body.width
+                text: Audio.deviceName(modelData)
+                checked: Audio.sink?.id === modelData.id
+                onClicked: Audio.setSink(modelData)
             }
         }
 
-        Item {
-            width: root.width
-            height: 16
+        SectionLabel {
+            topPadding: Theme.space(1)
+            text: "Input device"
+        }
 
-            DotBar {
-                id: bar
+        Repeater {
+            model: Audio.sources
 
-                anchors.verticalCenter: parent.verticalCenter
-                count: 24
-                value: Audio.muted ? 0 : Audio.volume
-                dotSize: 4
-            }
+            Radio {
+                required property PwNode modelData
 
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-
-                function apply(mouseX) {
-                    Audio.setVolume(Math.max(0, Math.min(1, mouseX / width)));
-                }
-
-                onPressed: event => apply(event.x)
-                onPositionChanged: event => {
-                    if (pressed)
-                        apply(event.x);
-                }
-                onWheel: event => Audio.step(event.angleDelta.y > 0 ? 0.02 : -0.02)
+                width: body.width
+                text: Audio.deviceName(modelData)
+                checked: Audio.source?.id === modelData.id
+                onClicked: Audio.setSource(modelData)
             }
         }
 
         Rectangle {
-            width: parent.width
+            width: body.width
             height: 1
             color: Theme.line
         }
@@ -92,33 +65,50 @@ Item {
 
             SectionLabel {
                 anchors.verticalCenter: parent.verticalCenter
-                width: 62
-                dim: true
-                text: "Input"
+                text: "Volume"
+                dim: false
             }
 
-            Glyph {
+            DotText {
                 anchors.verticalCenter: parent.verticalCenter
-                name: "mic-off"
-                size: 14
-                color: Audio.sourceMuted ? Theme.warn : Theme.fgFaint
-            }
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: Audio.sourceMuted ? "Muted" : "Live"
-                color: Theme.fgDim
-                font.family: Theme.fontUi
-                font.pixelSize: 12
-                renderType: Text.NativeRendering
+                text: Audio.muted ? "muted" : `${Math.round(Audio.volume * 100)}%`
+                size: 13
+                color: Audio.muted ? Theme.fgFaint : Theme.fgDim
             }
         }
 
-        SectionLabel {
+        LevelSlider {
             width: body.width
-            wrapMode: Text.WordWrap
-            dim: true
-            text: "Scroll to adjust · click to mute"
+            value: Audio.muted ? 0 : Audio.volume
+            onMoved: level => Audio.setVolume(level)
+        }
+
+        Row {
+            width: body.width
+            spacing: Theme.space(2)
+
+            SectionLabel {
+                anchors.verticalCenter: parent.verticalCenter
+                width: body.width - 34
+                text: Audio.sourceMuted ? "Input muted" : "Input live"
+                dim: false
+            }
+
+            IconButton {
+                anchors.verticalCenter: parent.verticalCenter
+                size: 22
+                icon: Audio.sourceMuted ? "mic-off" : "mic"
+                active: Audio.sourceMuted
+                onClicked: Audio.toggleSourceMuted()
+            }
+        }
+
+        ActionButton {
+            width: body.width
+            icon: "settings"
+            text: "Open settings"
+            visible: Audio.settingsApp.length > 0
+            onClicked: Audio.openSettings()
         }
     }
 }

@@ -1,51 +1,52 @@
 import QtQuick
-import Quickshell
-import Quickshell.Wayland
 import qs.components
 import qs.config
 import qs.services
 import qs.theme
 
 /*
- * One popout surface per monitor, shared by every bar item.
+ * The popout surface, hosted inside the bar window rather than in a window of
+ * its own.
  *
- * Reusing a single surface is what produces the fluid hand-off: moving from the
- * wifi glyph to the bluetooth glyph swaps the content and animates the frame to
- * its new size and position, rather than closing one window and opening another.
+ * It lived in a separate layer surface at first, and the anchor was consistently
+ * wrong: a surface with ExclusionMode.Ignore spans the whole output, while the
+ * bar respects other shells' exclusive zones and so starts 60px in on this
+ * machine. The two had different origins, and nothing in the API reports a
+ * layer surface's position, so the offset could not be recovered. Sharing the
+ * bar's window makes the trigger's coordinates and the popout's the same
+ * coordinates by construction.
+ *
+ * One surface serves every bar item, so moving between two triggers animates the
+ * frame across instead of closing one popout and opening another.
  */
-PanelWindow {
+Item {
     id: root
 
-    required property ShellScreen monitor
+    required property string monitorName
+    required property real barBottom
 
-    readonly property bool mine: Popouts.monitorName === monitor.name
-    readonly property bool shown: Popouts.open && mine
+    // The bar window masks input to this rect, so it must be empty when closed.
+    readonly property alias maskItem: maskRect
+    readonly property bool shown: Popouts.open && Popouts.monitorName === monitorName
 
-    visible: shown || frame.opacity > 0.001
+    anchors.fill: parent
 
-    screen: monitor
-    color: "transparent"
-    exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: WlrLayer.Overlay
-    // Hover-driven, so it must never steal the keyboard.
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    Item {
+        id: maskRect
 
-    anchors {
-        top: true
-        left: true
-        right: true
+        x: frame.x
+        y: frame.y
+        width: root.shown ? frame.width : 0
+        height: root.shown ? frame.height : 0
     }
-
-    implicitHeight: Config.get("bar.height", 38) + Config.get("bar.margin", 10) + 260
 
     Tile {
         id: frame
 
-        readonly property real target: Math.max(Theme.space(1),
-            Math.min(root.width - width - Theme.space(1), Popouts.anchorX - width / 2))
-
-        x: target
-        y: Config.get("bar.height", 38) + Config.get("bar.margin", 10) + Theme.space(0)
+        // Clamped so a popout under an item near the edge stays on screen.
+        x: Math.max(Theme.space(1), Math.min(root.width - width - Theme.space(1),
+            Popouts.anchorX - width / 2))
+        y: root.barBottom + Theme.space(1)
 
         width: content.implicitWidth + Theme.space(3) * 2
         height: content.implicitHeight + Theme.space(3) * 2
@@ -55,14 +56,13 @@ PanelWindow {
         radius: Theme.rTile
 
         opacity: root.shown ? 1 : 0
-        scale: root.shown ? 1 : 0.95
+        scale: root.shown ? 1 : 0.96
         transformOrigin: Item.Top
+        visible: opacity > 0.001
 
-        // Position, size and content all animate, so a hand-off between two bar
-        // items reads as one object moving rather than two windows blinking.
         Behavior on x {
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Theme.enterEasing
             }
@@ -70,7 +70,7 @@ PanelWindow {
 
         Behavior on width {
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Theme.enterEasing
             }
@@ -78,7 +78,7 @@ PanelWindow {
 
         Behavior on height {
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Theme.enterEasing
             }
@@ -92,17 +92,18 @@ PanelWindow {
 
         Behavior on scale {
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.expressiveMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.enterEasing
+                easing.bezierCurve: Theme.expressive
             }
         }
 
+        // Extends up into the gap between the bar and the frame, so travelling
+        // from the bar item into the popout never crosses dead space.
         MouseArea {
             anchors.fill: parent
-            anchors.margins: -Theme.space(2)
+            anchors.topMargin: -(Theme.space(1) + Theme.space(2))
             hoverEnabled: true
-            // Travelling from the bar item into the popout must not close it.
             onEntered: Popouts.keepOpen()
             onExited: Popouts.requestHide()
         }
@@ -111,17 +112,15 @@ PanelWindow {
             id: content
 
             anchors.centerIn: parent
-            implicitWidth: loader.item?.implicitWidth ?? 180
-            implicitHeight: loader.item?.implicitHeight ?? 80
+            implicitWidth: loader.item?.implicitWidth ?? 200
+            implicitHeight: loader.item?.implicitHeight ?? 90
 
             Loader {
                 id: loader
 
                 anchors.fill: parent
-                // Keep the last content while fading out, or the frame empties
-                // before it has finished shrinking.
                 source: {
-                    switch (Popouts.current) {
+                    switch (Popouts.content) {
                     case "network":
                         return "NetworkPopout.qml";
                     case "bluetooth":
@@ -129,7 +128,7 @@ PanelWindow {
                     case "audio":
                         return "AudioPopout.qml";
                     default:
-                        return loader.source;
+                        return "";
                     }
                 }
 

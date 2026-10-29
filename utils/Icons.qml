@@ -29,6 +29,15 @@ Singleton {
         "volume-mute": "M4 9.5h3.5L12 5.5v13L7.5 14.5H4zM16.5 9.5l5 5M21.5 9.5l-5 5",
         "mic-off": "M9 5.5a3 3 0 0 1 6 0V11M18 11.5a6 6 0 0 1-8.6 5.4M6 11.5a6 6 0 0 0 3 5.2M12 20v2M3 3l18 18",
         "battery-charging": "M2.5 8.5h11.5M2.5 15.5h11.5M2.5 8.5A1.5 1.5 0 0 0 1 10v4a1.5 1.5 0 0 0 1.5 1.5M16.5 8.5A1.5 1.5 0 0 1 18 10v4a1.5 1.5 0 0 1-1.5 1.5M20 10.5v3M11 7l-3 5h3l-3 5",
+        "lock": "M8 10.5V7.5a4 4 0 0 1 8 0v3M5.5 10.5h13v9h-13z",
+        "link": "M10.6 13.4a3.5 3.5 0 0 0 5 0l2.4-2.4a3.5 3.5 0 0 0-5-5l-1.2 1.2M13.4 10.6a3.5 3.5 0 0 0-5 0L6 13a3.5 3.5 0 0 0 5 5l1.2-1.2",
+        "link-off": "M10.6 13.4a3.5 3.5 0 0 0 4 .6M14.4 9.2a3.5 3.5 0 0 0-4-.6M4.5 4.5l15 15M16 8l2-2a3.5 3.5 0 0 0-5-.3M8 16l-2 2a3.5 3.5 0 0 0 5 .3",
+        "trash": "M5 7h14M9.5 7V5h5v2M7.5 7l.9 12.5h7.2L16.5 7",
+        "settings": "M12 9.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6M12 3.2v2.4M12 18.4v2.4M3.2 12h2.4M18.4 12h2.4M5.8 5.8l1.7 1.7M16.5 16.5l1.7 1.7M18.2 5.8l-1.7 1.7M7.5 16.5l-1.7 1.7",
+        "scan": "M20 12a8 8 0 1 1-2.4-5.7M20.5 4.5v4h-4",
+        "headphones": "M4.5 14.5v-2.5a7.5 7.5 0 0 1 15 0v2.5M4.5 14h3v5.5h-1.5a1.5 1.5 0 0 1-1.5-1.5zM19.5 14h-3v5.5h1.5a1.5 1.5 0 0 0 1.5-1.5z",
+        "mic": "M12 4.5a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0V7A2.5 2.5 0 0 1 12 4.5M6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20",
+        "check": "M5.5 12.5l4.5 4.5L18.5 7.5",
         "chevron-down": "m6 9.5 6 6 6-6",
         "chevron-left": "m14.5 6-6 6 6 6",
         "app": "M4.5 4.5h6v6h-6zM13.5 4.5h6v6h-6zM4.5 13.5h6v6h-6zM13.5 13.5h6v6h-6z",
@@ -47,6 +56,21 @@ Singleton {
     }
 
     // 0..1 volume to one of three speaker glyphs.
+    // BlueZ reports freedesktop icon names; map the ones that actually show up.
+    function bluetoothDevice(name) {
+        if (!name)
+            return "bluetooth";
+        if (name.startsWith("audio-card") || name.startsWith("audio-speakers"))
+            return "volume-2";
+        if (name.startsWith("audio-input") || name.includes("microphone"))
+            return "mic";
+        if (name.startsWith("audio-"))
+            return "headphones";
+        if (name.startsWith("input-") || name.startsWith("phone") || name.startsWith("computer"))
+            return "app";
+        return "bluetooth";
+    }
+
     function volume(level, muted) {
         if (muted)
             return "volume-mute";

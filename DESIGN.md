@@ -722,6 +722,55 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    element and drew straight past the panel edge, since nothing constrains a Text
    without an explicit `width`. Set `width` and `wrapMode` on anything that can outgrow
    its container.
-16. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+16. **Qt silently discards a malformed bezier curve and animates linearly.**
+   `easing.bezierCurve` must be a multiple of six reals — two control points plus
+   the end point `(1,1)` per cubic segment. The tokens were written as four
+   (`[0.2, 0, 0, 1]`), which Qt stores as `[]`, logs nothing about, and falls back
+   to linear for. Every animation in the shell was linear for its first few
+   commits, which is exactly how it looked. Verified by reading
+   `easing.bezierCurve` back off a `NumberAnimation` at runtime.
+17. **`Quickshell.Networking` exports a type called `Network`.** Importing that
+   module into a file that uses the `Network` service singleton shadows the
+   singleton, and every read comes back `undefined` with no warning — the wifi
+   popout rendered "Wi-Fi is off" over a live connection. This is the same trap
+   that `Bt` is named around. Files that use the service must not import the
+   module; type model entries as `var` instead. `Quickshell.Bluetooth` and
+   `Quickshell.Services.Pipewire` export nothing that collides with `Bt` or
+   `Audio`, so only this one needs the rule.
+18. **A self-referential binding spins the render thread.** Writing
+   `source: { ... default: return loader.source }` to hold a Loader's previous
+   content pegged the process at 42% CPU with no binding-loop warning. The
+   "keep the last value" state belongs in the service (`Popouts.content`), not in
+   a binding that reads the property it sets.
+19. **A shared Loader keeps its last content mounted,** so `Component.onDestruction`
+   never runs for it. The wifi scanner was enabled on the network popout's
+   `onCompleted` and never disabled, leaving the radio scanning for the rest of
+   the session. Lifecycle side effects in shared-surface content must bind to
+   whether that content is *shown*, not to the component's lifetime.
+20. **Popouts cannot live in their own layer surface while another shell is
+   running.** A surface with `ExclusionMode.Ignore` spans the whole output, while
+   the bar respects other shells' exclusive zones and so starts 60px in here. The
+   two had different origins, nothing in the API reports a layer surface's
+   position, and the left/right split of the inset can't be derived from widths.
+   Hosting the popout inside the bar window makes the trigger's coordinates and
+   the popout's the same coordinates by construction, and lets one `mask` keep the
+   area below the bar click-through.
+21. **The auto exclusive zone double-counted the margin.** Letting Quickshell
+   derive it reserved 78px on DP-2 for a 38px bar at a 10px margin; setting
+   `exclusiveZone: barHeight + margin` explicitly reserves 68, which is the bar
+   plus one margin, and moves the bar to where `bar.margin` says it should be.
+22. **A "remember the last value" property must be seeded, not left empty.**
+   `Popouts.content` held the last popout name so the frame could finish its close
+   transition, but it was only assigned in `onCurrentChanged` — so a popout open
+   across a config reload rendered an empty frame. Initialising it from `current`
+   gives the right value and the first assignment replaces the binding.
+23. **Several `qs -c stratum` instances at once make `qs ipc` and `qs kill` hang.**
+   Test launches accumulated until IPC could not resolve a single target. Scripts
+   that restart the shell must stop existing instances by PID first.
+24. **`pkill -f <pattern>` matches the calling shell.** Hit a second time, having
+   already documented it in §8: the pattern appears in the invoking command line,
+   so the call kills its own session (exit 144). Enumerate with `ps`/`pgrep` and
+   signal explicit PIDs.
+25. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

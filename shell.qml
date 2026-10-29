@@ -10,7 +10,6 @@ import qs.theme
 import qs.services
 import qs.modules.bar
 import qs.modules.dashboard
-import qs.modules.bar.popouts
 
 ShellRoot {
     id: root
@@ -56,5 +55,4 @@ ShellRoot {
 
     Bar {}
     Dashboard {}
-    BarPopouts {}
 }

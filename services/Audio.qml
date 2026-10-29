@@ -25,6 +25,40 @@ Singleton {
 
     readonly property bool ready: sink?.ready ?? false
 
+    // Selectable devices. A node is a device when it isn't a stream; sinks are
+    // outputs and anything else carrying audio is an input. Streams are
+    // per-application playback and belong in a mixer, not a device list.
+    readonly property var nodes: Pipewire.nodes?.values ?? []
+    readonly property list<PwNode> sinks: nodes.filter(n => !n.isStream && n.isSink)
+    readonly property list<PwNode> sources: nodes.filter(n => !n.isStream && !n.isSink && n.audio)
+
+    function deviceName(node) {
+        return node?.description ?? node?.nickname ?? node?.name ?? "";
+    }
+
+    function setSink(node) {
+        if (node)
+            Pipewire.preferredDefaultAudioSink = node;
+    }
+
+    function setSource(node) {
+        if (node)
+            Pipewire.preferredDefaultAudioSource = node;
+    }
+
+    function setSourceVolume(level) {
+        if (!source?.ready || !source?.audio)
+            return;
+        source.audio.muted = false;
+        source.audio.volume = Math.max(0, Math.min(1, level));
+    }
+
+    readonly property string settingsApp: Launch.firstOf(["pwvucontrol", "pavucontrol", "helvum"])
+
+    function openSettings() {
+        Launch.run(settingsApp);
+    }
+
     function setVolume(level) {
         if (!sink?.ready || !sink?.audio)
             return;
@@ -50,7 +84,9 @@ Singleton {
             source.audio.muted = !source.audio.muted;
     }
 
+    // Tracking only the defaults leaves every other device's description empty,
+    // so the picker would render a list of blanks.
     PwObjectTracker {
-        objects: [root.sink, root.source]
+        objects: [...root.sinks, ...root.sources]
     }
 }

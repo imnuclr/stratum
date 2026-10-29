@@ -2,30 +2,77 @@
   "name": "nothing-dark",
   "mode": "dark",
   "color": {
-    "bg":         "#09090A",
-    "panel":      "#0B0B0C",
-    "surface":    "#141416",
-    "surfaceHi":  "#1D1D20",
+    "bg": "#09090A",
+    "panel": "#0B0B0C",
+    "surface": "#141416",
+    "surfaceHi": "#1D1D20",
     "surfaceTop": "#232327",
-    "line":       "#12FFFFFF",
-    "lineHi":     "#24FFFFFF",
-    "fg":         "#F4F4F5",
-    "fgDim":      "#9A9AA0",
-    "fgFaint":    "#5C5C62",
-    "dotOn":      "#FFFFFF",
-    "dotOff":     "#21FFFFFF",
-    "accent":     "#E5252B",
-    "ok":         "#4ADE80",
-    "warn":       "#FBBF24",
-    "crit":       "#EF4444"
+    "line": "#12FFFFFF",
+    "lineHi": "#24FFFFFF",
+    "fg": "#F4F4F5",
+    "fgDim": "#9A9AA0",
+    "fgFaint": "#5C5C62",
+    "dotOn": "#FFFFFF",
+    "dotOff": "#21FFFFFF",
+    "accent": "#E5252B",
+    "ok": "#4ADE80",
+    "warn": "#FBBF24",
+    "crit": "#EF4444"
   },
-  "radius": { "tile": 20, "sheet": 28, "inner": 12 },
-  "space":  [4, 8, 12, 16, 24, 32, 48],
-  "blur":   { "sheet": 32, "lock": 48, "strength": 0.9 },
-  "font":   { "display": "Doto", "ui": "Geist", "mono": "JetBrainsMono Nerd Font" },
+  "radius": {
+    "tile": 20,
+    "sheet": 28,
+    "inner": 12
+  },
+  "space": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48
+  ],
+  "blur": {
+    "sheet": 32,
+    "lock": 48,
+    "strength": 0.9
+  },
+  "font": {
+    "display": "Doto",
+    "ui": "Geist",
+    "mono": "JetBrainsMono Nerd Font"
+  },
   "motion": {
-    "micro": 120, "standard": 200, "sheet": 320, "ambient": 500, "dotStagger": 8,
-    "enterEasing": [0.2, 0, 0, 1],
-    "exitEasing":  [0.3, 0, 0.8, 0.15]
+    "micro": 120,
+    "standard": 200,
+    "sheet": 320,
+    "ambient": 500,
+    "dotStagger": 8,
+    "enterEasing": [
+      0.2,
+      0,
+      0,
+      1,
+      1,
+      1
+    ],
+    "exitEasing": [
+      0.3,
+      0,
+      0.8,
+      0.15,
+      1,
+      1
+    ],
+    "expressive": [
+      0.34,
+      1.26,
+      0.38,
+      1,
+      1,
+      1
+    ],
+    "expressiveMs": 420
   }
 }

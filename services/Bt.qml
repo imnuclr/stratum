@@ -30,6 +30,40 @@ Singleton {
         return "on";
     }
 
+    // Paired devices first, then by name, so the list doesn't reshuffle as
+    // signal strengths jitter during discovery.
+    readonly property list<BluetoothDevice> sorted: [...devices].sort((a, b) =>
+        (b.connected - a.connected) || (b.paired - a.paired) || a.name.localeCompare(b.name))
+
+    function setDiscovering(value) {
+        if (adapter)
+            adapter.discovering = value;
+    }
+
+    function toggleDiscovering() {
+        setDiscovering(!discovering);
+    }
+
+    function toggleDevice(device) {
+        if (!device)
+            return;
+        if (device.connected)
+            device.disconnect();
+        else
+            device.connect();
+    }
+
+    function forget(device) {
+        if (device?.bonded)
+            device.forget();
+    }
+
+    readonly property string settingsApp: Launch.firstOf(["overskride", "blueman-manager"])
+
+    function openSettings() {
+        Launch.run(settingsApp);
+    }
+
     function setEnabled(value) {
         if (adapter)
             adapter.enabled = value;
