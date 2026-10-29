@@ -41,6 +41,10 @@ PanelWindow {
     readonly property real availableHeight: monitor.height - edgeGapTop - edgeGapBottom
     // How far the sheet reaches sideways past its card, toward the screen edge.
     readonly property real bridge: Theme.space(1)
+
+    // Most of the way off its own edge, capped so a tall sheet does not take an
+    // age to arrive.
+    readonly property real travel: Math.min(root.sheetHeight, 260)
     property int sheetWidth: 400
     property int sheetHeight: 500
 
@@ -85,7 +89,23 @@ PanelWindow {
 
     // The window stays mapped until the exit transition has finished, otherwise
     // the sheet vanishes instead of shrinking.
-    visible: open || card.opacity > 0.001
+    /*
+     * The window stays mapped whether the sheet is shown or not.
+     *
+     * A window that only exists while open has no laid-out content until it
+     * opens, so its height settles over the first few frames of being on screen —
+     * the control centre's rect went 428x398 then 428x704 on consecutive opens,
+     * the first one before its content had measured itself. That moves the input
+     * mask under a stationary pointer, the compositor has to re-decide what the
+     * pointer is over, and the sheet jitters and closes. It only showed on the
+     * monitor whose sheet was opened least, because every instance pays this once
+     * and the one that keeps closing never gets past it.
+     *
+     * Mapped from the start, the layout settles once at launch and an open is a
+     * single region change. The cost is a transparent surface per sheet with no
+     * input region, which composites to nothing.
+     */
+    visible: true
 
     onOpenChanged: {
         if (!open) {
@@ -156,10 +176,10 @@ PanelWindow {
         + (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom))
 
     mask: Region {
-        x: root.reachX
-        y: root.reachY
-        width: root.reachW
-        height: root.reachH
+        x: root.open ? root.reachX : 0
+        y: root.open ? root.reachY : 0
+        width: root.open ? root.reachW : 0
+        height: root.open ? root.reachH : 0
     }
 
 
@@ -217,10 +237,15 @@ PanelWindow {
                     Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds}`);
                     if (!root.hoverDismiss)
                         return;
-                    if (hovered)
+                    if (hovered) {
+                        verify.stop();
                         root.take();
-                    else
+                    } else {
+                        // Let go at once so leaving closes the sheet without a
+                        // wait. The poll below only ever puts the hold back.
+                        root.give();
                         verify.restart();
+                    }
                 }
             }
 
@@ -240,7 +265,8 @@ PanelWindow {
             Timer {
                 id: verify
 
-                interval: 160
+                // Shorter than the grace, so a rescue lands before the close.
+                interval: 40
                 repeat: true
                 onTriggered: cursor.running = true
             }
@@ -261,11 +287,13 @@ PanelWindow {
                             && x < root.monitorX + root.reachX + root.reachW
                             && y >= root.monitorY + root.reachY
                             && y < root.monitorY + root.reachY + root.reachH;
-                        if (inside)
-                            return;
-                        Diag.log("sheet", `${root.name} pointer left at ${x},${y}, releasing`);
                         verify.stop();
-                        root.give();
+                        if (!inside)
+                            return;
+                        // Hover said the pointer left and it had not: something
+                        // took a grab, which is what clicking a control does.
+                        Diag.log("sheet", `${root.name} still at ${x},${y}, keeping it open`);
+                        root.take();
                     }
                 }
             }
@@ -291,11 +319,21 @@ PanelWindow {
                     id: card
 
                     /*
-                     * How far out of place the sheet sits while closed. One anchored
-                     * to the bottom starts below where it belongs and rises into
-                     * place; one anchored to the top starts above and comes down.
+                     * How far out of place the sheet sits while closed. One
+                     * anchored to the bottom starts below where it belongs and
+                     * rises into place; one anchored to the top starts above and
+                     * comes down.
+                     *
+                     * Far enough to read as a direction. At 56px the travel was
+                     * swamped by the fade and the panel looked like it simply
+                     * materialised — which is why a sheet rising from the bottom
+                     * edge kept being described as arriving from the top. A
+                     * bottom sheet now starts below the screen edge and comes up
+                     * from it, the way a drawer does.
                      */
-                    property real slide: root.open ? 0 : (root.originY >= 0.5 ? 56 : -56)
+                    property real slide: root.open
+                        ? 0
+                        : (root.originY >= 0.5 ? root.travel : -root.travel)
 
                     Behavior on slide {
                         NumberAnimation {
@@ -321,7 +359,8 @@ PanelWindow {
                     }
 
                     opacity: root.open ? 1 : 0
-                    scale: root.open ? 1 : 0.94
+                    // A hint, not the motion: the slide says where it came from.
+                    scale: root.open ? 1 : 0.98
 
                     /*
                      * Dismiss affordance at the bottom edge. Clicking outside already

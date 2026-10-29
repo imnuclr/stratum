@@ -121,7 +121,10 @@ Singleton {
     Timer {
         id: hideTimer
 
-        interval: 180
+        // Long enough only to cross between two triggers that sit apart, which
+        // the group hover already covers; anything more reads as the popout
+        // refusing to leave.
+        interval: 70
         // Re-checked rather than trusted: the timer may have been started before
         // the pointer landed somewhere that holds the popout open.
         onTriggered: {
