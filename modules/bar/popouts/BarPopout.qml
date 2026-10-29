@@ -141,9 +141,9 @@ Item {
             enabled: frame.settled
 
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.popoutMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.smooth
+                easing.bezierCurve: Theme.gentle
             }
         }
 
@@ -151,9 +151,9 @@ Item {
             enabled: frame.settled
 
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.popoutMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.smooth
+                easing.bezierCurve: Theme.gentle
             }
         }
 
@@ -161,23 +161,23 @@ Item {
             enabled: frame.settled
 
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.popoutMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.smooth
+                easing.bezierCurve: Theme.gentle
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.popoutMs
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: Theme.expressiveMs
+                duration: Theme.popoutMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.expressive
+                easing.bezierCurve: Theme.gentle
             }
         }
 

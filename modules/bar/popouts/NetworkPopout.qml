@@ -24,7 +24,9 @@ Item {
     // lifetime: the shared frame keeps the last content loaded through its close
     // transition, so onDestruction never runs and the scanner would stay on for
     // the rest of the session.
-    readonly property bool active: Popouts.current === "network"
+    // Overridable, because this list is also shown inside the control centre,
+    // where being live has nothing to do with which bar popout is up.
+    property bool active: Popouts.current === "network"
 
     /*
      * The list this popout shows, frozen the moment it stops being the live one.

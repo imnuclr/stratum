@@ -108,6 +108,8 @@ PanelWindow {
     visible: true
 
     onOpenChanged: {
+        if (open && root.hoverDismiss)
+            Shell.armDismiss();
         if (!open) {
             verify.stop();
             root.give();
@@ -239,6 +241,7 @@ PanelWindow {
                         return;
                     if (hovered) {
                         verify.stop();
+                        Shell.engage();
                         root.take();
                     } else {
                         // Let go at once so leaving closes the sheet without a
@@ -287,13 +290,21 @@ PanelWindow {
                             && x < root.monitorX + root.reachX + root.reachW
                             && y >= root.monitorY + root.reachY
                             && y < root.monitorY + root.reachY + root.reachH;
-                        verify.stop();
-                        if (!inside)
+                        if (inside) {
+                            /*
+                             * Hover said the pointer left and it had not:
+                             * something took a grab, which is what clicking a
+                             * control does. Put the hold back and keep watching —
+                             * stopping here was a trap, because hover may never
+                             * come back on its own and then nothing was left to
+                             * notice the pointer eventually leaving. The panel
+                             * stayed open for good once you had clicked in it.
+                             */
+                            root.take();
                             return;
-                        // Hover said the pointer left and it had not: something
-                        // took a grab, which is what clicking a control does.
-                        Diag.log("sheet", `${root.name} still at ${x},${y}, keeping it open`);
-                        root.take();
+                        }
+                        verify.stop();
+                        root.give();
                     }
                 }
             }

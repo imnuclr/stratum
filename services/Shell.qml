@@ -29,17 +29,62 @@ Singleton {
 
     // Set when a panel was opened by hover, so a click-opened panel is not
     // dismissed by the pointer wandering off.
+    /*
+     * Whether hover-out should close the panel that is open.
+     *
+     * Set when a hot zone opened it, and also the first time the pointer lands on
+     * a panel opened any other way — a sheet reached from a keybind or from
+     * another panel's link should not vanish because the pointer is elsewhere,
+     * but once it has been used with the pointer, leaving it should close it like
+     * anything else. Without the second half, the notification page opened from
+     * the control centre's link stayed up no matter where the pointer went.
+     */
     property bool hoverOpened: false
+
+    /*
+     * Which service chip has its list open inside the control centre, if any.
+     * Kept here rather than on the sheet because there is one control centre per
+     * monitor and only one of them is ever the open one — state on the sheet
+     * belonged to whichever instance happened to hold it.
+     */
+    property string expandedChip: ""
+
+    function expand(which) {
+        root.expandedChip = root.expandedChip === which ? "" : which;
+    }
+
+    function engage() {
+        root.hoverOpened = true;
+        adopt.stop();
+    }
+
+    /*
+     * A panel that dismisses on hover but was not opened by it — reached from a
+     * keybind, or from another panel's link — takes a moment to adopt the rule,
+     * so there is time to move onto it. After that, being away from it closes
+     * it like anything else. Without this, the notification page opened from the
+     * control centre's link had nothing to arm it: the pointer was at the far
+     * corner and never touched the page, so it stayed up for good.
+     */
+    function armDismiss() {
+        if (root.hoverOpened)
+            return;
+        adopt.restart();
+    }
     property int holds: 0
 
     function toggle(name, screen) {
         root.hoverOpened = false;
+        root.expandedChip = "";
+        adopt.stop();
         root.openScreen = screen ?? "";
         openPanel = openPanel === name ? "" : name;
     }
 
     function open(name, screen) {
         root.hoverOpened = false;
+        root.expandedChip = "";
+        adopt.stop();
         root.openScreen = screen ?? "";
         openPanel = name;
     }
@@ -82,6 +127,8 @@ Singleton {
         grace.stop();
         root.holds = 0;
         root.hoverOpened = false;
+        root.expandedChip = "";
+        adopt.stop();
         if (openPanel.length > 0) {
             root.lastClosed = openPanel;
             cooldown.restart();
@@ -107,6 +154,19 @@ Singleton {
         id: cooldown
 
         interval: 400
+    }
+
+    Timer {
+        id: adopt
+
+        interval: 1500
+        onTriggered: {
+            root.hoverOpened = true;
+            if (root.holds === 0 && root.openPanel.length > 0) {
+                Diag.log("shell", `nothing holding ${root.openPanel}, closing`);
+                root.close();
+            }
+        }
     }
 
     Timer {

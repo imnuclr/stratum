@@ -30,6 +30,22 @@ Item {
         color: root.active ? Theme.fg : (hover.hovered && root.available ? Theme.surfaceTop : Theme.surfaceHi)
         opacity: root.available ? 1 : 0.45
 
+        /*
+         * The circle answers the press, not just the result. Held down it gives
+         * a little, lifts slightly under the pointer, and settles when released —
+         * so a toggle that takes a moment to actually take effect still feels
+         * like it registered the click.
+         */
+        scale: press.pressed ? 0.92 : (hover.hovered && root.available ? 1.04 : 1)
+
+        Behavior on scale {
+            NumberAnimation {
+                duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.gentle
+            }
+        }
+
         Behavior on color {
             ColorAnimation {
                 duration: Theme.standard
@@ -42,6 +58,14 @@ Item {
             size: 21
             stroke: 1.8
             color: root.active ? Theme.bg : Theme.fgBright
+
+            // The glyph turns over as the fill inverts beneath it, rather than
+            // swapping colour against a circle that is still changing.
+            Behavior on color {
+                ColorAnimation {
+                    duration: Theme.standard
+                }
+            }
         }
     }
 
@@ -53,6 +77,12 @@ Item {
         text: root.label
         color: root.active ? Theme.fgBright : Theme.fgFaint
         opacity: root.available ? 1 : 0.5
+
+        Behavior on color {
+            ColorAnimation {
+                duration: Theme.standard
+            }
+        }
     }
 
     HoverHandler {
@@ -63,6 +93,8 @@ Item {
     }
 
     TapHandler {
+        id: press
+
         enabled: root.available
         onTapped: root.toggled()
     }

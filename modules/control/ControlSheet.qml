@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.components
+import qs.modules.bar.popouts
 import qs.config
 import qs.services
 import qs.theme
@@ -23,9 +24,32 @@ Sheet {
     // Clamped to the room actually available, not to a guess at it.
     sheetHeight: Math.min(availableHeight, body.implicitHeight + Theme.space(4) * 2)
 
-    // Media only: no notification ages are shown here any more, so nothing on
-    // this panel needs a ticking clock.
-    onOpenChanged: open ? Media.watch() : Media.unwatch()
+    /*
+     * Media only: no notification ages are shown here any more, so nothing on
+     * this panel needs a ticking clock. Shell collapses whichever list was open
+     * when a panel closes, so the height is its own business on the next open.
+     */
+    onOpenChanged: {
+        if (open) {
+            Media.watch();
+        } else {
+            Media.unwatch();
+        }
+    }
+
+    Component {
+        id: networkList
+
+        NetworkPopout {
+            active: true
+        }
+    }
+
+    Component {
+        id: deviceList
+
+        BluetoothPopout {}
+    }
 
     Column {
         id: body
@@ -51,7 +75,7 @@ Sheet {
                 detail: Network.connected ? Network.label : "off"
                 active: Wifi.enabled
                 onToggled: Wifi.setEnabled(!Wifi.enabled)
-                onExpanded: Shell.close()
+                onExpanded: Shell.expand("network")
             }
 
             ServicePill {
@@ -61,8 +85,24 @@ Sheet {
                 detail: Bt.enabled ? Bt.label : "off"
                 active: Bt.enabled
                 onToggled: Bt.toggle()
-                onExpanded: Shell.close()
+                onExpanded: Shell.expand("bluetooth")
             }
+        }
+
+        /*
+         * The networks or devices, in the panel itself.
+         *
+         * Reaching for a network used to close the control centre and put the
+         * list in a bar popout at the other end of the screen, which is a strange
+         * thing to do to someone who has just said they want to pick a network:
+         * the thing they clicked disappears. The list opens here instead, under
+         * the chip it belongs to, and the panel stays where it is.
+         */
+        Loader {
+            width: parent.width
+            active: Shell.expandedChip.length > 0
+            visible: active
+            sourceComponent: Shell.expandedChip === "network" ? networkList : deviceList
         }
 
         QuickToggles {

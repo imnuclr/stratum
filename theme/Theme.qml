@@ -69,7 +69,11 @@ Singleton {
     // --- motion ---
     readonly property int micro: pick("motion.micro", 120)
     readonly property int standard: pick("motion.standard", 200)
-    readonly property int sheetMs: pick("motion.sheet", 320)
+    readonly property int sheetMs: pick("motion.sheet", 420)
+
+    // How long a popout takes to resize, move and appear. Short enough to keep
+    // up with a pointer crossing the bar, long enough not to crack.
+    readonly property int popoutMs: pick("motion.popout", 320)
     readonly property real dotStagger: pick("motion.dotStagger", 8)
 
     /*
@@ -78,13 +82,23 @@ Singleton {
      * length is discarded outright and the curve silently animates linearly,
      * with no warning, which is what these did for their first few commits.
      */
-    readonly property var enterEasing: pick("motion.enterEasing", [0.2, 0, 0, 1, 1, 1])
+    // Was [0.2, 0, 0, 1]: almost all of the travel in the first few frames, then
+    // a long crawl. Fine on paper, and it read as a slam.
+    readonly property var enterEasing: pick("motion.enterEasing", [0.215, 0.61, 0.355, 1, 1, 1])
     readonly property var exitEasing: pick("motion.exitEasing", [0.3, 0, 0.8, 0.15, 1, 1])
     // Overshoots slightly. For things that appear rather than merely move.
     readonly property var expressive: pick("motion.expressive", [0.34, 1.26, 0.38, 1, 1, 1])
     // Eased at both ends. For something changing size, where enterEasing's hard
     // decelerate puts most of the change in the first third and reads as a pop.
     readonly property var smooth: pick("motion.smooth", [0.4, 0, 0.2, 1, 1, 1])
+
+    /*
+     * Eased out, gently. The standard curve leaves at speed and stops dead,
+     * which on a short duration reads as the panel being thrown at its position
+     * rather than moving there. This one is ease-out-cubic: it starts moving
+     * properly, slows the whole way, and has nothing abrupt at either end.
+     */
+    readonly property var gentle: pick("motion.gentle", [0.215, 0.61, 0.355, 1, 1, 1])
     readonly property int expressiveMs: pick("motion.expressiveMs", 420)
 
     function pick(keyPath, fallback) {

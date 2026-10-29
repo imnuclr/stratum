@@ -56,6 +56,15 @@ ShellRoot {
         function current(): string {
             return Shell.openPanel;
         }
+
+        // Which service list the control centre has open, if any.
+        function expand(which: string): void {
+            Shell.expand(which);
+        }
+
+        function expanded(): string {
+            return Shell.expandedChip;
+        }
     }
 
     Bar {}
