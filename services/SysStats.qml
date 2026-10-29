@@ -13,7 +13,9 @@ import Quickshell.Io
  *
  * CPU percentage has to be derived from the difference between two samples of
  * /proc/stat: the file holds cumulative jiffies since boot, so a single read
- * gives the average since startup, not the load right now.
+ * gives the average since startup, not the load right now. The same applies per
+ * core, so one set of previous counters is kept for the aggregate and one per
+ * core line.
  */
 Singleton {
     id: root
@@ -26,7 +28,14 @@ Singleton {
     property int memTotalKb: 0
     property int memUsedKb: 0
 
+    // Shown as "14.6G" rather than a percentage, which is what the strip wants.
+    readonly property string memoryShort: `${(memUsedKb / 1048576).toFixed(1)}G`
     readonly property string memoryLabel: `${(memUsedKb / 1048576).toFixed(1)} / ${(memTotalKb / 1048576).toFixed(1)} GiB`
+
+    // Per-core load, in /proc/stat order.
+    property var cores: []
+    property real frequency: 0
+    readonly property string frequencyLabel: frequency > 0 ? `${(frequency / 1000000).toFixed(1)} GHz` : ""
 
     // Rolling CPU history for the dashboard's dot field, oldest first.
     property var cpuHistory: []
@@ -34,6 +43,7 @@ Singleton {
 
     property int lastIdle: 0
     property int lastTotal: 0
+    property var lastCores: ({})
 
     // Consumers that want a faster tick while something is on screen.
     property int watchers: 0
@@ -50,6 +60,7 @@ Singleton {
         statFile.reload();
         memFile.reload();
         tempFile.reload();
+        freqFile.reload();
     }
 
     Timer {
@@ -66,25 +77,47 @@ Singleton {
         path: "/proc/stat"
 
         onLoaded: {
-            const line = text().split("\n")[0];
-            if (!line.startsWith("cpu "))
-                return;
+            const lines = text().split("\n");
+            const nextCores = [];
+            const seen = {};
 
-            const parts = line.split(/\s+/).slice(1).map(Number);
-            const idle = parts[3] + (parts[4] ?? 0);
-            const total = parts.reduce((a, b) => a + b, 0);
+            for (const line of lines) {
+                if (!line.startsWith("cpu"))
+                    continue;
 
-            const dTotal = total - root.lastTotal;
-            const dIdle = idle - root.lastIdle;
-            // The first sample has nothing to diff against.
-            if (root.lastTotal > 0 && dTotal > 0) {
-                root.cpu = Math.max(0, Math.min(1, 1 - dIdle / dTotal));
-                const next = [...root.cpuHistory, root.cpu];
-                root.cpuHistory = next.slice(-root.historyLength);
+                const label = line.split(/\s+/)[0];
+                const parts = line.split(/\s+/).slice(1).map(Number);
+                if (parts.length < 4)
+                    continue;
+
+                const idle = parts[3] + (parts[4] ?? 0);
+                const total = parts.reduce((a, b) => a + b, 0);
+
+                if (label === "cpu") {
+                    const dTotal = total - root.lastTotal;
+                    const dIdle = idle - root.lastIdle;
+                    // The first sample has nothing to diff against.
+                    if (root.lastTotal > 0 && dTotal > 0) {
+                        root.cpu = Math.max(0, Math.min(1, 1 - dIdle / dTotal));
+                        root.cpuHistory = [...root.cpuHistory, root.cpu].slice(-root.historyLength);
+                    }
+                    root.lastIdle = idle;
+                    root.lastTotal = total;
+                } else {
+                    const prev = root.lastCores[label];
+                    if (prev) {
+                        const dTotal = total - prev.total;
+                        const dIdle = idle - prev.idle;
+                        nextCores.push(dTotal > 0 ? Math.max(0, Math.min(1, 1 - dIdle / dTotal)) : 0);
+                    } else {
+                        nextCores.push(0);
+                    }
+                    seen[label] = { idle, total };
+                }
             }
 
-            root.lastIdle = idle;
-            root.lastTotal = total;
+            root.lastCores = seen;
+            root.cores = nextCores;
         }
     }
 
@@ -120,13 +153,27 @@ Singleton {
         id: tempFile
 
         // x86_pkg_temp is the package sensor; zone 0 is it on this hardware, but
-        // the path is config-overridable because zone numbering is not stable.
+        // zone numbering is not stable across machines.
         path: "/sys/class/thermal/thermal_zone0/temp"
 
         onLoaded: {
             const milli = parseInt(text());
             if (!isNaN(milli))
                 root.temperature = milli / 1000;
+        }
+    }
+
+    FileView {
+        id: freqFile
+
+        // Core 0 stands in for the package. Reading all sixteen every second to
+        // average them costs more than the number is worth.
+        path: "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq"
+
+        onLoaded: {
+            const khz = parseInt(text());
+            if (!isNaN(khz))
+                root.frequency = khz;
         }
     }
 }

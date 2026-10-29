@@ -25,6 +25,12 @@ Singleton {
 
     readonly property bool located: !isNaN(latitude) && !isNaN(longitude)
 
+    // Tomorrow onward: { day, code, max, min }. Index 0 of the API's daily
+    // arrays is today, which the current conditions already cover.
+    property var daily: []
+    property string sunrise: ""
+    property string sunset: ""
+
     property real temperature: NaN
     property real apparent: NaN
     property real humidity: NaN
@@ -69,11 +75,14 @@ Singleton {
             return;
         }
         const units = metric ? "celsius" : "fahrenheit";
-        const wind = metric ? "kmh" : "mph";
+        // m/s rather than km/h: the strip shows wind beside "feels like" in the
+        // space of a few characters.
+        const wind = metric ? "ms" : "mph";
         fetch.command = ["curl", "-s", "--max-time", "10",
             `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
             `&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day` +
-            `&temperature_unit=${units}&wind_speed_unit=${wind}`];
+            `&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=5` +
+            `&temperature_unit=${units}&wind_speed_unit=${wind}&timezone=auto`];
         fetch.running = true;
     }
 
@@ -135,6 +144,27 @@ Singleton {
                     root.windSpeed = c.wind_speed_10m;
                     root.code = c.weather_code ?? -1;
                     root.day = c.is_day === 1;
+
+                    const d = JSON.parse(text)?.daily;
+                    if (d?.time) {
+                        // Local date strings, so the time is taken off the end
+                        // rather than parsed as UTC and shifted.
+                        root.sunrise = (d.sunrise?.[0] ?? "").slice(11);
+                        root.sunset = (d.sunset?.[0] ?? "").slice(11);
+
+                        const names = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+                        const days = [];
+                        for (let i = 1; i < d.time.length; i++) {
+                            days.push({
+                                day: names[new Date(`${d.time[i]}T00:00`).getDay()],
+                                code: d.weather_code?.[i] ?? -1,
+                                max: d.temperature_2m_max?.[i] ?? NaN,
+                                min: d.temperature_2m_min?.[i] ?? NaN
+                            });
+                        }
+                        root.daily = days;
+                    }
+
                     root.error = "";
                 } catch (e) {
                     root.error = "forecast unreadable";
