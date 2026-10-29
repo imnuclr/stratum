@@ -18,9 +18,9 @@ Variants {
             panel: "dashboard"
             edge: "top"
             along: 0.5
-            zoneLength: Config.forMonitor(modelData.name, "hotzones.deckLength", 520)
-            zoneDepth: Config.forMonitor(modelData.name, "hotzones.deckDepth", 6)
-            dwell: Config.forMonitor(modelData.name, "hotzones.deckDwell", 90)
+            zoneLength: Config.forMonitor(modelData.name, "hotzones.deckLength", 560)
+            zoneDepth: Config.forMonitor(modelData.name, "hotzones.deckDepth", 14)
+            dwell: Config.forMonitor(modelData.name, "hotzones.deckDwell", 60)
         }
 
         // Bottom right, away from everything: the control centre is the panel you
@@ -32,23 +32,17 @@ Variants {
             along: 1
             // A genuine corner: deep and long enough to catch a flick toward it
             // rather than needing the pointer parked in the last few pixels.
-            zoneLength: Config.forMonitor(modelData.name, "hotzones.cornerLength", 260)
-            zoneDepth: Config.forMonitor(modelData.name, "hotzones.cornerDepth", 10)
-            // Longer than the deck's: this corner sits mid-desktop on a
-            // multi-monitor layout and gets crossed, not aimed at.
-            dwell: Config.forMonitor(modelData.name, "hotzones.cornerDwell", 180)
+            zoneLength: Config.forMonitor(modelData.name, "hotzones.cornerLength", 320)
+            zoneDepth: Config.forMonitor(modelData.name, "hotzones.cornerDepth", 24)
+            /*
+             * Long enough to reject a pass-through when crossing between
+             * monitors, short enough that a deliberate move to the corner
+             * registers. 180ms was too long: tracing showed the pointer entering
+             * and leaving before the timer elapsed, so the panel never opened at
+             * all.
+             */
+            dwell: Config.forMonitor(modelData.name, "hotzones.cornerDwell", 70)
         }
     
-        // Top left, where it was before: the overview is a corner you throw the
-        // pointer at without aiming.
-        HotZone {
-            monitor: modelData
-            panel: "overview"
-            edge: "top"
-            along: 0
-            zoneLength: Config.forMonitor(modelData.name, "hotzones.overviewLength", 200)
-            zoneDepth: Config.forMonitor(modelData.name, "hotzones.overviewDepth", 10)
-            dwell: Config.forMonitor(modelData.name, "hotzones.overviewDwell", 150)
-        }
 }
 }

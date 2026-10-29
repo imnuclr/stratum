@@ -107,16 +107,15 @@
   },
   "hotzones": {
     "enabled": true,
-    "deckLength": 520,
-    "deckDepth": 6,
-    "cornerLength": 260,
-    "cornerDepth": 10
+    "deckLength": 560,
+    "deckDepth": 14,
+    "deckDwell": 60,
+    "cornerLength": 320,
+    "cornerDepth": 24,
+    "cornerDwell": 70
   },
   "session": {
     "width": 300
-  },
-  "overview": {
-    "cardWidth": 260
   },
   "debug": {
     "trace": true

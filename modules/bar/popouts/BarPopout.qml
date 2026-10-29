@@ -141,9 +141,9 @@ Item {
             enabled: frame.settled
 
             NumberAnimation {
-                duration: Theme.expressiveMs
+                duration: Theme.standard
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.enterEasing
+                easing.bezierCurve: Theme.smooth
             }
         }
 
@@ -151,9 +151,9 @@ Item {
             enabled: frame.settled
 
             NumberAnimation {
-                duration: Theme.expressiveMs
+                duration: Theme.standard
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.enterEasing
+                easing.bezierCurve: Theme.smooth
             }
         }
 
@@ -161,9 +161,9 @@ Item {
             enabled: frame.settled
 
             NumberAnimation {
-                duration: Theme.expressiveMs
+                duration: Theme.standard
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.enterEasing
+                easing.bezierCurve: Theme.smooth
             }
         }
 
@@ -221,85 +221,45 @@ Item {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.margins: Theme.space(3)
+            implicitWidth: loader.item?.implicitWidth ?? 200
+            implicitHeight: loader.item?.implicitHeight ?? 90
 
             /*
-             * Two loaders, crossfading. One loader meant the old layout was still
-             * on screen inside a frame already travelling to the new size, which
-             * read as a jump; hiding it first instead left the frame empty for
-             * the length of the resize, which read as a flicker. Overlapping the
-             * two is the only arrangement where the panel actually becomes the
-             * other panel: the outgoing content fades as the incoming one arrives,
-             * both while the frame is still moving.
+             * One loader, and the content changes the instant the popout does.
+             * What makes this read as a morph rather than a jump is the frame
+             * around it: its top edge is latched, so a taller or shorter panel
+             * grows downward instead of re-centring, and its width and height
+             * animate from the same instant target.
+             *
+             * Two fancier versions were tried and both failed. Two loaders
+             * crossfading needed a flag to say which was live, and the flag and
+             * the source assignment did not commute — the old content stayed on
+             * screen with Popouts.current already changed. Capturing the outgoing
+             * layout into a ShaderEffectSource and fading that out left the frame
+             * rendering empty. Neither was worth more attempts than the thing it
+             * was improving.
              */
-            property bool useA: true
-
-            readonly property Loader front: useA ? a : b
-            readonly property Loader back: useA ? b : a
-
-            // The frame sizes itself to what is arriving, not what is leaving.
-            implicitWidth: front.item?.implicitWidth ?? 200
-            implicitHeight: front.item?.implicitHeight ?? 90
-
-            function sourceFor(name) {
-                switch (name) {
-                case "network":
-                    return "NetworkPopout.qml";
-                case "bluetooth":
-                    return "BluetoothPopout.qml";
-                case "audio":
-                    return "AudioPopout.qml";
-                default:
-                    return "";
-                }
-            }
-
-            function show(name) {
-                const src = content.sourceFor(name);
-                if (src === content.front.source)
-                    return;
-                // Load into whichever slot is currently invisible, then swap which
-                // one is on top. The outgoing slot keeps its content until its
-                // fade finishes, so there is never a frame with nothing in it.
-                content.back.source = src;
-                content.useA = !content.useA;
-            }
-
-            Component.onCompleted: a.source = content.sourceFor(Popouts.content)
-
-            Connections {
-                target: Popouts
-
-                function onContentChanged() {
-                    content.show(Popouts.content);
-                }
-            }
-
             Loader {
-                id: a
+                id: loader
 
-                opacity: root.shown && content.useA ? 1 : 0
-                visible: opacity > 0.001
-
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: Theme.standard
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.smooth
+                source: {
+                    switch (Popouts.content) {
+                    case "network":
+                        return "NetworkPopout.qml";
+                    case "bluetooth":
+                        return "BluetoothPopout.qml";
+                    case "audio":
+                        return "AudioPopout.qml";
+                    default:
+                        return "";
                     }
                 }
-            }
 
-            Loader {
-                id: b
-
-                opacity: root.shown && !content.useA ? 1 : 0
-                visible: opacity > 0.001
+                opacity: root.shown ? 1 : 0
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: Theme.standard
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.smooth
+                        duration: Theme.micro
                     }
                 }
             }

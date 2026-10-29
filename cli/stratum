@@ -59,6 +59,10 @@ case "${1:-help}" in
     fi
     ;;
   log)     mkdir -p "$(dirname "$LOG")"; touch "$LOG"; tail -n "${2:-60}" -f "$LOG" ;;
+  # Only the shell's own trace lines, from the live instance rather than the
+  # start-up log. `stratum log` drowns these in compositor warnings, which is
+  # what made the first attempt at reading them useless.
+  trace)   qs -c "$CONFIG" log 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep '\[trace\]' | tail -n "${2:-40}" ;;
   ipc)     shift; exec qs -c "$CONFIG" ipc call "$@" ;;
   *)
     cat <<USAGE
@@ -71,6 +75,7 @@ case "${1:-help}" in
     stratum restart
     stratum status             exit 0 if running
     stratum log [N]            follow the log
+    stratum trace [N]          just the shell's trace lines
     stratum ipc ...            raw IPC, e.g. stratum ipc panel toggle control
 
   See also: stratumctl (panels), shellctl (switch between installed shells)
