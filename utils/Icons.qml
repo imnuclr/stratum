@@ -15,10 +15,6 @@ Singleton {
     id: root
 
     readonly property var paths: ({
-        "wifi-0": "M12 19.6h.01",
-        "wifi-1": "M9 15.9a6 6 0 0 1 6 0M12 19.6h.01",
-        "wifi-2": "M5.5 12.2a11 11 0 0 1 13 0M9 15.9a6 6 0 0 1 6 0M12 19.6h.01",
-        "wifi-3": "M2 8.5a16 16 0 0 1 20 0M5.5 12.2a11 11 0 0 1 13 0M9 15.9a6 6 0 0 1 6 0M12 19.6h.01",
         "wifi-dot": "M12 19.6h.01",
         "wifi-arc1": "M9 15.9a6 6 0 0 1 6 0",
         "wifi-arc2": "M5.5 12.2a11 11 0 0 1 13 0",
@@ -48,17 +44,6 @@ Singleton {
 
     function has(name) {
         return paths[name] !== undefined;
-    }
-
-    // 0..100 signal strength to one of four wifi glyphs.
-    function wifi(strength) {
-        if (strength >= 70)
-            return "wifi-3";
-        if (strength >= 45)
-            return "wifi-2";
-        if (strength >= 20)
-            return "wifi-1";
-        return "wifi-0";
     }
 
     // 0..1 volume to one of three speaker glyphs.

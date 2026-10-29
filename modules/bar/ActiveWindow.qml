@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import qs.components
+import qs.services
 import qs.theme
 
 /*
@@ -11,7 +11,7 @@ import qs.theme
 Row {
     id: root
 
-    readonly property var toplevel: Hyprland.activeToplevel
+    readonly property var toplevel: Hypr.activeToplevel
     readonly property string appClass: toplevel?.lastIpcObject?.class ?? ""
     readonly property string windowTitle: toplevel?.title ?? ""
     readonly property bool present: windowTitle.length > 0

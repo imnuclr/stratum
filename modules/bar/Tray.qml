@@ -7,8 +7,10 @@ import qs.theme
 /*
  * System tray, collapsed behind a chevron and expanding in place.
  *
- * Caelestia pushes overflow into a popup menu; this just grows the island, which
- * keeps the bar a single surface and avoids a second window to manage.
+ * Items reveal on a stagger rather than all at once, and the order reverses on
+ * close so the row folds back toward the chevron it came from. A single
+ * simultaneous fade behind a width animation reads as a glitch, because the
+ * icons appear at full opacity in a container that is still growing.
  */
 Row {
     id: root
@@ -17,37 +19,49 @@ Row {
 
     readonly property var items: SystemTray.items?.values ?? []
     readonly property bool hasItems: items.length > 0
+    readonly property int stagger: 38
 
     spacing: Theme.space(1)
     visible: hasItems
 
     Glyph {
+        id: chevron
+
         anchors.verticalCenter: parent.verticalCenter
-        name: root.expanded ? "chevron-left" : "chevron-down"
+        name: "chevron-down"
         size: 15
-        color: mouse.containsMouse ? Theme.fg : Theme.fgFaint
+        color: mouse.containsMouse || root.expanded ? Theme.fg : Theme.fgFaint
+        rotation: root.expanded ? 90 : 0
+
+        Behavior on rotation {
+            NumberAnimation {
+                duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.enterEasing
+            }
+        }
 
         MouseArea {
             id: mouse
 
             anchors.fill: parent
-            anchors.margins: -3
+            anchors.margins: -4
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: root.expanded = !root.expanded
         }
     }
 
-    // Clipped so icons slide out of the chevron rather than popping in.
     Item {
         anchors.verticalCenter: parent.verticalCenter
         clip: true
         height: 18
-        width: root.expanded ? icons.implicitWidth : 0
+        // Leading padding so the first icon isn't clipped mid-slide.
+        width: root.expanded ? icons.implicitWidth + Theme.space(1) : 0
 
         Behavior on width {
             NumberAnimation {
-                duration: Theme.standard
+                duration: Theme.standard + root.items.length * 12
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Theme.enterEasing
             }
@@ -56,6 +70,7 @@ Row {
         Row {
             id: icons
 
+            x: Theme.space(1)
             spacing: Theme.space(2)
 
             Repeater {
@@ -65,15 +80,58 @@ Row {
                     id: entry
 
                     required property var modelData
+                    required property int index
+
+                    // Forward on open, reverse on close, so the row folds back
+                    // toward the chevron.
+                    readonly property int delay: root.expanded
+                        ? index * root.stagger
+                        : (root.items.length - 1 - index) * Math.round(root.stagger * 0.6)
 
                     width: 17
                     height: 17
                     anchors.verticalCenter: parent.verticalCenter
+
                     opacity: root.expanded ? 1 : 0
+                    scale: root.expanded ? 1 : 0.55
+                    // Slides out of the chevron rather than fading in place.
+                    x: root.expanded ? 0 : -Theme.space(3)
 
                     Behavior on opacity {
-                        NumberAnimation {
-                            duration: Theme.standard
+                        SequentialAnimation {
+                            PauseAnimation {
+                                duration: entry.delay
+                            }
+                            NumberAnimation {
+                                duration: Theme.standard
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                    }
+
+                    Behavior on scale {
+                        SequentialAnimation {
+                            PauseAnimation {
+                                duration: entry.delay
+                            }
+                            NumberAnimation {
+                                duration: Theme.standard
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.enterEasing
+                            }
+                        }
+                    }
+
+                    Behavior on x {
+                        SequentialAnimation {
+                            PauseAnimation {
+                                duration: entry.delay
+                            }
+                            NumberAnimation {
+                                duration: Theme.standard
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.enterEasing
+                            }
                         }
                     }
 
@@ -89,6 +147,7 @@ Row {
                     MouseArea {
                         anchors.fill: parent
                         anchors.margins: -2
+                        enabled: root.expanded
                         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
                         cursorShape: Qt.PointingHandCursor
 

@@ -615,7 +615,7 @@ Deliberately ordered so something looks good on screen at the end of every phase
 | **0 — Skeleton** | repo, `shell.qml`, `Config` + `Theme` with live reload, `Sheet`/`Tile`/`Pill`/`DotText`, fonts vendored | a floating pill shows the real clock in Doto, and editing `theme.json` changes it without a reload |
 | **0 — done** | verified on the real hardware: bar renders on both monitors, Doto clock live, per-monitor height override applied, config and theme hot-reload from JSON, `panel` IPC round-trips | &check; |
 | **1 — Bar** | three islands, workspaces, active window, tray, status cluster, per-monitor, `thirds` layout | daily-drivable bar on both displays |
-| **2 — Services** | all 13 services, ≤200 lines each | every number in the bar is real |
+| **2 — Services** | remaining services: Media, Notifications, SysStats, Gpu, Weather | every number in the dashboard is real |
 | **3 — Dashboard + Control** | both sheets, in-place tile expansion, all 8 categories | you stop opening the old shell |
 | **4 — Wallpaper + depth** | wallpaper layer, cutout parallax, depth shader, transitions | the subject sits in front of a widget |
 | **5 — Widget canvas** | registry, grid, edit mode, first 8 widgets | you can lay out a desktop with the mouse |
@@ -700,6 +700,28 @@ Findings from running Phase 0 on the target machine, kept because each one cost 
    `MouseArea { anchors.fill: parent }` in a `Grid` logs "Grid will not function" and
    stacks every cell at the origin. Wrap the Grid in an Item and make the hit area a
    sibling.
-11. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
+11. **Hyprland's Lua config mode changes dispatch entirely.** When Hyprland runs a Lua
+   config (`Hyprland.usingLua`), the IPC dispatch argument is evaluated as Lua, so
+   `workspace 2` fails with "attempt to call a nil value" and no plain-string form
+   works. The equivalent is `hl.dsp.focus({ workspace = "2" })`. This silently broke
+   workspace clicking and scrolling until it was tested through the real code path.
+   Caelestia branches on `usingLua` at eight separate call sites; `services/Hypr.qml`
+   keeps the split in one place and gives modules semantic functions instead.
+12. **A wrong QML enum member is `undefined`, not an error.** `WifiSecurityType` has
+   members `Open`, `Owe`, `StaticWep`, `DynamicWep`, `Leap`, `WpaPsk`, `Wpa2Psk`,
+   `Wpa2Eap`, `WpaEap`, `Sae`, `Wpa3SuiteB192`, `Unknown` — not the `None`/`Wpa2`/`Wpa3`
+   you would guess. A `switch` over invented members compiles, warns about nothing, and
+   silently takes the default branch. Read the enum, don't assume it.
+13. **`NetworkDevice.address` is the MAC, not the IPv4 address**, and the module doesn't
+   expose IPv4 at all. `Network.ipv4` reads it from `ip -4 -json` — the only place that
+   service leaves the native API, and only because there is no alternative.
+14. **A positioner's `implicitWidth` is read-only.** Assigning it on a `Column` warns
+   "Invalid property assignment" at runtime and the popouts rendered unsized. Wrap the
+   column in an `Item` that owns the width and report the height back up.
+15. **A bare `Text` ignores its frame.** Hint lines in the popouts were the widest
+   element and drew straight past the panel edge, since nothing constrains a Text
+   without an explicit `width`. Set `width` and `wrapMode` on anything that can outgrow
+   its container.
+16. **The installed `quickshell-git` was built against Qt 6.11.2 while the system has
    6.12.0.** It logs a crash warning on every start and affects Caelestia equally.
    Rebuild the package: `paru -S --rebuild quickshell-git`.

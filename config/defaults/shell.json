@@ -5,7 +5,7 @@
     "height": 38,
     "margin": 10,
     "gap": 8,
-    "layout": "thirds",
+    "layout": "edges",
     "islands": {
       "left": [
         "workspaces",
@@ -23,8 +23,10 @@
     },
     "workspaces": {
       "count": 6,
-      "activeWidth": 18,
-      "dotSize": 6
+      "slot": 15,
+      "gap": 4,
+      "dotSize": 5,
+      "trailFactor": 1.6
     }
   },
   "controlCentre": {

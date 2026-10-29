@@ -5,28 +5,30 @@ import qs.theme
 import qs.utils
 
 /*
- * Network, bluetooth, volume and battery. Each glyph is live and most take an
- * interaction, so the cluster is a control surface rather than a readout.
+ * Network, bluetooth, volume and battery. Each is live, takes a click, and
+ * raises a hover popout with its own detail.
  *
- * Battery hides entirely when there isn't one, instead of rendering a fake 100%.
+ * Battery hides entirely when there isn't one, rather than rendering a fake 100%.
  */
 Row {
     id: root
 
+    required property string monitorName
+
     spacing: Theme.space(2)
 
-    // Network — click toggles wifi, and an unroutable connection dims the glyph
+    // Network — click toggles wifi. An unroutable connection tints the glyph
     // rather than inventing a separate "connected but no internet" icon.
-    Item {
-        anchors.verticalCenter: parent.verticalCenter
-        implicitWidth: 16
-        implicitHeight: 16
+    StatusItem {
+        popout: "network"
 
         readonly property color tint: {
             if (!Network.connected)
                 return Theme.fgFaint;
             return Network.online ? Theme.fgDim : Theme.warn;
         }
+
+        onActivated: Network.toggleWifi()
 
         Glyph {
             anchors.fill: parent
@@ -43,48 +45,71 @@ Row {
             color: parent.tint
             visible: !Network.wiredActive && Network.wifiEnabled
         }
-
-        MouseArea {
-            anchors.fill: parent
-            anchors.margins: -3
-            cursorShape: Qt.PointingHandCursor
-            onClicked: Network.toggleWifi()
-        }
     }
 
-    Glyph {
-        anchors.verticalCenter: parent.verticalCenter
-        name: Bt.enabled ? "bluetooth" : "bluetooth-off"
-        color: Bt.connected ? Theme.fg : (Bt.enabled ? Theme.fgDim : Theme.fgFaint)
-        size: 16
+    StatusItem {
+        popout: "bluetooth"
         visible: Bt.available
 
-        MouseArea {
+        onActivated: Bt.toggle()
+
+        Glyph {
             anchors.fill: parent
-            anchors.margins: -3
-            cursorShape: Qt.PointingHandCursor
-            onClicked: Bt.toggle()
+            name: Bt.enabled ? "bluetooth" : "bluetooth-off"
+            size: 16
+            color: Bt.connected ? Theme.fg : (Bt.enabled ? Theme.fgDim : Theme.fgFaint)
         }
     }
 
     // Volume — click mutes, scroll adjusts.
-    Glyph {
-        anchors.verticalCenter: parent.verticalCenter
-        name: Icons.volume(Audio.volume, Audio.muted)
-        color: Audio.muted ? Theme.fgFaint : Theme.fgDim
-        size: 16
+    StatusItem {
+        popout: "audio"
 
-        MouseArea {
+        onActivated: Audio.toggleMuted()
+        onScrolled: delta => Audio.step(delta > 0 ? 0.02 : -0.02)
+
+        Glyph {
             anchors.fill: parent
-            anchors.margins: -3
-            cursorShape: Qt.PointingHandCursor
-            onClicked: Audio.toggleMuted()
-            onWheel: event => Audio.step(event.angleDelta.y > 0 ? 0.02 : -0.02)
+            name: Icons.volume(Audio.volume, Audio.muted)
+            size: 16
+            color: Audio.muted ? Theme.fgFaint : Theme.fgDim
         }
     }
 
     Battery {
         anchors.verticalCenter: parent.verticalCenter
         visible: Power.hasBattery
+    }
+
+    /*
+     * Shared hover/click behaviour. Each item reports its own centre in bar-window
+     * coordinates so the popout can anchor under it.
+     */
+    component StatusItem: Item {
+        id: item
+
+        property string popout: ""
+
+        signal activated
+        signal scrolled(real delta)
+
+        anchors.verticalCenter: parent.verticalCenter
+        implicitWidth: 16
+        implicitHeight: 16
+
+        MouseArea {
+            anchors.fill: parent
+            anchors.margins: -Theme.space(1)
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+
+            onEntered: {
+                const centre = item.mapToItem(null, item.width / 2, 0);
+                Popouts.show(item.popout, centre.x, root.monitorName);
+            }
+            onExited: Popouts.requestHide()
+            onClicked: item.activated()
+            onWheel: event => item.scrolled(event.angleDelta.y)
+        }
     }
 }

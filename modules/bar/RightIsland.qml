@@ -40,6 +40,7 @@ Pill {
         }
 
         StatusCluster {
+            monitorName: root.monitorName
             anchors.verticalCenter: parent.verticalCenter
             visible: root.modules.includes("status")
         }

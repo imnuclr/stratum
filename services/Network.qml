@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Networking
 
 /*
@@ -42,7 +43,40 @@ Singleton {
 
     readonly property string ssid: activeNetwork?.name ?? ""
     readonly property int strength: Math.round((activeNetwork?.signalStrength ?? 0) * 100)
-    readonly property string security: activeNetwork?.security ?? ""
+    // security is a WifiSecurityType enum, not a string.
+    readonly property int securityType: activeNetwork?.security ?? 0
+    readonly property string securityName: {
+        switch (securityType) {
+        case WifiSecurityType.Open:
+            return "open";
+        case WifiSecurityType.Owe:
+            return "OWE";
+        case WifiSecurityType.StaticWep:
+        case WifiSecurityType.DynamicWep:
+        case WifiSecurityType.Leap:
+            return "WEP";
+        case WifiSecurityType.WpaPsk:
+            return "WPA";
+        case WifiSecurityType.Wpa2Psk:
+            return "WPA2";
+        case WifiSecurityType.Sae:
+            return "WPA3";
+        case WifiSecurityType.Wpa3SuiteB192:
+            return "WPA3-192";
+        case WifiSecurityType.WpaEap:
+        case WifiSecurityType.Wpa2Eap:
+            return "enterprise";
+        default:
+            return "unknown";
+        }
+    }
+
+    // NetworkDevice.address is the hardware address, not the IPv4 one. The IPv4
+    // address isn't exposed by the module, so it comes from `ip` — the one place
+    // in this service that leaves the native API, and only because there is no
+    // alternative.
+    readonly property string mac: active?.address ?? ""
+    property string ipv4: ""
     readonly property int linkSpeed: active?.linkSpeed ?? 0
     readonly property string address: active?.address ?? ""
 
@@ -57,6 +91,26 @@ Singleton {
             return ssid;
         return "offline";
     }
+
+    Process {
+        id: addrProc
+
+        running: true
+        command: ["ip", "-4", "-json", "addr", "show", root.active?.name ?? "lo"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const info = JSON.parse(text)?.[0]?.addr_info?.[0];
+                    root.ipv4 = info?.local ?? "";
+                } catch (e) {
+                    root.ipv4 = "";
+                }
+            }
+        }
+    }
+
+    onActiveChanged: addrProc.running = true
 
     function setWifiEnabled(enabled) {
         Networking.wifiEnabled = enabled;
