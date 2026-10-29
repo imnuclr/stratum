@@ -47,25 +47,8 @@
   "motion": {
     "micro": 120,
     "standard": 200,
-    "sheet": 320,
     "ambient": 500,
     "dotStagger": 8,
-    "enterEasing": [
-      0.2,
-      0,
-      0,
-      1,
-      1,
-      1
-    ],
-    "exitEasing": [
-      0.3,
-      0,
-      0.8,
-      0.15,
-      1,
-      1
-    ],
     "expressive": [
       0.34,
       1.26,

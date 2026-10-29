@@ -70,7 +70,7 @@ Sheet {
             NumberAnimation {
                 duration: Theme.sheetMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.gentle
+                easing.bezierCurve: Theme.soft
             }
         }
 
@@ -78,7 +78,7 @@ Sheet {
             NumberAnimation {
                 duration: Theme.sheetMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.gentle
+                easing.bezierCurve: Theme.soft
             }
         }
 

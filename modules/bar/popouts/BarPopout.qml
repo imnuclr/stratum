@@ -117,8 +117,8 @@ Item {
         floating: true
         radius: Theme.rTile
 
-        opacity: root.shown ? 1 : 0
-        scale: root.shown ? 1 : 0.96
+        opacity: 1
+        scale: 1
         // Grows out of the edge it hangs off, so the motion reads as the panel
         // emerging from the bar rather than appearing in place.
         transformOrigin: root.vertical ? Item.Left : Item.Top
@@ -137,13 +137,28 @@ Item {
          */
         readonly property bool settled: opacity > 0.5
 
+        /*
+         * y had no Behavior at all, so moving from one trigger to the next jumped
+         * the panel vertically while its size animated — a panel that is
+         * simultaneously teleporting and morphing. All four now move together.
+         */
+        Behavior on y {
+            enabled: frame.settled
+
+            NumberAnimation {
+                duration: Theme.popoutMs
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.soft
+            }
+        }
+
         Behavior on x {
             enabled: frame.settled
 
             NumberAnimation {
                 duration: Theme.popoutMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.gentle
+                easing.bezierCurve: Theme.soft
             }
         }
 
@@ -153,7 +168,7 @@ Item {
             NumberAnimation {
                 duration: Theme.popoutMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.gentle
+                easing.bezierCurve: Theme.soft
             }
         }
 
@@ -163,23 +178,57 @@ Item {
             NumberAnimation {
                 duration: Theme.popoutMs
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.gentle
+                easing.bezierCurve: Theme.soft
             }
         }
 
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Theme.popoutMs
+        /*
+         * Appearing and leaving are different lengths, so they are different
+         * transitions rather than one Behavior with a conditional duration.
+         *
+         * `duration: shown ? a : b` on a Behavior depends on the same value the
+         * Behavior is reacting to, and Qt does not say which updates first. It did
+         * not work: leaving ran the full entrance length, measured at 403ms
+         * against a 260 target. A transition between named states is chosen by
+         * the direction of the change itself, so there is nothing to race.
+         *
+         * The fade was also linear before, while everything it travelled with was
+         * eased: two curves on one panel, one of which had no shape.
+         */
+        states: State {
+            name: "hidden"
+            when: !root.shown
+
+            PropertyChanges {
+                frame.opacity: 0
+                frame.scale: 0.97
             }
         }
 
-        Behavior on scale {
-            NumberAnimation {
-                duration: Theme.popoutMs
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.gentle
+        transitions: [
+            Transition {
+                from: "hidden"
+                to: ""
+
+                NumberAnimation {
+                    properties: "opacity,scale"
+                    duration: Theme.popoutMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
+                }
+            },
+            Transition {
+                from: ""
+                to: "hidden"
+
+                NumberAnimation {
+                    properties: "opacity,scale"
+                    duration: Theme.popoutExitMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
+                }
             }
-        }
+        ]
 
         /*
          * A HoverHandler rather than a MouseArea: a parent MouseArea loses hover
@@ -264,16 +313,47 @@ Item {
                     }
                 }
 
-                opacity: root.shown && loader.have === loader.want ? 1 : 0
+                opacity: 1
 
-                Behavior on opacity {
-                    NumberAnimation {
-                        // Out fast, in over the length of the frame's resize.
-                        duration: loader.have === loader.want ? Theme.popoutMs : Theme.micro
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.gentle
+                /*
+                 * Out fast, in over the length of the frame's resize. As states
+                 * for the same reason as the frame: the duration used to depend on
+                 * `have === want`, which changes at the instant the fade it
+                 * controls begins.
+                 */
+                states: State {
+                    name: "swapping"
+                    when: !root.shown || loader.have !== loader.want
+
+                    PropertyChanges {
+                        loader.opacity: 0
                     }
                 }
+
+                transitions: [
+                    Transition {
+                        from: ""
+                        to: "swapping"
+
+                        NumberAnimation {
+                            property: "opacity"
+                            duration: Theme.micro
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.soft
+                        }
+                    },
+                    Transition {
+                        from: "swapping"
+                        to: ""
+
+                        NumberAnimation {
+                            property: "opacity"
+                            duration: Theme.popoutMs
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.soft
+                        }
+                    }
+                ]
 
                 Timer {
                     id: adopt

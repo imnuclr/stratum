@@ -98,7 +98,7 @@ Variants {
                 to: 1
                 duration: Config.get("wallpaper.fadeMs", 600)
                 easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.gentle
+                easing.bezierCurve: Theme.soft
 
                 // Freeing the outgoing image only once it is fully covered.
                 onFinished: back.source = ""

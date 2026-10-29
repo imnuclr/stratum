@@ -99,7 +99,7 @@ Variants {
                 NumberAnimation {
                     duration: Theme.standard
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.gentle
+                    easing.bezierCurve: Theme.soft
                 }
             }
 
@@ -108,7 +108,7 @@ Variants {
                     properties: "y"
                     duration: Theme.popoutMs
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.gentle
+                    easing.bezierCurve: Theme.soft
                 }
             }
 
@@ -150,7 +150,7 @@ Variants {
                     NumberAnimation {
                         duration: Theme.popoutMs
                         easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.gentle
+                        easing.bezierCurve: Theme.soft
                     }
                 }
 
@@ -160,7 +160,7 @@ Variants {
                     NumberAnimation {
                         duration: Theme.popoutMs
                         easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.gentle
+                        easing.bezierCurve: Theme.soft
                     }
                 }
 
@@ -170,7 +170,7 @@ Variants {
                     NumberAnimation {
                         duration: Theme.popoutMs
                         easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.gentle
+                        easing.bezierCurve: Theme.soft
                     }
                 }
 

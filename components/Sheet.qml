@@ -374,17 +374,7 @@ PanelWindow {
                      * bottom sheet now starts below the screen edge and comes up
                      * from it, the way a drawer does.
                      */
-                    property real slide: root.open
-                        ? 0
-                        : (root.originY >= 0.5 ? root.travel : -root.travel)
-
-                    Behavior on slide {
-                        NumberAnimation {
-                            duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                            easing.type: Easing.Bezier
-                            easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
-                        }
-                    }
+                    property real slide: 0
 
                     x: 0
                     y: Math.round(slide)
@@ -401,9 +391,58 @@ PanelWindow {
                         return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
                     }
 
-                    opacity: root.open ? 1 : 0
+                    opacity: 1
                     // A hint, not the motion: the slide says where it came from.
-                    scale: root.open ? 1 : 0.98
+                    scale: 1
+
+                    /*
+                     * Leaving is quicker than arriving: a panel you have decided
+                     * to dismiss should get out of the way, while one arriving has
+                     * to be followed by the eye.
+                     *
+                     * That was written as `duration: open ? a : b` on three
+                     * Behaviors, and it never worked — arriving and leaving both
+                     * measured 299ms, neither the 420 nor the 231 asked for,
+                     * because the duration depends on the same value the Behavior
+                     * is reacting to and Qt does not say which updates first.
+                     * Transitions between named states are picked by the direction
+                     * of the change itself, so there is nothing to race.
+                     */
+                    states: State {
+                        name: "closed"
+                        when: !root.open
+
+                        PropertyChanges {
+                            card.slide: root.originY >= 0.5 ? root.travel : -root.travel
+                            card.opacity: 0
+                            card.scale: 0.98
+                        }
+                    }
+
+                    transitions: [
+                        Transition {
+                            from: "closed"
+                            to: ""
+
+                            NumberAnimation {
+                                properties: "slide,opacity,scale"
+                                duration: Theme.sheetMs
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.enterEasing
+                            }
+                        },
+                        Transition {
+                            from: ""
+                            to: "closed"
+
+                            NumberAnimation {
+                                properties: "slide,opacity,scale"
+                                duration: Math.round(Theme.sheetMs * 0.6)
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.exitEasing
+                            }
+                        }
+                    ]
 
                     /*
                      * Dismiss affordance at the bottom edge. Clicking outside already
@@ -432,28 +471,6 @@ PanelWindow {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: Shell.close()
-                        }
-                    }
-
-                    /*
-                     * Leaving is quicker than arriving. A panel you have decided to
-                     * dismiss should get out of the way, while one arriving has to be
-                     * followed by the eye — the same duration both ways makes the exit
-                     * feel like it is lingering.
-                     */
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                            easing.type: Easing.Bezier
-                            easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
-                        }
-                    }
-
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: root.open ? Theme.sheetMs : Math.round(Theme.sheetMs * 0.55)
-                            easing.type: Easing.Bezier
-                            easing.bezierCurve: root.open ? Theme.enterEasing : Theme.exitEasing
                         }
                     }
                 }

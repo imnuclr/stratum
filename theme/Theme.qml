@@ -71,9 +71,11 @@ Singleton {
     readonly property int standard: pick("motion.standard", 200)
     readonly property int sheetMs: pick("motion.sheet", 420)
 
-    // How long a popout takes to resize, move and appear. Short enough to keep
-    // up with a pointer crossing the bar, long enough not to crack.
-    readonly property int popoutMs: pick("motion.popout", 320)
+    // How long a popout takes to appear, resize and move between triggers. Leaving
+    // is shorter: something arriving is watched, something leaving is already
+    // being left, and a slow exit reads as the panel refusing to go.
+    readonly property int popoutMs: pick("motion.popout", 420)
+    readonly property int popoutExitMs: pick("motion.popoutExit", 260)
     readonly property real dotStagger: pick("motion.dotStagger", 8)
 
     /*
@@ -82,10 +84,12 @@ Singleton {
      * length is discarded outright and the curve silently animates linearly,
      * with no warning, which is what these did for their first few commits.
      */
-    // Was [0.2, 0, 0, 1]: almost all of the travel in the first few frames, then
-    // a long crawl. Fine on paper, and it read as a slam.
-    readonly property var enterEasing: pick("motion.enterEasing", [0.215, 0.61, 0.355, 1, 1, 1])
-    readonly property var exitEasing: pick("motion.exitEasing", [0.3, 0, 0.8, 0.15, 1, 1])
+    // Large surfaces: sheets, popouts, toasts, the wallpaper fade. Both directions
+    // use `soft`. The previous pair — ease-out-cubic in, ease-in out — measured
+    // 40% of the travel inside the first 15% of the time on the way in, and the
+    // way out accelerated into a dead stop. Both read as aggressive.
+    readonly property var enterEasing: pick("motion.enterEasing", [0.37, 0, 0.63, 1, 1, 1])
+    readonly property var exitEasing: pick("motion.exitEasing", [0.37, 0, 0.63, 1, 1, 1])
     // Overshoots slightly. For things that appear rather than merely move.
     readonly property var expressive: pick("motion.expressive", [0.34, 1.26, 0.38, 1, 1, 1])
     // Eased at both ends. For something changing size, where enterEasing's hard
@@ -93,10 +97,18 @@ Singleton {
     readonly property var smooth: pick("motion.smooth", [0.4, 0, 0.2, 1, 1, 1])
 
     /*
-     * Eased out, gently. The standard curve leaves at speed and stops dead,
-     * which on a short duration reads as the panel being thrown at its position
-     * rather than moving there. This one is ease-out-cubic: it starts moving
-     * properly, slows the whole way, and has nothing abrupt at either end.
+     * Sine in-out: leaves from rest, peaks at about 1.6x the average speed, and
+     * arrives at rest. Measured against ease-out-cubic, which peaks at 2.8x and has
+     * covered 40% of its distance after 15% of its time. Use for anything large
+     * enough that its motion is watched.
+     */
+    readonly property var soft: pick("motion.soft", [0.37, 0, 0.63, 1, 1, 1])
+
+    /*
+     * Eased out, for small feedback only: a press, a hover lift, a colour. At
+     * that size and 120-200ms a slow start would read as lag, so this one leaves
+     * at once. It is ease-out-cubic, and is too front-loaded for anything big —
+     * use `soft` for those.
      */
     readonly property var gentle: pick("motion.gentle", [0.215, 0.61, 0.355, 1, 1, 1])
     readonly property int expressiveMs: pick("motion.expressiveMs", 420)
