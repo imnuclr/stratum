@@ -57,6 +57,28 @@ Singleton {
         return workspaces.find(w => w.id === workspaceId)?.toplevels?.values?.length ?? 0;
     }
 
+    // Which monitor a workspace is on, or "" if it does not exist yet. Hyprland
+    // creates a workspace when it is first used, so most of them have no answer.
+    function monitorOf(workspaceId) {
+        return workspaces.find(w => w.id === workspaceId)?.monitor?.name ?? "";
+    }
+
+    /*
+     * The ids worth showing: the configured run, extended to cover anything that
+     * actually exists. A fixed count meant switching past the end of it left no
+     * dot to light up and the bar simply stopped reporting where you were.
+     */
+    function visibleIds(configured) {
+        let highest = configured;
+        for (const w of workspaces)
+            if (w.id > highest && w.id < 100)
+                highest = w.id;
+        const ids = [];
+        for (let i = 1; i <= highest; i++)
+            ids.push(i);
+        return ids;
+    }
+
     function isOccupied(workspaceId) {
         return workspaces.some(w => w.id === workspaceId);
     }
