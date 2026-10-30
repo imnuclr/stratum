@@ -79,9 +79,10 @@ Rectangle {
     Rectangle {
         id: badge
 
+        // Level with the middle of the notification, however many lines it has.
         anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.margins: Theme.space(3)
+        anchors.leftMargin: Theme.space(3)
+        anchors.verticalCenter: parent.verticalCenter
         width: 40
         height: 40
         radius: 12
@@ -117,6 +118,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: Theme.space(3)
+        anchors.topMargin: Math.max(Theme.space(3), (root.height - implicitHeight) / 2)
         spacing: Theme.space(1)
 
         Item {
