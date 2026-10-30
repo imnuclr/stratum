@@ -153,6 +153,20 @@ Item {
                 current: Config.get("wallpaper.mono", false) ? 1 : 0
                 onPicked: index => Config.set("wallpaper.mono", index === 1)
             }
+
+            // The picture drifts with the workspace and, where a cutout has been
+            // made, the subject drifts further than the ground behind it.
+            Segmented {
+                model: ["flat", "depth"]
+                current: Config.get("wallpaper.parallax", true) ? 1 : 0
+                onPicked: index => Config.set("wallpaper.parallax", index === 1)
+            }
+        }
+
+        SectionLabel {
+            dim: true
+            visible: Config.get("wallpaper.parallax", true)
+            text: `cutout · ${Cutout.status}`
         }
 
         SliderPill {

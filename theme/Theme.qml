@@ -53,6 +53,9 @@ Singleton {
     readonly property color dotOn: pick("color.dotOn", "#FFFFFF")
     readonly property color dotOff: pick("color.dotOff", "#21FFFFFF")
     readonly property color accent: pick("color.accent", "#E5252B")
+    // Notifications: blacker than any surface, drawn with a pale outline.
+    readonly property color deep: pick("color.deep", "#030303")
+    readonly property color outline: pick("color.outline", "#E6F4F4F5")
     // Something has gone wrong. Not the accent, which is a decoration you may have
     // changed to white: an error must still read as one.
     readonly property color danger: pick("color.danger", "#E5252B")

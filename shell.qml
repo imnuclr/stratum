@@ -40,6 +40,7 @@ ShellRoot {
         Theme.ready;
         // Lazy, so touched here: nothing else asks for it until a colour is wanted.
         Palette.mode;
+        Cutout.enabled;
     }
 
     // Quickshell singletons are lazy, and a lazy singleton never registers its
@@ -97,6 +98,7 @@ ShellRoot {
     Shortcuts {}
 
     Freeze {}
+    CutoutLayer {}
 
     /*
      * Settings, scriptably. Values are JSON, so `config set notifications.toastMs 8000`

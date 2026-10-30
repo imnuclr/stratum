@@ -25,9 +25,17 @@ Rectangle {
     implicitHeight: content.implicitHeight + Theme.space(3) * 2
 
     radius: Theme.rTile
-    color: hover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+    color: hover.hovered ? Qt.lighter(Theme.deep, 3) : Theme.deep
+    border.width: 1
+    border.color: hover.hovered ? Theme.fg : Theme.outline
 
     Behavior on color {
+        ColorAnimation {
+            duration: Theme.micro
+        }
+    }
+
+    Behavior on border.color {
         ColorAnimation {
             duration: Theme.micro
         }
