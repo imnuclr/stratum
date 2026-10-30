@@ -20,19 +20,15 @@ Item {
             width: parent.width
             spacing: Theme.space(3)
 
-            DotImage {
+            SpinningArt {
                 id: art
 
+                // `width` rather than `size` is what the column below reads.
                 width: 88
                 height: 88
-                // Finer pitch and size-by-brightness: album art is the only
-                // photographic thing in the shell, and thresholding it at a 4px
-                // grid throws away the picture.
+                size: 88
                 cell: 3
                 dotScale: 0.5
-                halftone: true
-                colored: true
-                circular: true
                 source: Media.artUrl
                 visible: Media.artUrl.length > 0
             }
