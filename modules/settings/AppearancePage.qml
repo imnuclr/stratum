@@ -248,6 +248,17 @@ SettingsPage {
         footnote: "Applied to Hyprland straight away, and kept after it reloads. \"As in config\" leaves your Hyprland config in charge."
 
         SettingRow {
+            title: "Borders and glow"
+            detail: "Window borders and their glow in the shell's colours, matching your apps."
+
+            Segmented {
+                model: ["shell colours", "as in config"]
+                current: Decor.borders === "config" ? 1 : 0
+                onPicked: index => Config.set("windows.borders", index === 1 ? "config" : "accent")
+            }
+        }
+
+        SettingRow {
             title: "Blur"
             detail: "How strongly see-through windows blur what is behind them."
 

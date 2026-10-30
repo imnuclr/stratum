@@ -37,30 +37,57 @@ Singleton {
         return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, 1);
     }
 
+    /*
+     * The colours every app file is written from. From matugen's scheme when
+     * there is one (WallColours.scheme: the wallpaper's, or one built from your
+     * accent), so surfaces, text and three accents belong together the way
+     * Material You's do. Without matugen, the same roles are worked out from
+     * the accent's hue: tinted greys, and secondary and tertiary turned from it.
+     */
     readonly property var palette: {
         const dark = Theme.dark;
-        const bg = Theme.surface;
-        const fg = Theme.fg;
         const acc = Theme.accent;
-        // Terminal colours: the usual eight hues, softened to sit with the
-        // greys, with the accent for the cursor, selection and links.
-        const hues = dark
-            ? ["#E5534B", "#57AB5A", "#C69026", "#539BF5", "#B083F0", "#39C5CF"]
-            : ["#C9352D", "#2D8A3A", "#9A6700", "#0969DA", "#8250DF", "#1B7C83"];
-        return {
-            dark: dark,
-            bg: root.hex(bg),
-            bgAlt: root.hex(root.mix(bg, fg, 0.06)),
-            bgHi: root.hex(root.mix(bg, fg, 0.12)),
-            fg: root.hex(fg),
-            fgDim: root.hex(Theme.fgDim),
-            accent: root.hex(acc),
-            accentText: (acc.r * 0.299 + acc.g * 0.587 + acc.b * 0.114) > 0.6 ? "#111111" : "#FFFFFF",
-            black: root.hex(dark ? root.mix(bg, fg, 0.18) : root.mix(fg, bg, 0.1)),
-            white: root.hex(dark ? fg : root.mix(fg, bg, 0.75)),
-            grey: root.hex(Theme.fgFaint),
-            hues: hues
+        const role = (name, fallback) => {
+            const v = WallColours.role(name);
+            return v.length > 0 ? v : fallback;
         };
+        const h = Math.max(0, acc.hslHue);
+        const tone = (sat, light) => root.hex(Qt.hsla(h, sat, light, 1));
+        const turn = (deg, sat, light) => root.hex(Qt.hsla((h + deg / 360 + 1) % 1, sat, light, 1));
+        const L = dark ? [0.05, 0.07, 0.10, 0.13, 0.16] : [0.98, 0.95, 0.92, 0.89, 0.86];
+        const p = {
+            dark: dark,
+            // Surfaces, from the deepest to the most raised.
+            bgDeep: role("surface_container_lowest", tone(0.14, L[0])),
+            bg: role("surface", tone(0.14, L[1])),
+            bgAlt: role("surface_container", tone(0.14, L[2])),
+            bgHi: role("surface_container_high", tone(0.14, L[3])),
+            bgTop: role("surface_container_highest", tone(0.14, L[4])),
+            fg: role("on_surface", tone(0.2, dark ? 0.92 : 0.12)),
+            fgDim: role("on_surface_variant", tone(0.12, dark ? 0.72 : 0.32)),
+            outline: role("outline", tone(0.1, dark ? 0.48 : 0.5)),
+            accent: role("primary", root.hex(acc)),
+            accentText: role("on_primary", (acc.r * 0.299 + acc.g * 0.587 + acc.b * 0.114) > 0.6 ? "#111111" : "#FFFFFF"),
+            accentSoft: role("primary_container", tone(0.4, dark ? 0.25 : 0.85)),
+            secondary: role("secondary", turn(30, 0.45, dark ? 0.75 : 0.4)),
+            tertiary: role("tertiary", turn(60, 0.55, dark ? 0.78 : 0.4)),
+            error: role("error", dark ? "#F2B8B5" : "#B3261E")
+        };
+        // Terminal hues, pulled a little toward the accent so they sit with it,
+        // at one lightness and saturation so none shouts.
+        const pull = hue => {
+            let d = h * 360 - hue;
+            d = ((d + 540) % 360) - 180;
+            return ((hue + d * 0.18) + 360) % 360 / 360;
+        };
+        const ansi = hue => root.hex(Qt.hsla(pull(hue), dark ? 0.62 : 0.55, dark ? 0.72 : 0.38, 1));
+        const bright = hue => root.hex(Qt.hsla(pull(hue), dark ? 0.7 : 0.6, dark ? 0.8 : 0.3, 1));
+        p.hues = [p.error, ansi(130), ansi(45), ansi(215), p.tertiary, ansi(185)];
+        p.brights = [bright(5), bright(130), bright(45), bright(215), bright(300), bright(185)];
+        p.black = dark ? p.bgHi : p.fgDim;
+        p.white = dark ? p.fgDim : p.bgTop;
+        p.grey = p.outline;
+        return p;
     }
 
     onPaletteChanged: writeLater.restart()
@@ -218,8 +245,9 @@ Singleton {
 
     function ansi(p) {
         const h = p.hues;
+        const b = p.brights;
         return [p.black, h[0], h[1], h[2], h[3], h[4], h[5], p.white,
-            p.grey, h[0], h[1], h[2], h[3], h[4], h[5], p.fg];
+            p.grey, b[0], b[1], b[2], b[3], b[4], b[5], p.fg];
     }
 
     function kitty(p) {
@@ -280,46 +308,92 @@ Singleton {
             `subtext            = ${x(p.fgDim)}`,
             `main               = ${x(p.bg)}`,
             `main-elevated      = ${x(p.bgAlt)}`,
+            `main-transition    = ${x(p.bg)}`,
             `highlight          = ${x(p.bgHi)}`,
-            `highlight-elevated = ${x(p.bgHi)}`,
-            `sidebar            = ${x(p.bg)}`,
-            `player             = ${x(p.bg)}`,
+            `highlight-elevated = ${x(p.bgTop)}`,
+            `sidebar            = ${x(p.bgDeep)}`,
+            `player             = ${x(p.bgDeep)}`,
             `card               = ${x(p.bgAlt)}`,
             `shadow             = 000000`,
             `selected-row       = ${x(p.fg)}`,
             `button             = ${x(p.accent)}`,
-            `button-active      = ${x(p.accent)}`,
-            `button-disabled    = ${x(p.grey)}`,
+            `button-active      = ${x(p.secondary)}`,
+            `button-secondary   = ${x(p.fgDim)}`,
+            `button-disabled    = ${x(p.outline)}`,
             `tab-active         = ${x(p.bgHi)}`,
-            `notification       = ${x(p.accent)}`,
-            `notification-error = ${x(p.hues[0])}`,
-            `misc               = ${x(p.grey)}`].join("\n") + "\n";
+            `notification       = ${x(p.accentSoft)}`,
+            `notification-error = ${x(p.error)}`,
+            `misc               = ${x(p.outline)}`,
+            `play-button        = ${x(p.accent)}`,
+            `play-button-active = ${x(p.secondary)}`,
+            `progress-fg        = ${x(p.accent)}`,
+            `progress-bg        = ${x(p.bgTop)}`,
+            `heart              = ${x(p.tertiary)}`,
+            `pagelink-active    = ${x(p.fg)}`,
+            `radio-btn-active   = ${x(p.accent)}`].join("\n") + "\n";
     }
 
+    /*
+     * Vesktop / Discord: the Midnight theme with our colours in its variables,
+     * as Caelestia does — Midnight does the layout, this only says what colour
+     * each part is. Its five steps of each accent are the accent mixed further
+     * toward itself, as Midnight's own builds are.
+     */
     function discord(p) {
+        const steps = (name, c) => [1, 2, 3, 4, 5].map(i => `  --${name}-${i}: color-mix(in srgb, ${c}, black ${(i - 1) * 7}%);`);
+        const rgb = c => `${parseInt(c.slice(1, 3), 16)}, ${parseInt(c.slice(3, 5), 16)}, ${parseInt(c.slice(5, 7), 16)}`;
         return ["/**",
             " * @name Stratum",
-            " * @description The Stratum shell's colours. Written by Stratum; changes are overwritten.",
-            " * @author Stratum",
+            " * @description Midnight, in the Stratum shell's colours. Written by Stratum; changes are overwritten.",
+            " * @author refact0r (Midnight), Stratum",
             " */",
-            ":root, .theme-dark, .theme-light, .visual-refresh {",
-            `  --brand-500: ${p.accent};`,
-            `  --brand-560: ${p.accent};`,
-            `  --brand-experiment: ${p.accent};`,
-            `  --control-brand-foreground: ${p.accent};`,
-            `  --text-link: ${p.accent};`,
-            `  --background-primary: ${p.bg};`,
-            `  --background-secondary: ${p.bgAlt};`,
-            `  --background-secondary-alt: ${p.bgAlt};`,
-            `  --background-tertiary: ${p.bgHi};`,
-            `  --background-floating: ${p.bgAlt};`,
-            `  --background-base-lower: ${p.bg};`,
-            `  --background-base-low: ${p.bgAlt};`,
-            `  --background-surface-high: ${p.bgHi};`,
-            `  --text-normal: ${p.fg};`,
-            `  --text-muted: ${p.fgDim};`,
-            `  --interactive-normal: ${p.fgDim};`,
-            `  --interactive-active: ${p.fg};`,
+            '@import url("https://refact0r.github.io/midnight-discord/build/midnight.css");',
+            "",
+            "body {",
+            "  --gap: 12px;",
+            "  --border-thickness: 1px;",
+            "  --top-bar-height: var(--gap);",
+            "  --top-bar-button-position: titlebar;",
+            "  --custom-window-controls: on;",
+            "  --custom-dms-icon: off;",
+            `  --bg-floating: ${p.bgDeep};`,
+            "}",
+            "",
+            ":root {",
+            "  --colors: on;",
+            `  --text-0: ${p.accentText};`,
+            `  --text-1: ${p.fg};`,
+            `  --text-2: ${p.fg};`,
+            `  --text-3: ${p.fg};`,
+            `  --text-4: ${p.fgDim};`,
+            `  --text-5: ${p.outline};`,
+            `  --bg-1: ${p.bgTop};`,
+            `  --bg-2: ${p.bgHi};`,
+            `  --bg-3: ${p.bgDeep};`,
+            `  --bg-4: ${p.bg};`,
+            `  --hover: rgba(${rgb(p.fg)}, 0.08);`,
+            `  --active: rgba(${rgb(p.fg)}, 0.1);`,
+            `  --active-2: rgba(${rgb(p.fg)}, 0.2);`,
+            `  --message-hover: rgba(${rgb(p.fg)}, 0.06);`,
+            "  --accent-1: var(--blue-1);",
+            "  --accent-2: var(--blue-2);",
+            "  --accent-3: var(--blue-3);",
+            "  --accent-4: var(--blue-4);",
+            "  --accent-5: var(--blue-5);",
+            `  --accent-new: ${p.error};`,
+            "  --online: var(--green-2);",
+            "  --dnd: var(--red-2);",
+            "  --idle: var(--yellow-2);",
+            "  --streaming: var(--purple-2);",
+            "  --offline: var(--text-4);",
+            `  --border-light: rgba(${rgb(p.outline)}, 0);`,
+            `  --border: rgba(${rgb(p.outline)}, 0.25);`,
+            `  --button-border: rgba(${rgb(p.outline)}, 0);`,
+            ...steps("red", p.error),
+            ...steps("green", p.hues[1]),
+            ...steps("blue", p.accent),
+            ...steps("yellow", p.hues[2]),
+            ...steps("purple", p.tertiary),
             "}"].join("\n") + "\n";
     }
 }

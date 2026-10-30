@@ -29,6 +29,7 @@ Singleton {
         ["appearance", "Spotify", "spotify spicetify theme colours apps music"],
         ["appearance", "Vesktop / Discord", "discord vesktop vencord theme colours apps"],
         ["appearance", "GTK apps", "gtk libadwaita gnome apps accent theme"],
+        ["appearance", "Borders and glow", "window border outline glow shadow colour active hyprland"],
         ["appearance", "Blur", "blur frosted glass transparency windows hyprland intensity strength effects"],
         ["appearance", "24-hour time", "clock time format 12 hour 24 hour am pm military"],
         // motion
