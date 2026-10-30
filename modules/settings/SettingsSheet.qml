@@ -22,8 +22,8 @@ FloatingWindow {
     id: root
 
     readonly property bool open: Shell.openPanel === "settings"
-    readonly property int windowWidth: Config.get("settings.width", 960)
-    readonly property int windowHeight: Config.get("settings.height", 660)
+    readonly property int windowWidth: Config.get("settings.width", 1180)
+    readonly property int windowHeight: Config.get("settings.height", 780)
 
     visible: root.open
     title: "Stratum Settings"
@@ -54,6 +54,10 @@ FloatingWindow {
     readonly property var pages: [
         { label: "wallpaper", component: wallpaperPage },
         { label: "appearance", component: appearancePage },
+        { label: "bar", component: barPage },
+        { label: "monitors", component: monitorsPage },
+        { label: "widgets", component: widgetsPage },
+        { label: "keybinds", component: keybindsPage },
         { label: "notifications", component: notificationsPage },
         { label: "advanced", component: advancedPage }
     ]
@@ -289,6 +293,30 @@ FloatingWindow {
         id: notificationsPage
 
         NotificationsPage {}
+    }
+
+    Component {
+        id: barPage
+
+        BarPage {}
+    }
+
+    Component {
+        id: monitorsPage
+
+        MonitorsPage {}
+    }
+
+    Component {
+        id: widgetsPage
+
+        WidgetsPage {}
+    }
+
+    Component {
+        id: keybindsPage
+
+        KeybindsPage {}
     }
 
     Component {

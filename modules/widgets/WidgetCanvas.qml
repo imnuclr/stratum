@@ -38,14 +38,15 @@ PanelWindow {
     // Any window on this monitor's workspace counts as covering the desktop.
     readonly property var workspace: Hyprland.monitorFor(win.monitor)?.activeWorkspace ?? null
     readonly property bool covered: (win.workspace?.toplevels?.values?.length ?? 0) > 0
-    readonly property bool live: win.editing || !win.covered
+    readonly property bool live: win.shown && (win.editing || !win.covered)
     /*
      * Widgets belong to the bare desktop. With a window on the workspace they
      * fade back out of the way — through a translucent terminal, or in the gaps
      * between windows, they were still there behind everything — and return
      * when the desktop is clear. Edit mode always shows them.
      */
-    readonly property bool shown: win.editing || !win.covered
+    readonly property bool shown: win.editing
+        || (Config.get("widgets.enabled", true) && (!win.covered || !Config.get("widgets.hideCovered", true)))
 
     // Clear of the bar, with a margin.
     readonly property bool barSide: Config.get("bar.orientation", "vertical") === "vertical"

@@ -24,17 +24,22 @@ Daily-drivable on both monitors. Phases follow the roadmap in
 - [ ] **4** &mdash; wallpaper + depth. **Wallpaper layer done**: drawn by the shell per
       monitor, crossfaded, per-monitor choice. *Cutout parallax, depth shader and
       shader-based transitions remain* (qt6-shadertools is installed).
-- [ ] **5** &mdash; widget canvas + edit mode
+- [x] **5** &mdash; widget canvas + edit mode: thirteen widgets on a snapping grid, per
+      monitor; hold a widget, right-click the desktop or Super + Shift + W to arrange,
+      with a gallery to add from and per-widget options. They pause and fade behind
+      windows. *Widgets do not yet avoid overlapping each other.*
 - [x] **6** &mdash; lock screen: real session lock, dithered avatar, time-of-day
       greeting, smooth password box. Locks from SUPER + L, the session menu or
       `loginctl lock-session`; `qs -c stratum ipc call lock preview` shows it without
       locking. Password unlock confirmed on real hardware. *Fingerprint and a
       wallpaper backdrop remain.*
-- [ ] **7** &mdash; settings. **Started**: a centred panel from the control centre's
-      gear with wallpaper, appearance, notifications and advanced pages, and a safe
-      config/theme writer behind it. Clicks on its controls are untested (needs a
-      synthetic pointer). Open on a page with `qs -c stratum ipc call panel settings <page>`.
-      *Still to come: bar, monitors and keybind pages; the schema-driven version.*
+- [ ] **7** &mdash; settings, as a real window (Super + Q closes it, Super + drag moves
+      it) with wallpaper, appearance, bar, monitors, widgets, keybinds, notifications
+      and advanced pages. Keybinds is a keyboard: every key outlined by what is bound to
+      it, conflicts in red, and the shell's own binds edited in place and written to
+      the stratum-binds file. Open on a page with
+      `qs -c stratum ipc call panel settings <page>`. *Still to come: the schema-driven
+      version.*
 - [ ] **8** &mdash; polish. **Toasts done** (focused monitor only, hover holds, urgent
       ones stay, do-not-disturb). *OSD, launcher, remaining widgets, `stratumctl`,
       install script and screenshots remain.*
