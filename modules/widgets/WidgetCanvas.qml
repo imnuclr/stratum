@@ -39,6 +39,13 @@ PanelWindow {
     readonly property var workspace: Hyprland.monitorFor(win.monitor)?.activeWorkspace ?? null
     readonly property bool covered: (win.workspace?.toplevels?.values?.length ?? 0) > 0
     readonly property bool live: win.editing || !win.covered
+    /*
+     * Widgets belong to the bare desktop. With a window on the workspace they
+     * fade back out of the way — through a translucent terminal, or in the gaps
+     * between windows, they were still there behind everything — and return
+     * when the desktop is clear. Edit mode always shows them.
+     */
+    readonly property bool shown: win.editing || !win.covered
 
     // Clear of the bar, with a margin.
     readonly property bool barSide: Config.get("bar.orientation", "vertical") === "vertical"
@@ -99,6 +106,8 @@ PanelWindow {
         y: 0
         width: win.editing ? win.width : 0
         height: win.editing ? win.height : 0
+        // Hidden widgets take no clicks.
+        regions: win.shown ? win.hits : []
     }
 
     property var hits: []
@@ -111,7 +120,6 @@ PanelWindow {
                 next.push(hitRegion.createObject(maskRegion, { item: f }));
         }
         const old = win.hits;
-        maskRegion.regions = next;
         win.hits = next;
         for (const r of old)
             r.destroy();
@@ -155,6 +163,26 @@ PanelWindow {
             y: win.fieldTop
             width: win.cols * win.cell
             height: win.rows * win.cell
+
+            opacity: win.shown ? 1 : 0
+            scale: win.shown ? 1 : 0.97
+            visible: opacity > 0.01
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
+                }
+            }
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
+                }
+            }
 
             // The grid, as a dot at each corner of a cell.
             Canvas {
