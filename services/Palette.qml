@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import qs.config
 import qs.theme
+import qs.services
 
 /*
  * Colours taken from the wallpaper, through matugen.

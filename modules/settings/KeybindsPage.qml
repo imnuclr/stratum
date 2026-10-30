@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import qs.components
 import qs.services
 import qs.theme
@@ -35,6 +36,9 @@ Flickable {
     // The combination being made for the selected key.
     property var pendingMods: ["SUPER"]
     property string pendingAction: ""
+    // Or an app to open, by desktop id.
+    property string pendingApp: ""
+    property string appQuery: ""
 
     Component.onCompleted: Binds.refresh()
 
@@ -433,7 +437,95 @@ Flickable {
                                 }
 
                                 TapHandler {
-                                    onTapped: page.pendingAction = actionChip.modelData.name
+                                    onTapped: {
+                                        page.pendingAction = actionChip.modelData.name;
+                                        page.pendingApp = "";
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    /*
+                     * Or open an app: its window comes to the workspace you are
+                     * on (out of a scratchpad too), or it starts if not running.
+                     */
+                    Row {
+                        width: parent.width
+                        spacing: Theme.space(2)
+
+                        SectionLabel {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "or open an app"
+                        }
+
+                        TextField {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 200
+                            height: 28
+                            placeholder: "spotify, vesktop, code…"
+                            onTextChanged: page.appQuery = text
+                        }
+                    }
+
+                    Flow {
+                        width: parent.width
+                        spacing: Theme.space(1)
+                        visible: page.appQuery.trim().length > 0
+
+                        Repeater {
+                            model: page.appQuery.trim().length > 0 ? Launcher.rankApps(page.appQuery.trim(), 8) : []
+
+                            Rectangle {
+                                id: appChip
+
+                                required property var modelData
+
+                                readonly property bool on: page.pendingApp === appChip.modelData.id
+
+                                width: appRow.implicitWidth + Theme.space(4)
+                                height: 30
+                                radius: 15
+                                color: appChip.on ? Theme.fg : (appHover.hovered ? Theme.surfaceTop : "transparent")
+                                border.width: 1
+                                border.color: Theme.line
+
+                                Row {
+                                    id: appRow
+
+                                    anchors.centerIn: parent
+                                    spacing: Theme.space(1)
+
+                                    Image {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 16
+                                        height: 16
+                                        source: Quickshell.iconPath(appChip.modelData.icon ?? "", true) ?? ""
+                                        sourceSize.width: 32
+                                        sourceSize.height: 32
+                                    }
+
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: appChip.modelData.name
+                                        color: appChip.on ? Theme.bg : Theme.fgBright
+                                        font.family: Theme.fontUi
+                                        font.pixelSize: 12
+                                        renderType: Text.NativeRendering
+                                    }
+                                }
+
+                                HoverHandler {
+                                    id: appHover
+
+                                    cursorShape: Qt.PointingHandCursor
+                                }
+
+                                TapHandler {
+                                    onTapped: {
+                                        page.pendingApp = appChip.modelData.id;
+                                        page.pendingAction = "";
+                                    }
                                 }
                             }
                         }
@@ -445,10 +537,14 @@ Flickable {
                         ActionButton {
                             text: "bind"
                             width: 96
-                            enabled: page.pendingAction.length > 0
+                            enabled: page.pendingAction.length > 0 || page.pendingApp.length > 0
                             onClicked: {
-                                Binds.addOwn(page.pendingMods, page.selected, page.pendingAction);
+                                if (page.pendingApp.length > 0)
+                                    Binds.addApp(page.pendingMods, page.selected, page.pendingApp);
+                                else
+                                    Binds.addOwn(page.pendingMods, page.selected, page.pendingAction);
                                 page.pendingAction = "";
+                                page.pendingApp = "";
                             }
                         }
 
@@ -456,7 +552,7 @@ Flickable {
                             anchors.verticalCenter: parent.verticalCenter
                             readonly property var taken: Binds.forKey(page.selected).filter(b => b.mask === Binds.maskOf(page.pendingMods) && !b.stratum)
                             visible: taken.length > 0
-                            text: `${Binds.combo(page.pendingMods, "key")} is already used by your config — both would fire.`
+                            text: `${Binds.combo(page.pendingMods, "key")} is already used by your config — binding replaces it.`
                             color: Theme.accent
                             font.family: Theme.fontUi
                             font.pixelSize: 12

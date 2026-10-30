@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import qs.config
+import qs.services
 
 /*
  * Every connected output as Hyprland sees it, and changing how each one runs:

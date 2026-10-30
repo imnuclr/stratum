@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.services
 
 /*
  * Panel visibility, centralised. Exactly one panel is open at a time; opening

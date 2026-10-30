@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.theme
+import qs.services
 
 /*
  * The quick toggles that do not belong to a service of their own.

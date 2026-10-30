@@ -105,14 +105,22 @@ Singleton {
 
     function layoutFor(name, cols, rows) {
         const saved = root.layouts[name];
-        if (saved)
-            return saved;
+        /*
+         * A saved layout is fitted to the room there is now, as the default is:
+         * moving the bar to the other side, or changing its size, shrinks the
+         * field, and pieces past its new edge sat under the bar or on top of
+         * each other. Fitted on the way out, not written back, so putting the
+         * bar back restores the layout as it was.
+         */
         // The default is laid out for a wide screen; on a narrower one its pieces
         // are settled into free space rather than left on top of each other.
-        const list = root.defaultLayout(cols ?? 100);
+        const list = saved ? saved.map(w => Object.assign({}, w)) : root.defaultLayout(cols ?? 100);
         const placed = [];
         for (const w of list) {
+            w.w = Math.min(w.w, cols ?? 100);
+            w.h = Math.min(w.h, rows ?? 1000);
             w.x = Math.max(0, Math.min((cols ?? 100) - w.w, w.x));
+            w.y = Math.max(0, Math.min((rows ?? 1000) - w.h, w.y));
             placed.push(w);
             root.settle(placed, w, cols ?? 100, rows ?? 1000);
         }

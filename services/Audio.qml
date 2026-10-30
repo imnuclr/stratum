@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Services.Pipewire
+import qs.services
 
 /*
  * Default sink and source. Native Pipewire — no pactl, no wpctl, no parsing.
