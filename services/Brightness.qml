@@ -64,11 +64,11 @@ Singleton {
     /*
      * Key steps on a laptop panel: 1, 2, 3, 4, 6, 8, 10 at the dim end, where a
      * single percent is the difference between dark and just visible, and an even
-     * 2% from there up (12, 14, 16 ... 100). The step is always to the next stop,
+     * 2% from there up (15, 20, 25 ... 100). The step is always to the next stop,
      * so the numbers land on round values whichever way you are going and whatever
      * the slider left it at. External monitors just move by the step they are given.
      */
-    readonly property var stops: [1, 2, 3, 4, 6, 8, 10].concat(Array.from({ length: 45 }, (_, i) => 12 + i * 2))
+    readonly property var stops: [1, 2, 3, 4, 6, 8, 10].concat(Array.from({ length: 18 }, (_, i) => 15 + i * 5))
 
     function stepFor(id, delta) {
         const i = root.indexOf(id);
@@ -156,12 +156,15 @@ Singleton {
     // only ever read by the debounce below.
     readonly property var pendingIds: ({})
 
+    // What each display was last told, in percent, so a change can be walked there.
+    property var written: ({})
+
     Timer {
         id: debounce
 
         // Long enough to collapse a drag into one write, short enough that a
-        // single click still feels immediate.
-        interval: 180
+        // single key press feels immediate.
+        interval: 60
         onTriggered: {
             if (!root.ready)
                 return;
@@ -171,23 +174,62 @@ Singleton {
                     continue;
                 delete root.pendingIds[d.id];
                 const level = Math.round(d.value * 100);
-                writes.push(root.internal
-                    ? `brightnessctl --device ${d.id} set ${level}%`
-                    : `ddcutil --brief --display ${d.id} setvcp ${root.feature} ${level}`);
+                if (root.internal) {
+                    /*
+                     * Walked to the new level in single percents, a few
+                     * milliseconds apart, instead of jumped: a backlight set in one
+                     * go steps visibly, and five percent at once is an obvious
+                     * jump. Long distances take two at a time so a drag across the
+                     * whole range does not take long to arrive.
+                     */
+                    const from = root.written[d.id] ?? level;
+                    const stride = Math.abs(level - from) > 12 ? 2 : 1;
+                    const ramp = [];
+                    for (let v = from; v !== level; v += Math.sign(level - from) * stride) {
+                        if (Math.abs(level - v) <= stride)
+                            break;
+                        ramp.push(v + Math.sign(level - from) * stride);
+                    }
+                    ramp.push(level);
+                    writes.push(ramp.map(v => `brightnessctl --device ${d.id} set ${v}%`).join("; sleep 0.012; "));
+                    root.written[d.id] = level;
+                } else {
+                    writes.push(`ddcutil --brief --display ${d.id} setvcp ${root.feature} ${level}`);
+                }
             }
             if (writes.length === 0)
                 return;
             // Chained in one shell rather than run in parallel: concurrent I2C
             // writes to different buses collide.
-            apply.command = ["sh", "-c", writes.join("; ")];
-            apply.running = true;
+            root.run(writes.join("; "));
         }
+    }
+
+    // One write at a time. A write asked for while another is still running is
+    // held and sent when it finishes; assigning to a running Process starts
+    // nothing, so it used to be lost.
+    property string queued: ""
+
+    function run(command) {
+        if (apply.running) {
+            root.queued = command;
+            return;
+        }
+        apply.command = ["sh", "-c", command];
+        apply.running = true;
     }
 
     Process {
         id: apply
 
         onRunningChanged: root.applying = running
+        onExited: {
+            if (root.queued.length > 0) {
+                const next = root.queued;
+                root.queued = "";
+                root.run(next);
+            }
+        }
     }
 
     /*
@@ -228,6 +270,7 @@ Singleton {
                 if (isNaN(current) || !(max > 0))
                     return;
                 root.displays = [{ id: root.backlight, label: "internal", value: current / max }];
+                root.written[root.backlight] = Math.round(current / max * 100);
                 root.ready = true;
             }
         }
