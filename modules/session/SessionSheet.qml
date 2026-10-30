@@ -20,7 +20,7 @@ Sheet {
     name: "session"
     // Beside whatever opened it: the bar's edge when asked for from the bar, the
     // control centre's corner otherwise.
-    originX: Shell.openFrom === "bar" ? 0 : 1
+    originX: Shell.openFrom === "bar" ? (barRight ? 1 : 0) : 1
     originY: 1
     clickDismiss: true
     // Once the pointer has been on it, leaving it closes it.

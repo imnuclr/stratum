@@ -103,8 +103,57 @@ Singleton {
         return list;
     }
 
-    function layoutFor(name, cols) {
-        return root.layouts[name] ?? root.defaultLayout(cols ?? 100);
+    function layoutFor(name, cols, rows) {
+        const saved = root.layouts[name];
+        if (saved)
+            return saved;
+        // The default is laid out for a wide screen; on a narrower one its pieces
+        // are settled into free space rather than left on top of each other.
+        const list = root.defaultLayout(cols ?? 100);
+        const placed = [];
+        for (const w of list) {
+            w.x = Math.max(0, Math.min((cols ?? 100) - w.w, w.x));
+            placed.push(w);
+            root.settle(placed, w, cols ?? 100, rows ?? 1000);
+        }
+        return placed;
+    }
+
+    function overlaps(a, b) {
+        return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    }
+
+    function free(list, item) {
+        return !list.some(o => o.id !== item.id && root.overlaps(item, o));
+    }
+
+    /*
+     * Moves a widget that lands on another to the nearest free place, so two
+     * never share cells. The nearest is measured from where it was put, so it
+     * stays as close to that as it can.
+     */
+    function settle(list, item, cols, rows) {
+        if (root.free(list, item))
+            return;
+        const ox = item.x;
+        const oy = item.y;
+        let best = null;
+        let bestD = Infinity;
+        for (let y = 0; y <= rows - item.h; y++) {
+            for (let x = 0; x <= cols - item.w; x++) {
+                const d = (x - ox) * (x - ox) + (y - oy) * (y - oy);
+                if (d >= bestD)
+                    continue;
+                item.x = x;
+                item.y = y;
+                if (root.free(list, item)) {
+                    best = [x, y];
+                    bestD = d;
+                }
+            }
+        }
+        item.x = best ? best[0] : ox;
+        item.y = best ? best[1] : oy;
     }
 
     function commit(name, list) {
@@ -116,23 +165,24 @@ Singleton {
 
     // Edits start from what is showing, so the first change on a monitor writes its
     // default out and everything after works on the real thing.
-    function edit(name, cols, change) {
-        const list = root.layoutFor(name, cols).map(w => Object.assign({}, w));
+    function edit(name, cols, change, rows) {
+        const list = root.layoutFor(name, cols, rows).map(w => Object.assign({}, w));
         change(list);
         root.commit(name, list);
     }
 
-    function move(name, cols, id, x, y) {
+    function move(name, cols, id, x, y, rows) {
         root.edit(name, cols, list => {
             const w = list.find(i => i.id === id);
             if (w) {
                 w.x = Math.max(0, Math.round(x));
                 w.y = Math.max(0, Math.round(y));
+                root.settle(list, w, cols, rows ?? 1000);
             }
-        });
+        }, rows);
     }
 
-    function resize(name, cols, id, w, h) {
+    function resize(name, cols, id, w, h, rows) {
         root.edit(name, cols, list => {
             const it = list.find(i => i.id === id);
             if (!it)
@@ -140,7 +190,11 @@ Singleton {
             const t = root.types[it.type];
             it.w = Math.max(t.minW, Math.round(w));
             it.h = Math.max(t.minH, Math.round(h));
-        });
+            // A widget grown over its neighbours moves them aside, not itself.
+            for (const other of list)
+                if (other.id !== it.id && root.overlaps(it, other))
+                    root.settle(list, other, cols, rows ?? 1000);
+        }, rows);
     }
 
     function setOption(name, cols, id, key, value) {
@@ -162,12 +216,13 @@ Singleton {
         });
     }
 
-    function add(name, cols, type) {
+    function add(name, cols, type, rows) {
         root.edit(name, cols, list => {
-            // Somewhere visible and not exactly on top of the last one.
-            const n = list.length;
-            list.push(root.make(type, 8 + (n % 5) * 2, 6 + (n % 5) * 2));
-        });
+            // Wherever there is room, starting from the top left.
+            const w = root.make(type, 2, 2);
+            list.push(w);
+            root.settle(list, w, cols, rows ?? 1000);
+        }, rows);
     }
 
     function reset(name) {

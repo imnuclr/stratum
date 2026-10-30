@@ -31,6 +31,8 @@ Item {
      */
     property bool vertical: false
     property real barEdge: 0
+    // A bar on the right edge opens its popouts to its left.
+    property bool opensLeft: false
 
     // The bar window masks input to this rect, so it must be empty when closed.
     readonly property alias maskItem: maskRect
@@ -50,7 +52,7 @@ Item {
 
         // The mask reaches back over the gap to the bar, so the pointer can cross
         // from the trigger to the panel without leaving the surface.
-        x: root.vertical ? frame.x - root.bridge : frame.x
+        x: root.vertical ? (root.opensLeft ? frame.x : frame.x - root.bridge) : frame.x
         y: root.vertical ? frame.y : frame.y - root.bridge
         width: root.shown ? frame.width + (root.vertical ? root.bridge : 0) : 0
         height: root.shown ? frame.height + (root.vertical ? 0 : root.bridge) : 0
@@ -73,7 +75,7 @@ Item {
 
         // Clamped so a popout under an item near the edge stays on screen.
         x: root.vertical
-            ? root.barEdge + Theme.space(1)
+            ? (root.opensLeft ? root.barEdge - targetWidth - Theme.space(1) : root.barEdge + Theme.space(1))
             : Math.max(Theme.space(1), Math.min(root.width - targetWidth - Theme.space(1),
                 Popouts.anchorX - targetWidth / 2))
         /*
@@ -121,7 +123,7 @@ Item {
         scale: 1
         // Grows out of the edge it hangs off, so the motion reads as the panel
         // emerging from the bar rather than appearing in place.
-        transformOrigin: root.vertical ? Item.Left : Item.Top
+        transformOrigin: root.vertical ? (root.opensLeft ? Item.Right : Item.Left) : Item.Top
         visible: opacity > 0.001
         // Content is laid out at full size while the frame is still animating to
         // it, so without this it spills above and below the panel for a frame or

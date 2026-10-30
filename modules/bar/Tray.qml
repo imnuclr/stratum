@@ -24,7 +24,14 @@ Row {
 
     // Hover-driven, with a grace period so the row doesn't collapse while the
     // pointer is crossing into it.
-    readonly property bool expanded: hover.hovered || closing.running
+    /*
+     * Open while hovered, for a moment after, and while an icon is being pressed.
+     * Pressing an icon takes the pointer, which clears the hover — so the tray
+     * began closing under the click, the icon switched itself off before the
+     * release, and nothing in the tray could be clicked at all.
+     */
+    property bool holding: false
+    readonly property bool expanded: hover.hovered || closing.running || root.holding
 
     HoverHandler {
         id: hover
@@ -198,58 +205,11 @@ Row {
                         }
                     }
 
-                    Image {
-                        id: icon
-
+                    TrayIcon {
                         anchors.fill: parent
-                        source: Icons.trayIcon(entry.modelData.icon)
-                        // Matching the drawn size keeps small pixmaps from being
-                        // upscaled into mush; mipmap covers the oversized ones.
-                        sourceSize.width: Math.round(width * 2)
-                        sourceSize.height: Math.round(height * 2)
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-                        mipmap: true
-                        asynchronous: true
-                        visible: status === Image.Ready
-                    }
-
-                    // An icon that fails to resolve would otherwise leave an empty
-                    // slot in the row that reads as a gap in the pill.
-                    Glyph {
-                        anchors.centerIn: parent
-                        name: "app"
-                        size: 13
-                        color: Theme.fgFaint
-                        visible: icon.status !== Image.Ready
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -2
-                        enabled: root.expanded
-                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-                        cursorShape: Qt.PointingHandCursor
-
-                        onClicked: event => {
-                            const item = entry.modelData;
-                            if (event.button === Qt.MiddleButton) {
-                                item.secondaryActivate();
-                            } else if (event.button === Qt.RightButton || item.onlyMenu) {
-                                if (item.hasMenu)
-                                    menu.open();
-                            } else {
-                                item.activate();
-                            }
-                        }
-                    }
-
-                    QsMenuAnchor {
-                        id: menu
-
-                        menu: entry.modelData.menu
-                        anchor.item: entry
-                        anchor.edges: Edges.Bottom
+                        item: entry.modelData
+                        edge: Edges.Bottom
+                        onHeld: down => root.holding = down
                     }
                 }
             }

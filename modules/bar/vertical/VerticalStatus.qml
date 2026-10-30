@@ -1,4 +1,7 @@
 import QtQuick
+import Quickshell
+import Quickshell.Services.SystemTray
+import qs.modules.bar
 import qs.components
 import qs.config
 import qs.services
@@ -18,6 +21,37 @@ Column {
     required property string monitorName
 
     spacing: Theme.space(3)
+
+    /*
+     * The tray, as a column of its icons above the status group. Their menus open
+     * away from the screen's edge, into the room beside the bar.
+     */
+    Column {
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: Theme.space(3)
+        visible: (SystemTray.items?.values?.length ?? 0) > 0
+        bottomPadding: Theme.space(1)
+
+        Repeater {
+            model: SystemTray.items?.values ?? []
+
+            TrayIcon {
+                required property var modelData
+
+                anchors.horizontalCenter: parent.horizontalCenter
+                item: modelData
+                size: 17
+                edge: Config.forMonitor(root.monitorName, "bar.edge", "left") === "right" ? Edges.Left : Edges.Right
+            }
+        }
+
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 14
+            height: 1
+            color: Theme.line
+        }
+    }
 
     SectionLabel {
         anchors.horizontalCenter: parent.horizontalCenter
