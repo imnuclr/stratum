@@ -44,19 +44,19 @@ Variants {
         anchors.left: true
         anchors.right: true
 
-        // Where this monitor's workspace sits among its row, from -1 to +1.
-        readonly property int workspace: Hyprland.monitorFor(win.modelData)?.activeWorkspace?.id ?? 1
-        readonly property int count: Config.get("bar.workspaces.count", 6)
-        readonly property real across: win.count > 1
-            ? ((((win.workspace - 1) % win.count) + win.count) % win.count) / (win.count - 1) * 2 - 1
-            : 0
+        WorkspaceDrift {
+            id: lean
+
+            monitor: win.modelData
+            depth: Config.get("wallpaper.parallaxDepth", 70)
+        }
 
         Item {
             id: stage
 
             anchors.fill: parent
             scale: Config.get("wallpaper.parallaxScale", 1.08)
-            x: -win.across * Config.get("wallpaper.parallaxDepth", 70)
+            x: lean.pulse
             opacity: win.shown && picture.status === Image.Ready ? 1 : 0
 
             Behavior on x {

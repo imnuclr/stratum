@@ -109,22 +109,24 @@ Variants {
             layerA.source = win.wanted;
         }
 
-        // Drifts a little with the workspace, less than the subject does, so the
-        // two read as being at different distances. Scaled up enough that its
-        // edges never come into view.
-        readonly property int workspace: Hyprland.monitorFor(win.modelData)?.activeWorkspace?.id ?? 1
-        readonly property int count: Config.get("bar.workspaces.count", 6)
-        readonly property real across: win.count > 1
-            ? ((((win.workspace - 1) % win.count) + win.count) % win.count) / (win.count - 1) * 2 - 1
-            : 0
+        // Leans a little as the workspace changes, less than the subject does, so
+        // the two read as being at different distances. Scaled up enough that its
+        // edges never come into view, and back at the centre once it settles.
         readonly property bool drift: Config.get("wallpaper.parallax", true)
+
+        WorkspaceDrift {
+            id: lean
+
+            monitor: win.modelData
+            depth: Config.get("wallpaper.parallaxDepth", 70)
+        }
 
         Item {
             id: stage
 
             anchors.fill: parent
             scale: win.drift ? Config.get("wallpaper.parallaxScale", 1.08) : 1
-            x: win.drift ? -win.across * Config.get("wallpaper.parallaxDepth", 70) * 0.4 : 0
+            x: win.drift ? lean.pulse * 0.4 : 0
 
             Behavior on x {
                 NumberAnimation {
