@@ -15,7 +15,7 @@ Column {
 
     DotText {
         anchors.horizontalCenter: parent.horizontalCenter
-        text: Time.format(Time.twelveHour ? "hh" : "HH")
+        text: Time.hour2
         size: 26
     }
 

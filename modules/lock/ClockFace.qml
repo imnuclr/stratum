@@ -20,7 +20,7 @@ Item {
     property real size: 230
     property color colour: Theme.fg
 
-    readonly property string hh: Qt.formatTime(root.time, Time.twelveHour ? "hh" : "HH")
+    readonly property string hh: Time.hourOf(root.time, Time.twelveHour, true)
     readonly property string mm: Qt.formatTime(root.time, "mm")
 
     // Widest digit in the face, so every cell is as wide as the worst case.

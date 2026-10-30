@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.components
 import qs.services
 import qs.theme
@@ -22,6 +23,33 @@ Item {
 
     implicitWidth: 268
     implicitHeight: body.implicitHeight
+
+    /*
+     * Ends the app outright. A tray item does not say which process it is, so
+     * the process is found by the item's name: exactly first, then anywhere in
+     * a command line. This script and the shell itself are never candidates,
+     * since the name is in this script's own command line.
+     */
+    function forceQuit() {
+        const name = String(root.item?.id ?? "").trim();
+        if (name.length === 0)
+            return;
+        Popouts.hide();
+        killer.command = ["sh", "-c", `
+            n="$1"; me=$$; shell=$(pgrep -x qs; pgrep -x quickshell)
+            p=$(pgrep -x -- "$n"); [ -z "$p" ] && p=$(pgrep -i -x -- "$n")
+            [ -z "$p" ] && p=$(pgrep -i -f -- "$n")
+            for pid in $p; do
+                [ "$pid" = "$me" ] && continue
+                echo "$shell" | grep -qx "$pid" && continue
+                kill -9 "$pid" 2>/dev/null
+            done`, "sh", name];
+        killer.running = true;
+    }
+
+    Process {
+        id: killer
+    }
 
     function run(entry) {
         Popouts.hide();
@@ -171,13 +199,25 @@ Item {
             }
         }
 
-        // Nothing to list: the item's own action is the only thing on offer.
-        LinkButton {
-            visible: menuList.count === 0
-            text: "open"
-            onClicked: {
-                Popouts.hide();
-                root.item?.activate();
+        Row {
+            spacing: Theme.space(2)
+
+            // Nothing to list: the item's own action is the only thing on offer.
+            LinkButton {
+                visible: menuList.count === 0
+                text: "open"
+                onClicked: {
+                    Popouts.hide();
+                    root.item?.activate();
+                }
+            }
+
+            // For an app whose own Quit does nothing, or that has none.
+            LinkButton {
+                text: "force quit"
+                icon: "close"
+                danger: true
+                onClicked: root.forceQuit()
             }
         }
     }

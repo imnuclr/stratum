@@ -220,8 +220,12 @@ Singleton {
             return root.actionLabel(b.arg.slice("stratum:".length));
         if (b.description.length > 0)
             return b.description;
-        if (b.dispatcher === "__lua")
-            return root.luaWords[`${b.mask}:${b.k}`] ?? "a Lua function (its code could not be found in ~/.config/hypr)";
+        if (b.dispatcher === "__lua") {
+            const said = root.luaWords[`${b.mask}:${b.k}`] ?? [];
+            if (said.length > 0)
+                return said[Math.min(b.nth ?? 0, said.length - 1)];
+            return "a Lua function (its code could not be found in ~/.config/hypr)";
+        }
         return root.explain(b.dispatcher, b.arg);
     }
 
@@ -395,7 +399,10 @@ Singleton {
                 const u = p.toUpperCase().replace(/^\$/, "");
                 return u === "CONTROL" ? "CTRL" : (u === "MOD4" || u === "WIN" || u === "META" || u === "MAINMOD" || u === "MOD") ? "SUPER" : u;
             });
-            out[`${root.maskOf(mods)}:${root.norm(key)}`] = words;
+            // Kept in order per combination: a key bound twice has two entries,
+            // and Hyprland lists its binds in the order they were made.
+            const at = `${root.maskOf(mods)}:${root.norm(key)}`;
+            out[at] = [...(out[at] ?? []), words];
         }
         return out;
     }
@@ -703,6 +710,7 @@ Singleton {
                     root.upgradeChecked = true;
                     upgradeLater.restart();
                 }
+                const seen = {};
                 root.all = list.filter(b => !b.mouse && (b.submap ?? "") === "").map(b => {
                     const mask = (b.modmask ?? 0) & ~root.ignoredBits;
                     const arg = String(b.arg ?? "");
@@ -714,7 +722,9 @@ Singleton {
                         dispatcher: b.dispatcher ?? "",
                         arg: arg,
                         description: b.description ?? "",
-                        stratum: arg.startsWith("stratum:")
+                        stratum: arg.startsWith("stratum:"),
+                        // Which of the Lua binds on this combination it is, in order.
+                        nth: b.dispatcher === "__lua" ? (seen[`${mask}:${root.norm(b.key)}`] = (seen[`${mask}:${root.norm(b.key)}`] ?? -1) + 1) : 0
                     };
                 });
             }

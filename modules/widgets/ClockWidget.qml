@@ -40,7 +40,7 @@ Item {
         spacing: Math.round(root.numeral * 0.08)
 
         DotText {
-            text: Time.format(root.pattern)
+            text: Time.clockOf(Time.now, root.twelve)
             size: root.numeral
             plain: true
         }

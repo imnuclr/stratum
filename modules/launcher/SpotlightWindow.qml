@@ -368,8 +368,6 @@ PanelWindow {
             groups.push(["frequent", used.map(e => root.appRow(e, "frequent"))]);
             if (Config.get("launcher.recent", true))
                 groups.push(["recent files", Launcher.recent.slice(0, 5).map(f => root.fileRow(f, "recent files"))]);
-            if (used.length === 0)
-                groups.push(["search one kind", root.commandRows("")]);
         } else {
             if (Config.get("launcher.calc", true))
                 groups.push(["calculator", root.calcFor(q)]);
@@ -574,7 +572,7 @@ PanelWindow {
 
                 anchors.left: chip.visible ? chip.right : lens.right
                 anchors.leftMargin: Theme.space(3)
-                anchors.right: escHint.left
+                anchors.right: info.left
                 anchors.rightMargin: Theme.space(3)
                 anchors.verticalCenter: parent.verticalCenter
                 color: Theme.fg
@@ -642,6 +640,35 @@ PanelWindow {
                 }
             }
 
+            // The keys, for whoever wants them, out of the way until asked.
+            Rectangle {
+                id: info
+
+                anchors.right: escHint.left
+                anchors.rightMargin: Theme.space(2)
+                anchors.verticalCenter: parent.verticalCenter
+                width: 22
+                height: 22
+                radius: 11
+                color: infoHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+                border.width: 1
+                border.color: Theme.line
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "i"
+                    color: Theme.fgDim
+                    font.family: Theme.fontUi
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    renderType: Text.NativeRendering
+                }
+
+                HoverHandler {
+                    id: infoHover
+                }
+            }
+
             Rectangle {
                 id: escHint
 
@@ -680,7 +707,7 @@ PanelWindow {
             id: list
 
             anchors.top: bar.bottom
-            anchors.bottom: footer.top
+            anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.topMargin: Theme.space(1)
             width: Math.round(parent.width * 0.56)
@@ -840,7 +867,7 @@ PanelWindow {
             id: divider
 
             anchors.top: bar.bottom
-            anchors.bottom: footer.top
+            anchors.bottom: parent.bottom
             anchors.left: list.right
             width: 1
             color: Theme.line
@@ -851,7 +878,7 @@ PanelWindow {
             id: preview
 
             anchors.top: bar.bottom
-            anchors.bottom: footer.top
+            anchors.bottom: parent.bottom
             anchors.left: divider.right
             anchors.right: parent.right
             anchors.margins: Theme.space(6)
@@ -940,55 +967,62 @@ PanelWindow {
             }
         }
 
-        // Keys, always in view, so nothing has to be remembered.
         Rectangle {
-            id: footer
+            id: keysCard
 
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
+            anchors.top: bar.bottom
+            anchors.topMargin: -Theme.space(2)
             anchors.right: parent.right
-            height: 40
-            color: "transparent"
+            anchors.rightMargin: Theme.space(5)
+            width: keysColumn.implicitWidth + Theme.space(4) * 2
+            height: keysColumn.implicitHeight + Theme.space(3) * 2
+            radius: Theme.rInner
+            color: Theme.surface
+            border.width: 1
+            border.color: Theme.lineHi
+            z: 20
+            opacity: infoHover.hovered ? 1 : 0
+            visible: opacity > 0.01
 
-            Rectangle {
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 1
-                color: Theme.line
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.standard
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
             }
 
-            Row {
-                anchors.left: parent.left
-                anchors.leftMargin: Theme.space(5)
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: Theme.space(5)
+            Column {
+                id: keysColumn
+
+                anchors.centerIn: parent
+                spacing: Theme.space(2)
 
                 Repeater {
                     model: [
-                        ["↑↓", "move"],
-                        ["↵", root.chosen?.hint ?? "open"],
-                        ["ctrl ↵", "show in folder"],
-                        [">", "search one kind"]
-                    ].filter(k => k[1] !== "show in folder" || root.chosen?.kind === "file")
+                        ["↵", "open"],
+                        ["ctrl ↵", "show a file in its folder"],
+                        ["↑ ↓", "move"],
+                        ["tab", "finish a > command"],
+                        [">", "search one kind: app, file, set, do, win, web, run"],
+                        ["=", "calculate"]
+                    ]
 
                     Row {
                         required property var modelData
 
-                        spacing: Theme.space(2)
+                        spacing: Theme.space(3)
 
                         Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: keyText.implicitWidth + 12
-                            height: 20
-                            radius: 5
+                            width: 52
+                            height: 22
+                            radius: 6
                             color: Theme.surfaceHi
                             border.width: 1
                             border.color: Theme.line
 
                             Text {
-                                id: keyText
-
                                 anchors.centerIn: parent
                                 text: modelData[0]
                                 color: Theme.fgBright

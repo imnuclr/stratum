@@ -52,8 +52,35 @@ Item {
             width: 180
             spacing: Theme.space(2)
 
-            SectionLabel {
-                text: "processes"
+            // What the list is ranked by: click to switch.
+            Row {
+                spacing: Theme.space(2)
+
+                Repeater {
+                    model: [["cpu", "cpu"], ["memory", "mem"], ["gpu", "gpu"]].filter(m => m[0] !== "gpu" || Gpu.available)
+
+                    SectionLabel {
+                        id: sortBy
+
+                        required property var modelData
+
+                        readonly property bool on: Processes.mode === sortBy.modelData[0]
+
+                        text: sortBy.modelData[1]
+                        color: sortBy.on ? Theme.fg : (sortHover.hovered ? Theme.fgBright : Theme.fgFaint)
+                        font.underline: sortBy.on
+
+                        HoverHandler {
+                            id: sortHover
+
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
+                        TapHandler {
+                            onTapped: Processes.setMode(sortBy.modelData[0])
+                        }
+                    }
+                }
             }
 
             Repeater {

@@ -21,7 +21,7 @@ Item {
         }
 
         DotText {
-            text: Time.format(Time.hm)
+            text: Time.clock
             size: 60
         }
 
