@@ -32,15 +32,11 @@ Rectangle {
         anchors.margins: Theme.space(2)
         spacing: Theme.space(3)
 
-        DotImage {
+        SpinningArt {
             anchors.verticalCenter: parent.verticalCenter
-            width: 64
-            height: 64
+            size: 64
             cell: 3
             dotScale: 0.5
-            halftone: true
-            colored: true
-            circular: true
             source: Media.artUrl
         }
 
