@@ -156,7 +156,7 @@ Variants {
 
                 onLiveChanged: {
                     grow.to = toast.live ? 1 : 0;
-                    grow.duration = toast.live ? Theme.popoutMs + 80 : Theme.popoutExitMs + 60;
+                    grow.duration = toast.live ? Math.round(Theme.popoutMs * 0.75) : Math.round(Theme.popoutExitMs * 0.8);
                     grow.restart();
                 }
 
@@ -210,7 +210,7 @@ Variants {
                         // shape; this only carries the words.
                         color: "transparent"
                         border.width: 0
-                        opacity: Math.max(0, Math.min(1, (toast.p - 0.6) / 0.4))
+                        opacity: Math.max(0, Math.min(1, (toast.p - 0.45) / 0.4))
                     }
                 }
 

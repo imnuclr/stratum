@@ -27,7 +27,11 @@ Singleton {
     // The first display's picture stands for the desktop when they differ.
     readonly property string image: Wallpaper.forMonitor(Quickshell.screens[0]?.name ?? "")
 
-    property bool available: false
+    // Found with the user's own bin directories on the path: the shell is often
+    // started from somewhere that does not have them, and matugen is usually
+    // installed with cargo.
+    property string binary: ""
+    readonly property bool available: root.binary.length > 0
     property string error: ""
     property var cache: ({})
     // Which image the running process is for, so a late answer cannot be applied
@@ -57,7 +61,7 @@ Singleton {
         if (!root.available || probe.running || matugen.running)
             return;
         root.running = root.image;
-        matugen.command = ["matugen", "image", root.image, "--json", "hex", "--dry-run"];
+        matugen.command = [root.binary, "image", root.image, "--json", "hex", "--dry-run"];
         matugen.running = true;
     }
 
@@ -101,11 +105,11 @@ Singleton {
         id: probe
 
         running: true
-        command: ["sh", "-c", "command -v matugen >/dev/null && echo yes"]
+        command: ["sh", "-c", 'PATH="$PATH:$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin"; command -v matugen']
 
         stdout: StdioCollector {
             onStreamFinished: {
-                root.available = text.trim() === "yes";
+                root.binary = text.trim();
                 root.refresh();
             }
         }

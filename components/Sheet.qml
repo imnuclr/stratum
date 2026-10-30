@@ -413,7 +413,7 @@ PanelWindow {
                     radius: Theme.rSheet
                     color: root.deep ? Theme.deep : Theme.surface
                     border.width: 1
-                    border.color: root.deep ? Theme.outline : Theme.lineHi
+                    border.color: Theme.outline
 
                     transformOrigin: {
                         if (root.centered)

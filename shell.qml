@@ -95,6 +95,7 @@ ShellRoot {
     Session {}
     Lock {}
     Settings {}
+    WallpaperMenus {}
     Shortcuts {}
 
     Freeze {}

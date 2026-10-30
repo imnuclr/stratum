@@ -19,6 +19,7 @@ Item {
     property string look: "original"
     property bool mono: false
     property real dotSize: 8
+    property real dotScale: 0.5
     property real light: 1
 
     signal ready
@@ -54,7 +55,7 @@ Item {
         visible: root.look === "dots"
         source: root.source.toString()
         cell: root.dotSize
-        dotScale: 0.5
+        dotScale: root.dotScale
         halftone: true
         colored: !root.mono
         gain: root.light

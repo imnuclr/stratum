@@ -39,23 +39,23 @@ Singleton {
     property bool dirty: false
 
     // --- colour ---
-    readonly property color bg: pick("color.bg", "#09090A")
-    readonly property color panel: pick("color.panel", "#0B0B0C")
-    readonly property color surface: pick("color.surface", "#141416")
-    readonly property color surfaceHi: pick("color.surfaceHi", "#1D1D20")
-    readonly property color surfaceTop: pick("color.surfaceTop", "#232327")
+    readonly property color bg: pick("color.bg", "#080808")
+    readonly property color panel: pick("color.panel", "#0B0B0B")
+    readonly property color surface: pick("color.surface", "#121212")
+    readonly property color surfaceHi: pick("color.surfaceHi", "#1B1B1B")
+    readonly property color surfaceTop: pick("color.surfaceTop", "#242424")
     readonly property color line: pick("color.line", "#12FFFFFF")
     readonly property color lineHi: pick("color.lineHi", "#24FFFFFF")
-    readonly property color fg: pick("color.fg", "#F4F4F5")
-    readonly property color fgDim: pick("color.fgDim", "#9A9AA0")
-    readonly property color fgBright: pick("color.fgBright", "#D2D2D8")
-    readonly property color fgFaint: pick("color.fgFaint", "#5C5C62")
+    readonly property color fg: pick("color.fg", "#F5F5F5")
+    readonly property color fgDim: pick("color.fgDim", "#9C9C9C")
+    readonly property color fgBright: pick("color.fgBright", "#D6D6D6")
+    readonly property color fgFaint: pick("color.fgFaint", "#5E5E5E")
     readonly property color dotOn: pick("color.dotOn", "#FFFFFF")
     readonly property color dotOff: pick("color.dotOff", "#21FFFFFF")
     readonly property color accent: pick("color.accent", "#E5252B")
     // Notifications: blacker than any surface, drawn with a pale outline.
     readonly property color deep: pick("color.deep", "#030303")
-    readonly property color outline: pick("color.outline", "#E6F4F4F5")
+    readonly property color outline: pick("color.outline", "#D9FFFFFF")
     // Something has gone wrong. Not the accent, which is a decoration you may have
     // changed to white: an error must still read as one.
     readonly property color danger: pick("color.danger", "#E5252B")

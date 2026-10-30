@@ -169,28 +169,12 @@ Item {
             text: `cutout · ${Cutout.status}`
         }
 
-        SliderPill {
-            readonly property real dot: Config.get("wallpaper.dotSize", 8)
-
-            width: parent.width
-            height: visible ? 44 : 0
+        ActionButton {
             visible: Config.get("wallpaper.look", "original") === "dots"
-            icon: "scan"
-            value: (dot - 4) / 20
-            label: `${Math.round(dot)}`
-            onMoved: v => Config.set("wallpaper.dotSize", Math.round(4 + v * 20))
-        }
-
-        SliderPill {
-            readonly property real lit: Config.get("wallpaper.light", 1)
-
-            width: parent.width
-            height: visible ? 44 : 0
-            visible: Config.get("wallpaper.look", "original") === "dots"
-            icon: "brightness"
-            value: (lit - 0.5) / 1.5
-            label: `${Math.round(lit * 100)}`
-            onMoved: v => Config.set("wallpaper.light", Math.round((0.5 + v * 1.5) * 20) / 20)
+            height: visible ? 36 : 0
+            width: 160
+            text: "shape the dots"
+            onClicked: Shell.open("wallpaper", Shell.openScreen)
         }
     }
 

@@ -23,7 +23,10 @@ Singleton {
     readonly property string model: Config.get("wallpaper.cutoutModel", "isnet-general-use")
     readonly property string cacheDir: `${Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache"}/stratum/cutouts`
 
-    property bool available: false
+    // Found with the user's own bin directories on the path (pipx puts it in
+    // ~/.local/bin, which the shell's own environment often lacks).
+    property string binary: ""
+    readonly property bool available: root.binary.length > 0
     // Image path -> cutout path, for the ones that exist.
     property var done: ({})
     property string working: ""
@@ -79,9 +82,9 @@ Singleton {
         root.working = next;
         maker.command = ["sh", "-c",
             `out="$2"; mkdir -p "$(dirname "$out")"; ` +
-            `[ -s "$out" ] || { nice -n 19 rembg i -m "$3" "$1" "$out.tmp" && mv "$out.tmp" "$out"; }; ` +
+            `[ -s "$out" ] || { nice -n 19 "$4" i -m "$3" "$1" "$out.tmp" && mv "$out.tmp" "$out"; }; ` +
             `[ -s "$out" ]`,
-            "sh", next, root.outFor(next), root.model];
+            "sh", next, root.outFor(next), root.model, root.binary];
         maker.running = true;
     }
 
@@ -91,11 +94,11 @@ Singleton {
         id: probe
 
         running: true
-        command: ["sh", "-c", "command -v rembg >/dev/null && echo yes"]
+        command: ["sh", "-c", 'PATH="$PATH:$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin"; command -v rembg']
 
         stdout: StdioCollector {
             onStreamFinished: {
-                root.available = text.trim() === "yes";
+                root.binary = text.trim();
                 root.pump();
             }
         }

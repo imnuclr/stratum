@@ -31,7 +31,9 @@ Variants {
         // How the picture is drawn: as it is or as dots, in colour or without.
         readonly property string look: Config.get("wallpaper.look", "original")
         readonly property bool mono: Config.get("wallpaper.mono", false)
-        readonly property real dotSize: Config.get("wallpaper.dotSize", 8)
+        // Amount is how fine the grid is, size how much of each cell a dot fills.
+        readonly property real dotCell: 4 + (1 - Config.get("wallpaper.dotAmount", 0.8)) * 20
+        readonly property real dotScale: Config.get("wallpaper.dotScale", 0.5)
         readonly property real light: Config.get("wallpaper.light", 1)
 
         screen: modelData
@@ -128,7 +130,8 @@ Variants {
                 pixelHeight: win.modelData.height
                 look: win.look
                 mono: win.mono
-                dotSize: win.dotSize
+                dotSize: win.dotCell
+                dotScale: win.dotScale
                 light: win.light
 
                 onReady: {
@@ -148,7 +151,8 @@ Variants {
                 pixelHeight: win.modelData.height
                 look: win.look
                 mono: win.mono
-                dotSize: win.dotSize
+                dotSize: win.dotCell
+                dotScale: win.dotScale
                 light: win.light
 
                 onReady: {

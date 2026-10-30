@@ -29,7 +29,7 @@ Rectangle {
         return level === 0 ? Theme.surface : Theme.surfaceHi;
     }
     border.width: active ? 0 : 1
-    border.color: floating ? Theme.lineHi : Theme.line
+    border.color: floating ? Theme.outline : Theme.line
 
     Behavior on color {
         ColorAnimation {
