@@ -24,6 +24,8 @@ Rectangle {
     Behavior on color {
         ColorAnimation {
             duration: Theme.micro
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.smooth
         }
     }
 
@@ -35,6 +37,8 @@ Rectangle {
         Behavior on opacity {
             NumberAnimation {
                 duration: Theme.micro
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
 

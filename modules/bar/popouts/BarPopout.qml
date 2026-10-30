@@ -91,6 +91,26 @@ Item {
 
         function relatch() {
             frame.latchedTop = Popouts.anchorY - frame.targetHeight / 2;
+            following.restart();
+        }
+
+        /*
+         * Content that settles its size after the trigger changes is centred
+         * again once it has. A tray menu arrives over D-Bus a moment after the
+         * hover, so the panel was centred using the previous item's height: a
+         * short Spotify menu opened far above its icon because Warp's tall one
+         * had been measured instead. Only for a moment after a move, so content
+         * growing later (a list expanding) still grows downward in place.
+         */
+        Timer {
+            id: following
+
+            interval: 450
+        }
+
+        onTargetHeightChanged: {
+            if (following.running)
+                frame.latchedTop = Popouts.anchorY - frame.targetHeight / 2;
         }
 
         onVisibleChanged: if (visible) frame.relatch()

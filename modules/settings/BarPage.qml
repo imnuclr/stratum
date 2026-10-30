@@ -20,7 +20,7 @@ SettingsPage {
         SettingRow {
             width: parent.width
             title: "Show the bar"
-            detail: "Off hides it on every display. Each display can also be set on its own, under Monitors."
+            detail: "Off hides it on every display. Each display can also be set on its own, under Displays."
 
             Switch {
                 checked: Config.get("bar.enabled", true)

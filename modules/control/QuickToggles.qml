@@ -190,6 +190,8 @@ Item {
                 Behavior on scale {
                     NumberAnimation {
                         duration: Theme.micro
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
                     }
                 }
 
@@ -275,6 +277,8 @@ Item {
         Behavior on opacity {
             NumberAnimation {
                 duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
 

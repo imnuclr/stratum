@@ -43,12 +43,16 @@ Item {
                 Behavior on color {
                     ColorAnimation {
                         duration: Theme.micro
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
                     }
                 }
 
                 Behavior on scale {
                     NumberAnimation {
                         duration: Theme.micro
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
                     }
                 }
             }

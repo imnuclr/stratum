@@ -186,6 +186,8 @@ Flickable {
                     Behavior on color {
                         ColorAnimation {
                             duration: Theme.micro
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
                         }
                     }
 

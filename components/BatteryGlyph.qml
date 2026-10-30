@@ -79,6 +79,8 @@ Item {
             Behavior on width {
                 NumberAnimation {
                     duration: Theme.standard
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
                 }
             }
         }

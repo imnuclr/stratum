@@ -115,12 +115,17 @@ Item {
 
                     required property var modelData
 
+                    // A submenu is a dropdown, folded until it is clicked.
+                    property bool open: false
+
                     width: parent.width
 
                     MenuLine {
                         width: parent.width
                         entry: entry.modelData
+                        expanded: entry.open
                         onPicked: e => root.run(e)
+                        onToggled: entry.open = !entry.open
                     }
 
                     QsMenuOpener {
@@ -129,16 +134,37 @@ Item {
                         menu: entry.modelData.hasChildren ? entry.modelData : null
                     }
 
-                    Repeater {
-                        model: entry.modelData.hasChildren ? sub.children : []
+                    Item {
+                        width: parent.width
+                        height: entry.open ? subList.implicitHeight : 0
+                        clip: true
+                        visible: height > 0
 
-                        MenuLine {
-                            required property var modelData
+                        Behavior on height {
+                            NumberAnimation {
+                                duration: Theme.standard * 1.6
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.smooth
+                            }
+                        }
 
-                            width: entry.width
-                            indent: Theme.space(4)
-                            entry: modelData
-                            onPicked: e => root.run(e)
+                        Column {
+                            id: subList
+
+                            width: parent.width
+
+                            Repeater {
+                                model: entry.modelData.hasChildren ? sub.children : []
+
+                                MenuLine {
+                                    required property var modelData
+
+                                    width: entry.width
+                                    indent: Theme.space(4)
+                                    entry: modelData
+                                    onPicked: e => root.run(e)
+                                }
+                            }
                         }
                     }
                 }
@@ -161,11 +187,14 @@ Item {
 
         property var entry: null
         property real indent: 0
+        property bool expanded: false
 
         signal picked(var e)
+        signal toggled
 
         readonly property bool separator: !!line.entry?.isSeparator
-        readonly property bool usable: !line.separator && (line.entry?.enabled ?? true) && !line.entry?.hasChildren
+        readonly property bool parentLine: !!line.entry?.hasChildren
+        readonly property bool usable: !line.separator && (line.entry?.enabled ?? true)
         readonly property bool ticked: (line.entry?.buttonType ?? 0) !== 0 && line.entry?.checkState === Qt.Checked
 
         height: line.separator ? Theme.space(2) + 1 : 32
@@ -204,16 +233,37 @@ Item {
             visible: !line.separator
             anchors.left: tick.right
             anchors.leftMargin: Theme.space(2)
-            anchors.right: parent.right
+            anchors.right: chevron.left
+            anchors.rightMargin: Theme.space(1)
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideRight
             // Mnemonic underscores are for keyboard menus.
             text: String(line.entry?.text ?? "").replace(/_(?!_)/g, "")
-            color: line.entry?.hasChildren ? Theme.fgDim : (line.usable ? Theme.fg : Theme.fgFaint)
+            color: line.usable ? Theme.fg : Theme.fgFaint
             font.family: Theme.fontUi
             font.pixelSize: 13
-            font.weight: line.entry?.hasChildren ? Font.Medium : Font.Normal
             renderType: Text.NativeRendering
+        }
+
+        Glyph {
+            id: chevron
+
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            visible: line.parentLine
+            width: visible ? 14 : 0
+            name: "chevron-down"
+            size: 14
+            color: Theme.fgDim
+            rotation: line.expanded ? 0 : -90
+
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: Theme.standard * 1.6
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
         }
 
         HoverHandler {
@@ -225,7 +275,7 @@ Item {
 
         TapHandler {
             enabled: line.usable
-            onTapped: line.picked(line.entry)
+            onTapped: line.parentLine ? line.toggled() : line.picked(line.entry)
         }
     }
 }

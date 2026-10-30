@@ -87,7 +87,7 @@ PanelWindow {
         { page: "wallpaper", words: "wallpaper background picture photo image" },
         { page: "appearance", words: "appearance theme dark light colour color accent font dots" },
         { page: "bar", words: "bar panel top edge column height width workspaces" },
-        { page: "monitors", words: "monitors displays screens resolution" },
+        { page: "displays", words: "displays monitors screens resolution refresh rate scale brightness arrange" },
         { page: "widgets", words: "widgets desktop clock weather" },
         { page: "keybinds", words: "keybinds keyboard shortcuts keys hotkeys" },
         { page: "notifications", words: "notifications toasts do not disturb" },
@@ -321,6 +321,8 @@ PanelWindow {
         Behavior on opacity {
             NumberAnimation {
                 duration: Theme.sheetMs
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
 
