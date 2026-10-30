@@ -170,6 +170,13 @@ Item {
         }
 
         ActionButton {
+            width: 160
+            height: 36
+            text: "browse on desktop"
+            onClicked: Shell.open("picker", Shell.openScreen)
+        }
+
+        ActionButton {
             visible: Config.get("wallpaper.look", "original") === "dots"
             height: visible ? 36 : 0
             width: 160
