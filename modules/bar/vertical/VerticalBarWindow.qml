@@ -62,15 +62,6 @@ PanelWindow {
         ]
     }
 
-    FadeBand {
-        vertical: true
-        atStart: root.onLeft
-        solid: root.barWidth + root.margin
-        anchors.top: parent.top
-        anchors.left: root.onLeft ? parent.left : undefined
-        anchors.right: root.onLeft ? undefined : parent.right
-    }
-
     Tile {
         id: column
 
