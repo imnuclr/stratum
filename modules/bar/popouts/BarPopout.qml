@@ -39,6 +39,14 @@ Item {
     readonly property bool mine: Popouts.monitorName === monitorName
     readonly property bool shown: Popouts.open && mine
 
+    property bool settled: false
+
+    Timer {
+        running: true
+        interval: 600
+        onTriggered: root.settled = true
+    }
+
     anchors.fill: parent
 
     // Bridges the gap between the bar strip and the panel. The HoverHandler's
@@ -242,6 +250,9 @@ Item {
             Transition {
                 from: ""
                 to: "hidden"
+                // Not as the shell starts, when it is born shown and drops to
+                // hidden at once; that drop flashed an empty popout.
+                enabled: root.settled
 
                 NumberAnimation {
                     properties: "opacity,scale"

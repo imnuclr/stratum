@@ -27,8 +27,9 @@ start() {
   mkdir -p "$(dirname "$LOG")"
   # Detached with its own log, so the shell outlives the terminal that
   # started it and there is somewhere to look when it does not.
-  qs -c "$CONFIG" >>"$LOG" 2>&1 &
-  disown
+  # In its own session with no terminal at all: nothing the shell does can
+  # reach the prompt that started it.
+  setsid -f qs -c "$CONFIG" </dev/null >>"$LOG" 2>&1
   sleep 1
   running && say "started" || die "failed to start — see: stratum log"
 }
