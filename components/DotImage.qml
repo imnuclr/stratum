@@ -54,6 +54,21 @@ Canvas {
      * corners, so a photograph — which has no such ground — is left whole.
      */
     property bool frameSubject: false
+    /*
+     * How the picture meets the grid. "stretch" squeezes it to fill, which is right
+     * for a square avatar and wrong for a wallpaper: a 16:9 picture on a 16:10
+     * screen comes out taller and narrower than it is, and everything in it moves.
+     * "crop" fills the grid from the middle of the picture and cuts the overflow,
+     * as the plain wallpaper does.
+     */
+    property string fit: "stretch"
+    /*
+     * Stretches the picture's own tones to fill the range before they become dot
+     * sizes. Without colour a saturated picture — a blue, say — is nearly black by
+     * luma and draws almost no dots, while a pale one draws dots so large they
+     * merge into a solid sheet.
+     */
+    property bool autoLevels: false
 
     // 4x4 Bayer matrix, normalised. Ordered dithering keeps the dot grid regular,
     // which is the point — error diffusion would scatter it.
@@ -96,6 +111,9 @@ Canvas {
     onRowsChanged: requestPaint()
     onDotColorChanged: requestPaint()
     onCellChanged: requestPaint()
+    onDotScaleChanged: requestPaint()
+    onFitChanged: requestPaint()
+    onAutoLevelsChanged: requestPaint()
     onHalftoneChanged: requestPaint()
     onCircularChanged: requestPaint()
     onColoredChanged: requestPaint()
@@ -212,7 +230,20 @@ Canvas {
             ctx.reset();
         }
 
-        ctx.drawImage(sampler, ox, oy, dw, dh);
+        if (fit === "crop" && !frameSubject && sampler.implicitWidth > 0 && sampler.implicitHeight > 0) {
+            const nw = sampler.implicitWidth;
+            const nh = sampler.implicitHeight;
+            const want = cols / rows;
+            let sw = nw;
+            let sh = nh;
+            if (nw / nh > want)
+                sw = nh * want;
+            else
+                sh = nw / want;
+            ctx.drawImage(sampler, (nw - sw) / 2, (nh - sh) / 2, sw, sh, 0, 0, cols, rows);
+        } else {
+            ctx.drawImage(sampler, ox, oy, dw, dh);
+        }
         let data = ctx.getImageData(0, 0, cols, rows).data;
         if (!root.anyDrawn(data)) {
             root.again();
@@ -255,6 +286,33 @@ Canvas {
             flip = n > 0 && sum / n > 0.62;
         }
 
+        // Where the picture's tones start and end, so mono can use the whole range.
+        let lo = 0;
+        let hi = 1;
+        if (autoLevels) {
+            const bins = new Array(64).fill(0);
+            let total = 0;
+            for (let k = 0; k < rows * cols; k++) {
+                const j = k * 4;
+                const l = (0.299 * data[j] + 0.587 * data[j + 1] + 0.114 * data[j + 2]) / 255 * (data[j + 3] / 255);
+                bins[Math.min(63, Math.floor(l * 64))]++;
+                total++;
+            }
+            let run = 0;
+            let found = false;
+            for (let b = 0; b < 64; b++) {
+                run += bins[b];
+                if (!found && run > total * 0.02) {
+                    lo = b / 64;
+                    found = true;
+                }
+                if (run > total * 0.98) {
+                    hi = (b + 1) / 64;
+                    break;
+                }
+            }
+        }
+
         ctx.fillStyle = dotColor;
         ctx.globalAlpha = Math.max(0.05, Math.min(1, dotAlpha));
 
@@ -265,7 +323,9 @@ Canvas {
 
                 const i = (y * cols + x) * 4;
                 // Rec. 601 luma, matching how the rest of the shell weighs colour.
-                const luma = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+                let luma = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+                if (autoLevels)
+                    luma = Math.max(0, Math.min(1, (luma - lo) / Math.max(0.12, hi - lo)));
                 const alpha = data[i + 3] / 255;
                 // Inverted, an empty (transparent) pixel stays empty rather than lighting up.
                 const v = Math.min(1, (flip ? (1 - luma) * alpha : luma * alpha) * gain);

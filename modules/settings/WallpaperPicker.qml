@@ -136,6 +136,30 @@ PanelWindow {
             event.accepted = true;
         }
 
+        // Shade at the top and foot, so the words and the strip read over any
+        // picture without dimming the middle, which is what is being judged.
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 300
+            gradient: Gradient {
+                GradientStop { position: 0; color: "#E6000000" }
+                GradientStop { position: 1; color: "transparent" }
+            }
+        }
+
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 420
+            gradient: Gradient {
+                GradientStop { position: 0; color: "transparent" }
+                GradientStop { position: 1; color: "#F2000000" }
+            }
+        }
+
         // A click on bare screen keeps the one being shown and closes.
         MouseArea {
             anchors.fill: parent
