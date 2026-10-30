@@ -78,6 +78,239 @@ Singleton {
     // Caps and Num Lock are modifiers to Hyprland, but nobody means them.
     readonly property int ignoredBits: 2 | 16
 
+    /*
+     * What each bind in your Lua config does, in words, keyed "mask:key".
+     *
+     * Hyprland only reports a Lua bind as `__lua` and a number, so the config
+     * itself is read: every hl.bind("COMBO", ...) call, with a comment beside or
+     * above it preferred, and otherwise the dispatcher inside explained.
+     */
+    property var luaWords: ({})
+
+    // Dispatchers in words. Keys have underscores dropped, so the Lua names
+    // (exec_cmd, kill_active) land on the same entries as the conf ones.
+    readonly property var dispatchers: ({
+        "exec": a => root.runWords(a),
+        "execcmd": a => root.runWords(a),
+        "execr": a => root.runWords(a),
+        "killactive": () => "close the window",
+        "close": () => "close the window",
+        "forcekillactive": () => "force close the window",
+        "closewindow": () => "close the window",
+        "kill": () => "force close the window",
+        "float": () => "float the window",
+        "tile": () => "tile the window",
+        "togglefloat": () => "float or tile the window",
+        "resize": a => `resize the window${a ? ` (${a})` : ""}`,
+        "move": a => `move the window${a ? ` ${root.dirWords(a)}` : ""}`,
+        "focus": a => `focus ${root.dirWords(a)}`,
+        "killwindow": () => "force close the window",
+        "exit": () => "quit Hyprland",
+        "togglefloating": () => "float or tile the window",
+        "setfloating": () => "float the window",
+        "settiled": () => "tile the window",
+        "fullscreen": a => /^1|maximi/.test(a) ? "maximise the window" : "make the window fullscreen",
+        "fullscreenstate": () => "fullscreen the window",
+        "pseudo": () => "pseudotile the window",
+        "pin": () => "pin the window to every workspace",
+        "togglesplit": () => "flip the split",
+        "swapsplit": () => "swap the split",
+        "centerwindow": () => "centre the window",
+        "workspace": a => root.workspaceWords("go to", a),
+        "movetoworkspace": a => root.workspaceWords("move the window to", a),
+        "movetoworkspacesilent": a => root.workspaceWords("send the window to", a),
+        "togglespecialworkspace": a => a ? `show or hide the ${a} scratchpad` : "show or hide the scratchpad",
+        "movefocus": a => `focus the window ${root.dirWords(a)}`,
+        "movewindow": a => `move the window ${root.dirWords(a)}`,
+        "swapwindow": a => `swap with the window ${root.dirWords(a)}`,
+        "resizeactive": a => `resize the window (${a})`,
+        "focusmonitor": a => `focus monitor ${a}`,
+        "movecurrentworkspacetomonitor": a => `move this workspace to monitor ${a}`,
+        "cyclenext": a => /prev/.test(a) ? "focus the previous window" : "focus the next window",
+        "focusurgentorlast": () => "focus the last window",
+        "togglegroup": () => "group or ungroup windows",
+        "changegroupactive": a => /b/.test(a) ? "previous window in the group" : "next window in the group",
+        "submap": a => a === "reset" ? "leave the submap" : `enter the ${a} submap`,
+        "dpms": a => `screen power ${a || "toggle"}`,
+        "layoutmsg": a => `layout: ${a}`,
+        "global": a => a.startsWith("stratum:") ? root.actionLabel(a.slice(8)) : `shortcut ${a}`,
+        "pass": a => `pass the key to ${a}`,
+        "sendshortcut": a => `send ${a}`
+    })
+
+    function dirWords(a) {
+        return ({ l: "to the left", r: "to the right", u: "above", d: "below",
+            left: "to the left", right: "to the right", up: "above", down: "below" })[String(a).toLowerCase()] ?? a;
+    }
+
+    function workspaceWords(verb, a) {
+        a = String(a);
+        if (/^\d+$/.test(a))
+            return `${verb} workspace ${a}`;
+        if (/^[er]\+1$|^\+1$|^m\+1$/.test(a))
+            return `${verb} the next workspace`;
+        if (/^[er]-1$|^-1$|^m-1$/.test(a))
+            return `${verb} the previous workspace`;
+        if (a.startsWith("special"))
+            return `${verb} the scratchpad`;
+        if (a === "previous")
+            return `${verb} the last workspace`;
+        return `${verb} workspace ${a}`;
+    }
+
+    // A command line as what it opens: "kitty" reads as "open kitty".
+    function runWords(cmd) {
+        cmd = String(cmd).trim().replace(/^\[[^\]]*\]\s*/, "");
+        if (cmd.length === 0)
+            return "run a command";
+        const words = cmd.split(/\s+/);
+        let i = 0;
+        while (i < words.length - 1 && (/^(uwsm|app2unit|setsid|env|exec|nohup|systemd-run)$/.test(words[i]) || /^-/.test(words[i]) || /=/.test(words[i]) || words[i] === "app" || words[i] === "--"))
+            i++;
+        const prog = words[i].split("/").pop();
+        const rest = words.slice(i + 1).join(" ");
+        const known = {
+            "wpctl": "change the volume", "pamixer": "change the volume", "pactl": "change the volume",
+            "brightnessctl": "change the brightness", "playerctl": "control media",
+            "grim": "take a screenshot", "hyprshot": "take a screenshot", "grimblast": "take a screenshot",
+            "hyprlock": "lock the screen", "swaylock": "lock the screen", "loginctl": rest.includes("lock") ? "lock the screen" : "session",
+            "hyprpicker": "pick a colour", "cliphist": "clipboard history", "qs": "a Stratum command", "quickshell": "a Stratum command",
+            "systemctl": rest.includes("suspend") ? "sleep" : rest.includes("poweroff") ? "shut down" : rest.includes("reboot") ? "restart" : "system command",
+            "pkill": `stop ${rest.split(" ").pop()}`, "killall": `stop ${rest.split(" ").pop()}`
+        };
+        if (known[prog])
+            return known[prog];
+        if (/^(rofi|wofi|fuzzel|tofi|anyrun|walker|bemenu|dmenu)/.test(prog))
+            return `open ${prog} (launcher)`;
+        return `open ${prog}`;
+    }
+
+    function explain(dispatcher, arg) {
+        const d = String(dispatcher).toLowerCase().replace(/_/g, "");
+        const f = root.dispatchers[d];
+        return f ? f(String(arg ?? "").trim()) : `${dispatcher} ${arg ?? ""}`.trim();
+    }
+
+    // A dispatcher called with a table, as in hl.dsp.focus({ workspace = 1 }).
+    function explainTable(name, text, value) {
+        const t = {};
+        const field = /(\w+)\s*=\s*("[^"]*"|'[^']*'|[^,}]+)/g;
+        for (let f = field.exec(text); f !== null; f = field.exec(text))
+            t[f[1]] = value(f[2]);
+        const n = name.toLowerCase();
+        if (t.workspace !== undefined)
+            return root.workspaceWords(/move|send/.test(n) ? (/silent/.test(n) || t.follow === "false" ? "send the window to" : "move the window to") : "go to", t.workspace);
+        if (t.direction !== undefined)
+            return /swap/.test(n) ? `swap with the window ${root.dirWords(t.direction)}`
+                : /move/.test(n) ? `move the window ${root.dirWords(t.direction)}`
+                : `focus the window ${root.dirWords(t.direction)}`;
+        if (t.monitor !== undefined)
+            return /move/.test(n) ? `move to monitor ${t.monitor}` : `focus monitor ${t.monitor}`;
+        const first = Object.keys(t).map(k => t[k])[0] ?? "";
+        return root.explain(n.split(".").pop(), first);
+    }
+
+    // What a bind does, for the keybinds page.
+    function describe(b) {
+        if (b.stratum)
+            return root.actionLabel(b.arg.slice("stratum:".length));
+        if (b.description.length > 0)
+            return b.description;
+        if (b.dispatcher === "__lua")
+            return root.luaWords[`${b.mask}:${b.k}`] ?? "a Lua function in your config";
+        return root.explain(b.dispatcher, b.arg);
+    }
+
+    /*
+     * Reads hl.bind calls out of Lua source. Not a Lua parser: it finds each
+     * call, takes its first argument as the combination and balances brackets
+     * to find where the rest ends, which is enough for how binds are written.
+     */
+    function parseLua(src) {
+        const vars = {};
+        const assign = /local\s+(\w+)\s*=\s*["']([^"'\n]*)["']/g;
+        for (let a = assign.exec(src); a !== null; a = assign.exec(src))
+            vars[a[1]] = a[2];
+        const value = text => {
+            text = text.trim();
+            const q = /^["']([\s\S]*)["']$/.exec(text);
+            if (q)
+                return q[1];
+            // "kitty " .. "--single" or a variable, joined back together.
+            return text.split("..").map(p => {
+                p = p.trim();
+                const s = /^["']([\s\S]*)["']$/.exec(p);
+                return s ? s[1] : (vars[p] ?? p);
+            }).join("");
+        };
+
+        const out = {};
+        const re = /hl\.bind\s*\(\s*["']([^"']+)["']\s*,/g;
+        let m;
+        while ((m = re.exec(src)) !== null) {
+            // The rest of the call, brackets balanced.
+            let depth = 1, i = re.lastIndex, inStr = "";
+            for (; i < src.length && depth > 0; i++) {
+                const c = src[i];
+                if (inStr) {
+                    if (c === inStr && src[i - 1] !== "\\")
+                        inStr = "";
+                } else if (c === '"' || c === "'") {
+                    inStr = c;
+                } else if (c === "(" || c === "{") {
+                    depth++;
+                } else if (c === ")" || c === "}") {
+                    depth--;
+                }
+            }
+            const body = src.slice(re.lastIndex, i - 1);
+
+            // A comment on the same line, or the line just above, says it best.
+            const lineEnd = src.indexOf("\n", i);
+            const tail = src.slice(i, lineEnd < 0 ? src.length : lineEnd);
+            const before = src.slice(0, m.index).split("\n");
+            const above = before.length >= 2 ? before[before.length - 2].trim() : "";
+            const sameLine = /--\s*(.+)$/.exec(tail);
+            let words = "";
+            if (sameLine)
+                words = sameLine[1].trim();
+            else if (above.startsWith("--") && !before[before.length - 1].trim().startsWith("--"))
+                words = above.replace(/^--+\s*/, "");
+
+            if (words.length === 0 || words.length > 60) {
+                const call = /hl\.dsp\.([\w.]+)\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)/.exec(body);
+                if (call) {
+                    const name = call[1].split(".").pop();
+                    const arg = call[2].trim();
+                    words = arg.startsWith("{") ? root.explainTable(call[1], arg, value) : root.explain(name, value(arg.split(/,(?![^(]*\))/)[0] ?? ""));
+                } else if (/function/.test(body)) {
+                    words = "a Lua function in your config";
+                } else {
+                    continue;
+                }
+            }
+
+            const parts = m[1].split("+").map(p => p.trim()).filter(p => p.length > 0);
+            const key = parts.pop() ?? "";
+            const mods = parts.map(p => {
+                const u = p.toUpperCase();
+                return u === "CONTROL" ? "CTRL" : (u === "MOD4" || u === "WIN" || u === "META") ? "SUPER" : u;
+            });
+            out[`${root.maskOf(mods)}:${root.norm(key)}`] = words;
+        }
+        return out;
+    }
+
+    Process {
+        id: luaSource
+
+        command: ["sh", "-c", `find -L "${root.hyprDir}" -maxdepth 3 -name '*.lua' -not -name 'stratum-binds.lua' -exec cat {} + 2>/dev/null`]
+
+        stdout: StdioCollector {
+            onStreamFinished: root.luaWords = root.parseLua(text)
+        }
+    }
+
     function actionLabel(name) {
         return root.actions.find(a => a.name === name)?.label ?? name;
     }
@@ -213,6 +446,8 @@ Singleton {
     function refresh() {
         if (!reader.running)
             reader.running = true;
+        if (!luaSource.running)
+            luaSource.running = true;
     }
 
     FileView {

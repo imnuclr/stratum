@@ -112,13 +112,7 @@ Flickable {
     }
 
     function describe(b) {
-        if (b.stratum)
-            return Binds.actionLabel(b.arg.slice("stratum:".length));
-        if (b.description.length > 0)
-            return b.description;
-        if (b.dispatcher === "__lua")
-            return "a Lua function in your config";
-        return `${b.dispatcher} ${b.arg}`.trim();
+        return Binds.describe(b);
     }
 
     Column {
