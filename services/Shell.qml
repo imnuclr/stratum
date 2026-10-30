@@ -68,6 +68,10 @@ Singleton {
     // is one sheet per monitor and the choice should follow you between them.
     property string settingsPage: "wallpaper"
 
+    // A setting to bring into view and flash once its page is showing, by its
+    // title. Cleared by the row that answers to it.
+    property string settingsFocus: ""
+
     function expand(which) {
         root.expandedChip = root.expandedChip === which ? "" : which;
     }

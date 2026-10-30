@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import qs.theme
 
 /*
@@ -51,6 +52,26 @@ Column {
         font.pixelSize: 12
         wrapMode: Text.WordWrap
         renderType: Text.NativeRendering
+    }
+
+    // Scrolled to when settings search picks it by its title.
+    readonly property bool sought: root.title.length > 0 && Shell.settingsFocus.length > 0
+        && Shell.settingsFocus.toLowerCase() === root.title.toLowerCase()
+
+    onSoughtChanged: if (sought) Qt.callLater(root.reveal)
+    Component.onCompleted: if (sought) Qt.callLater(root.reveal)
+
+    function reveal() {
+        if (!root.sought)
+            return;
+        let p = root.parent;
+        while (p && p.contentY === undefined)
+            p = p.parent;
+        if (p) {
+            const y = root.mapToItem(p.contentItem, 0, 0).y - 24;
+            p.contentY = Math.max(0, Math.min(y, p.contentHeight - p.height));
+        }
+        Shell.settingsFocus = "";
     }
 
     function tidy() {
