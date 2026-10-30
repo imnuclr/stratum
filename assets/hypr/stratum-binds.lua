@@ -40,3 +40,6 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.global("stratum:brightnessDown"), repeat
 hl.bind("Print", hl.dsp.global("stratum:screenshotRegion"), locked)
 hl.bind("SUPER + Print", hl.dsp.global("stratum:screenshot"), locked)
 hl.bind("CTRL + Print", hl.dsp.global("stratum:screenshotEdit"), locked)
+
+-- Lock the session. Not "locked": it should not fire while already locked.
+hl.bind("SUPER + L", hl.dsp.global("stratum:lock"))
