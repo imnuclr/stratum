@@ -57,6 +57,14 @@ Singleton {
         const next = [...root.displays];
         next[i] = { id: next[i].id, label: next[i].label, value: Math.max(0, Math.min(1, v)) };
         root.displays = next;
+        // The laptop panel, when it can be written directly, is eased there in
+        // this process: no program to start, so it follows a key or a drag at once.
+        if (root.direct && root.internal) {
+            root.rampTarget = next[i].value * 100;
+            if (!ramp.running)
+                ramp.start();
+            return;
+        }
         pendingIds[id] = true;
         debounce.restart();
     }
@@ -155,6 +163,74 @@ Singleton {
     // Which displays have an unwritten change. Plain object, not a model: it is
     // only ever read by the debounce below.
     readonly property var pendingIds: ({})
+
+    /*
+     * Writing the backlight file directly.
+     *
+     * Every write through brightnessctl is a program started, which is most of what
+     * makes the keys feel slow, and a smooth ramp would be several of them. Where
+     * the user is allowed to write /sys/class/backlight/<name>/brightness (the
+     * udev rule that ships with brightnessctl grants it to the video group) the
+     * shell writes it itself, and easing the level there is a few small writes
+     * from a timer. Otherwise it falls back to brightnessctl as before.
+     */
+    property bool direct: false
+    property int rawMax: 0
+    property real rampTarget: -1
+    property real rampNow: -1
+    property int lastRaw: -1
+
+    function writeRaw(percent) {
+        // Never 0: on many panels that is off.
+        const raw = Math.max(1, Math.round(percent / 100 * root.rawMax));
+        if (raw === root.lastRaw)
+            return;
+        root.lastRaw = raw;
+        sysBrightness.setText(String(raw));
+    }
+
+    Timer {
+        id: ramp
+
+        interval: 8
+        repeat: true
+        onTriggered: {
+            const diff = root.rampTarget - root.rampNow;
+            if (Math.abs(diff) < 0.3) {
+                root.rampNow = root.rampTarget;
+                root.writeRaw(root.rampNow);
+                ramp.stop();
+                return;
+            }
+            // A quarter of the way each tick, and never less than a third of a
+            // percent: quick at first, settling at the end, and always arriving.
+            root.rampNow += Math.sign(diff) * Math.max(0.33, Math.abs(diff) * 0.25);
+            root.writeRaw(root.rampNow);
+        }
+    }
+
+    FileView {
+        id: sysBrightness
+
+        path: root.direct ? `/sys/class/backlight/${root.backlight}/brightness` : ""
+        atomicWrites: false
+        // Only ever written, and a sysfs file is not something to watch or cache.
+        preload: false
+        watchChanges: false
+    }
+
+    Process {
+        id: canWrite
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim() !== "yes")
+                    return;
+                root.rampNow = root.displays.length > 0 ? root.displays[0].value * 100 : 50;
+                root.direct = true;
+            }
+        }
+    }
 
     // What each display was last told, in percent, so a change can be walked there.
     property var written: ({})
@@ -270,6 +346,9 @@ Singleton {
                 if (isNaN(current) || !(max > 0))
                     return;
                 root.displays = [{ id: root.backlight, label: "internal", value: current / max }];
+                root.rawMax = max;
+                canWrite.command = ["sh", "-c", `[ -w /sys/class/backlight/${root.backlight}/brightness ] && echo yes`];
+                canWrite.running = true;
                 root.written[root.backlight] = Math.round(current / max * 100);
                 root.ready = true;
             }
