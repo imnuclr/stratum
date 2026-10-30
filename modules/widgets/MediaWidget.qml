@@ -28,29 +28,17 @@ Item {
         live: root.live
     }
 
-    Item {
+    // The cover in its ring, turning while it plays, as in the control centre.
+    SpinningArt {
         id: art
 
         x: root.pad
         anchors.verticalCenter: parent.verticalCenter
-        width: root.disc
-        height: root.disc
-
-        DotImage {
-            anchors.fill: parent
-            visible: root.hasArt
-            source: Media.artUrl
-            cell: Math.max(3, root.disc / 38)
-            dotScale: 0.46
-            halftone: true
-            circular: true
-            colored: root.cover === "colour"
-        }
-
-        NoCover {
-            anchors.fill: parent
-            visible: !root.hasArt
-        }
+        size: root.disc
+        cell: Math.max(3, root.disc / 38)
+        dotScale: 0.46
+        source: Media.artUrl
+        colored: root.cover === "colour"
     }
 
     Column {
