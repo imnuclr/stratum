@@ -190,8 +190,6 @@ PanelWindow {
                             anchors.fill: parent
                             radius: frame.round ? Math.min(width, height) / 2 : Theme.rTile
                             color: frame.def.shape === "none" ? "transparent" : Theme.surface
-                            border.width: frame.def.shape === "none" ? 0 : 1
-                            border.color: Theme.line
                         }
 
                         Loader {

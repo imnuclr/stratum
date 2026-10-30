@@ -28,13 +28,13 @@ Singleton {
     // What can be placed. `shape` says what sits behind a widget: nothing, a
     // rounded tile, or a disc.
     readonly property var types: ({
-        "clock": { label: "clock", icon: "moon", w: 48, h: 16, minW: 24, minH: 8, shape: "none" },
-        "greeting": { label: "greeting", icon: "sun", w: 40, h: 10, minW: 22, minH: 6, shape: "none" },
-        "weather": { label: "weather", icon: "cloud-sun", w: 12, h: 12, minW: 8, minH: 8, shape: "round" },
-        "date": { label: "date", icon: "app", w: 12, h: 12, minW: 8, minH: 8, shape: "tile" },
-        "gpu": { label: "gpu", icon: "scan", w: 12, h: 12, minW: 8, minH: 8, shape: "round" },
-        "media": { label: "now playing", icon: "play", w: 25, h: 12, minW: 18, minH: 9, shape: "tile" },
-        "stats": { label: "system", icon: "terminal", w: 38, h: 12, minW: 24, minH: 9, shape: "tile" }
+        "clock": { label: "clock", icon: "moon", w: 54, h: 26, minW: 24, minH: 10, shape: "none" },
+        "greeting": { label: "greeting", icon: "sun", w: 44, h: 14, minW: 22, minH: 6, shape: "none" },
+        "weather": { label: "weather", icon: "cloud-sun", w: 15, h: 15, minW: 9, minH: 9, shape: "round" },
+        "date": { label: "date", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "tile" },
+        "gpu": { label: "gpu", icon: "scan", w: 15, h: 15, minW: 9, minH: 9, shape: "round" },
+        "media": { label: "now playing", icon: "play", w: 31, h: 15, minW: 20, minH: 10, shape: "tile" },
+        "stats": { label: "system", icon: "terminal", w: 47, h: 15, minW: 26, minH: 10, shape: "tile" }
     })
     readonly property var typeNames: ["clock", "greeting", "weather", "date", "gpu", "media", "stats"]
 
@@ -55,18 +55,20 @@ Singleton {
     // Laid out for a screen `cols` cells across: the clock and greeting at the left,
     // a column of small things at the right.
     function defaultLayout(cols) {
-        const x0 = Math.max(50, cols - 39);
+        // The small things in a block at the right, three rows of tiles one cell
+        // apart; the clock and greeting at the left.
+        const x0 = Math.max(58, cols - 48);
         const list = [
-            root.make("clock", 2, 2),
-            root.make("greeting", 2, 22),
-            root.make("weather", x0, 2),
-            root.make("date", x0 + 13, 2),
-            root.make("gpu", x0 + 26, 2),
-            root.make("media", x0, 16),
-            root.make("stats", x0, 30)
+            root.make("clock", 3, 9),
+            root.make("greeting", 3, 42),
+            root.make("weather", x0, 10),
+            root.make("date", x0 + 16, 10),
+            root.make("gpu", x0 + 32, 10),
+            root.make("media", x0, 26),
+            root.make("stats", x0, 42)
         ];
         // Stable ids, so a default is the same default each time it is asked for.
-        list.forEach((w, i) => w.id = `default-${w.type}`);
+        list.forEach(w => w.id = `default-${w.type}`);
         return list;
     }
 
