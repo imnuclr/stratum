@@ -20,7 +20,7 @@ QtObject {
 
     // "fast", "slow" or "" for not watching; what is held now.
     property string held: ""
-    readonly property string wanted: !root.live || Power.saving("widgetsStop") ? ""
+    readonly property string wanted: !root.live || Power.saving("widgetsStop") || GameMode.on ? ""
         : (Power.saving("widgets") && root.service.watchSlowly ? "slow" : "fast")
 
     function release() {

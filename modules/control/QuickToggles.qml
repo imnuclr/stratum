@@ -36,6 +36,7 @@ Item {
         "dnd": { icon: "bell-off", label: "dnd", active: Notifs.dnd, available: true, act: () => Notifs.toggleDnd() },
         "night": { icon: "moon", label: "night", active: Toggles.night, available: Toggles.hasNight, act: () => Toggles.toggleNight() },
         "airplane": { icon: "airplane", label: "airplane", active: Toggles.airplane, available: true, act: () => Toggles.toggleAirplane() },
+        "game": { icon: "gamepad", label: "game", active: GameMode.on, available: true, act: () => GameMode.toggle() },
         "caffeine": { icon: "coffee", label: "caffeine", active: Toggles.caffeine, available: true, act: () => Toggles.toggleCaffeine() },
         "mic": { icon: "mic-off", label: "mic", active: Audio.sourceMuted, available: true, act: () => Audio.toggleSourceMuted() },
         "record": { icon: "record", label: "record", active: Toggles.recording, available: Toggles.hasRecorder, act: () => Toggles.toggleRecording() },
@@ -55,7 +56,7 @@ Item {
     })
 
     // The order here is the order the add-chips are offered in.
-    readonly property var allIds: ["dnd", "night", "airplane", "caffeine", "mic", "record", "vpn", "theme",
+    readonly property var allIds: ["dnd", "night", "airplane", "game", "caffeine", "mic", "record", "vpn", "theme",
         "wifi", "bluetooth", "mute", "eco", "lock", "shot", "recarea", "widgets", "settings"]
 
     // Unknown names in the file are ignored rather than drawn as holes.

@@ -32,7 +32,9 @@ Item {
         NumberAnimation on rotation {
             from: 0
             to: 360
-            duration: 9000
+            // A slow turn, like a record seen from across the room: fast enough
+            // to show it is playing, slow enough not to pull the eye.
+            duration: 24000
             loops: Animation.Infinite
             running: true
             paused: !Media.playing
