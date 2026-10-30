@@ -59,7 +59,7 @@ SettingsPage {
                 }
 
                 PauseAnimation {
-                    duration: 300
+                    duration: 500
                 }
 
                 NumberAnimation {
@@ -71,7 +71,7 @@ SettingsPage {
                 }
 
                 PauseAnimation {
-                    duration: 300
+                    duration: 500
                 }
             }
         }

@@ -37,6 +37,8 @@ Singleton {
     // Which image the running process is for, so a late answer cannot be applied
     // to a wallpaper that has since changed.
     property string running: ""
+    // Whether this matugen understands --source-color-index (3.x does).
+    property bool pickFlag: true
 
     onModeChanged: root.refresh()
     onImageChanged: root.refresh()
@@ -61,7 +63,14 @@ Singleton {
         if (!root.available || probe.running || matugen.running)
             return;
         root.running = root.image;
-        matugen.command = [root.binary, "image", root.image, "--json", "hex", "--dry-run"];
+        /*
+         * matugen 3 stops to ask which of the picture's colours to build from
+         * when it finds several, and with nobody at a terminal it waits for ever
+         * or fails. The index answers in advance; matugen 2 has no such flag,
+         * so a refusal of it drops the flag and tries again.
+         */
+        matugen.command = [root.binary, "image", root.image, "--json", "hex", "--dry-run",
+            ...(root.pickFlag ? ["--source-color-index", "0"] : [])];
         matugen.running = true;
     }
 
@@ -125,13 +134,27 @@ Singleton {
     Process {
         id: matugen
 
+        property string complaint: ""
+        property int code: 0
+
+        // stderr may still be arriving when the process exits, so judged a
+        // moment later.
+        onExited: code => {
+            matugen.code = code;
+            if (code !== 0)
+                judge.restart();
+        }
+
         stdout: StdioCollector {
             onStreamFinished: {
                 if (root.running !== root.image)
                     return root.refresh();
+                if (text.trim().length === 0)
+                    return;
                 let scheme = null;
                 try {
-                    scheme = JSON.parse(text);
+                    // Some versions log a line or two before the JSON.
+                    scheme = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
                 } catch (e) {
                     root.error = "matugen printed something that is not JSON";
                     return;
@@ -146,9 +169,24 @@ Singleton {
 
         stderr: StdioCollector {
             onStreamFinished: {
-                if (text.trim().length > 0)
-                    root.error = text.trim().split("\n")[0];
+                matugen.complaint = text.trim().split("\n").filter(l => l.trim().length > 0).pop() ?? "";
             }
+        }
+    }
+
+    Timer {
+        id: judge
+
+        interval: 120
+        onTriggered: {
+            const code = matugen.code;
+            if (root.pickFlag && /source-color-index|unexpected|unrecognized|wasn't expected/i.test(matugen.complaint)) {
+                root.pickFlag = false;
+                root.running = "";
+                Qt.callLater(root.refresh);
+                return;
+            }
+            root.error = matugen.complaint.length > 0 ? `matugen: ${matugen.complaint}` : `matugen stopped with code ${code}`;
         }
     }
 }

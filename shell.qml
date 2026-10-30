@@ -44,6 +44,8 @@ ShellRoot {
         // Lazy, so touched here: nothing else asks for it until a colour is wanted.
         Palette.mode;
         Cutout.enabled;
+        // Reads the binds now, which also brings an old binds file up to date.
+        Binds.refresh();
     }
 
     // Quickshell singletons are lazy, and a lazy singleton never registers its

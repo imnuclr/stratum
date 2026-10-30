@@ -50,7 +50,7 @@ SettingsPage {
             detail: !Palette.available
                 ? "Needs matugen, which is not installed."
                 : (Palette.error.length > 0 ? Palette.error
-                    : "Accent follows the picture; full also tints the surfaces. Off keeps the red.")
+                    : `Accent follows the picture; full also tints the surfaces. Using ${Palette.binary}.`)
 
             Segmented {
                 model: ["off", "accent", "full"]
@@ -130,6 +130,81 @@ SettingsPage {
                                     Theme.setUser("color.accent", swatch.modelData);
                             }
                         }
+                    }
+                }
+            }
+        }
+        // Any colour at all: typed as hex, or picked off the hue strip.
+        SettingRow {
+            width: parent.width
+            title: "Custom colour"
+            detail: "Type a hex code, or click along the strip."
+
+            Row {
+                spacing: Theme.space(3)
+
+                Rectangle {
+                    id: hues
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 220
+                    height: 22
+                    radius: height / 2
+
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+
+                        GradientStop { position: 0.0; color: Qt.hsla(0.0, 0.8, 0.55, 1) }
+                        GradientStop { position: 0.17; color: Qt.hsla(0.17, 0.8, 0.55, 1) }
+                        GradientStop { position: 0.33; color: Qt.hsla(0.33, 0.8, 0.55, 1) }
+                        GradientStop { position: 0.5; color: Qt.hsla(0.5, 0.8, 0.55, 1) }
+                        GradientStop { position: 0.67; color: Qt.hsla(0.67, 0.8, 0.55, 1) }
+                        GradientStop { position: 0.83; color: Qt.hsla(0.83, 0.8, 0.55, 1) }
+                        GradientStop { position: 1.0; color: Qt.hsla(1.0, 0.8, 0.55, 1) }
+                    }
+
+                    // Where the chosen colour sits on the strip.
+                    Rectangle {
+                        readonly property real hue: Math.max(0, Theme.accent.hslHue)
+
+                        x: hue * (hues.width - width)
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 14
+                        height: 14
+                        radius: 7
+                        color: "transparent"
+                        border.width: 2
+                        border.color: "#FFFFFF"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+
+                        function pick(x) {
+                            const h = Math.max(0, Math.min(1, x / width));
+                            const c = Qt.hsla(h, 0.8, 0.55, 1);
+                            Theme.setUser("color.accent", c.toString().toUpperCase());
+                        }
+
+                        onPressed: event => pick(event.x)
+                        onPositionChanged: event => {
+                            if (pressed)
+                                pick(event.x);
+                        }
+                    }
+                }
+
+                TextField {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 104
+                    height: 30
+                    placeholder: "#E5252B"
+                    text: page.chosen
+                    onAccepted: value => {
+                        const hex = value.trim().replace(/^#?/, "#");
+                        if (/^#([0-9a-fA-F]{6})$/.test(hex))
+                            Theme.setUser("color.accent", hex.toUpperCase());
                     }
                 }
             }

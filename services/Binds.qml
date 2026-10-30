@@ -69,7 +69,8 @@ Singleton {
         { mods: ["SUPER"], key: "SPACE", action: "launcher" },
         { mods: ["ALT"], key: "Print", action: "recordRegion" },
         { mods: ["SUPER", "ALT"], key: "Print", action: "record" },
-        { mods: ["SUPER", "SHIFT"], key: "W", action: "widgetsEdit" }
+        { mods: ["SUPER", "SHIFT"], key: "W", action: "widgetsEdit" },
+        { mods: ["SUPER", "ALT"], key: "P", action: "screenshot" }
     ]
 
     readonly property var own: Config.get("keybinds.own", null) ?? root.defaults
@@ -226,75 +227,169 @@ Singleton {
      * call, takes its first argument as the combination and balances brackets
      * to find where the rest ends, which is enough for how binds are written.
      */
+    // Brackets balanced from `from` (just inside an opening one) to its close.
+    function closing(src, from) {
+        let depth = 1, i = from, inStr = "";
+        for (; i < src.length && depth > 0; i++) {
+            const c = src[i];
+            if (inStr) {
+                if (c === inStr && src[i - 1] !== "\\")
+                    inStr = "";
+            } else if (c === '"' || c === "'") {
+                inStr = c;
+            } else if (c === "(" || c === "{" || c === "[") {
+                depth++;
+            } else if (c === ")" || c === "}" || c === "]") {
+                depth--;
+            }
+        }
+        return i - 1;
+    }
+
+    // Splits a call's arguments at the commas that are not inside anything.
+    function args(text) {
+        const out = [];
+        let depth = 0, inStr = "", start = 0;
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (inStr) {
+                if (c === inStr && text[i - 1] !== "\\")
+                    inStr = "";
+            } else if (c === '"' || c === "'") {
+                inStr = c;
+            } else if ("({[".includes(c)) {
+                depth++;
+            } else if (")}]".includes(c)) {
+                depth--;
+            } else if (c === "," && depth === 0) {
+                out.push(text.slice(start, i).trim());
+                start = i + 1;
+            }
+        }
+        out.push(text.slice(start).trim());
+        return out;
+    }
+
+    /*
+     * Numeric for loops written out, so `for i = 1, 9 do hl.bind("SUPER + " .. i,
+     * ...) end` becomes nine binds. Blocks are matched by counting what opens
+     * one (function, do, if) against what closes it (end).
+     */
+    function unroll(src) {
+        const head = /\bfor\s+(\w+)\s*=\s*(\d+)\s*,\s*(\d+)\s*do\b/g;
+        let out = "", last = 0, m;
+        while ((m = head.exec(src)) !== null) {
+            const words = /\b(function|do|if|end)\b/g;
+            words.lastIndex = head.lastIndex;
+            let depth = 1, w, stop = -1;
+            while ((w = words.exec(src)) !== null) {
+                depth += w[1] === "end" ? -1 : 1;
+                if (depth === 0) {
+                    stop = w.index;
+                    break;
+                }
+            }
+            if (stop < 0)
+                break;
+            const body = src.slice(head.lastIndex, stop);
+            let copies = "";
+            for (let n = Number(m[2]); n <= Number(m[3]) && n - Number(m[2]) < 40; n++)
+                copies += body.replace(new RegExp(`\\b${m[1]}\\b`, "g"), String(n)) + "\n";
+            out += src.slice(last, m.index) + copies;
+            last = stop + 3;
+            head.lastIndex = last;
+        }
+        return out + src.slice(last);
+    }
+
+    /*
+     * Reads hl.bind calls out of Lua source. Not a Lua parser: it finds each
+     * call, works out the combination (strings, variables and `..` joined), and
+     * explains what the rest does — a comment beside or above the bind first.
+     */
     function parseLua(src) {
+        src = root.unroll(src);
         const vars = {};
-        const assign = /local\s+(\w+)\s*=\s*["']([^"'\n]*)["']/g;
+        const assign = /(?:local\s+)?(\w+)\s*=\s*["']([^"'\n]*)["']/g;
         for (let a = assign.exec(src); a !== null; a = assign.exec(src))
             vars[a[1]] = a[2];
         const value = text => {
-            text = text.trim();
-            const q = /^["']([\s\S]*)["']$/.exec(text);
-            if (q)
-                return q[1];
-            // "kitty " .. "--single" or a variable, joined back together.
+            text = String(text).trim();
             return text.split("..").map(p => {
-                p = p.trim();
-                const s = /^["']([\s\S]*)["']$/.exec(p);
-                return s ? s[1] : (vars[p] ?? p);
+                p = p.trim().replace(/^tostring\s*\(([\s\S]*)\)$/, "$1").trim();
+                const q = /^["']([\s\S]*)["']$/.exec(p);
+                if (q)
+                    return q[1];
+                if (vars[p] !== undefined)
+                    return vars[p];
+                // Arithmetic on numbers, as in `i % 10` for workspace ten's key.
+                if (/^[\d\s+\-*%()]+$/.test(p)) {
+                    try {
+                        return String(Function(`"use strict"; return (${p});`)());
+                    } catch (e) {}
+                }
+                return p;
             }).join("");
         };
 
+        const explainBody = body => {
+            const call = /hl\.dsp\.([\w.]+)\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)/.exec(body);
+            if (call) {
+                const name = call[1].split(".").pop();
+                const arg = call[2].trim();
+                return arg.startsWith("{")
+                    ? root.explainTable(call[1], arg, value)
+                    : root.explain(name, value(root.args(arg)[0] ?? ""));
+            }
+            // The string form, hl.dispatch("workspace 3") or "exec kitty".
+            const str = /hl\.dispatch\s*\(\s*["']([^"']+)["']/.exec(body);
+            if (str) {
+                const [d, ...rest] = str[1].trim().split(/\s+/);
+                return root.explain(d, rest.join(" "));
+            }
+            const run = /(?:os\.execute|hl\.exec(?:_cmd)?)\s*\(\s*([^)]*)\)/.exec(body);
+            if (run)
+                return root.runWords(value(run[1]));
+            return "";
+        };
+
         const out = {};
-        const re = /hl\.bind\s*\(\s*["']([^"']+)["']\s*,/g;
+        const re = /hl\.bind\s*\(/g;
         let m;
         while ((m = re.exec(src)) !== null) {
-            // The rest of the call, brackets balanced.
-            let depth = 1, i = re.lastIndex, inStr = "";
-            for (; i < src.length && depth > 0; i++) {
-                const c = src[i];
-                if (inStr) {
-                    if (c === inStr && src[i - 1] !== "\\")
-                        inStr = "";
-                } else if (c === '"' || c === "'") {
-                    inStr = c;
-                } else if (c === "(" || c === "{") {
-                    depth++;
-                } else if (c === ")" || c === "}") {
-                    depth--;
-                }
-            }
-            const body = src.slice(re.lastIndex, i - 1);
+            const end = root.closing(src, re.lastIndex);
+            const parts = root.args(src.slice(re.lastIndex, end));
+            const combo = value(parts[0] ?? "");
+            const body = parts.slice(1).join(", ");
 
             // A comment on the same line, or the line just above, says it best.
-            const lineEnd = src.indexOf("\n", i);
-            const tail = src.slice(i, lineEnd < 0 ? src.length : lineEnd);
+            const lineEnd = src.indexOf("\n", end);
+            const tail = src.slice(end, lineEnd < 0 ? src.length : lineEnd);
             const before = src.slice(0, m.index).split("\n");
             const above = before.length >= 2 ? before[before.length - 2].trim() : "";
             const sameLine = /--\s*(.+)$/.exec(tail);
-            let words = "";
-            if (sameLine)
+            // A description given to the bind itself.
+            const named = /description\s*=\s*["']([^"']+)["']/.exec(body);
+            let words = named ? named[1] : "";
+            if (words.length === 0 && sameLine)
                 words = sameLine[1].trim();
-            else if (above.startsWith("--") && !before[before.length - 1].trim().startsWith("--"))
+            else if (words.length === 0 && above.startsWith("--") && !before[before.length - 1].trim().startsWith("--"))
                 words = above.replace(/^--+\s*/, "");
-
-            if (words.length === 0 || words.length > 60) {
-                const call = /hl\.dsp\.([\w.]+)\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)/.exec(body);
-                if (call) {
-                    const name = call[1].split(".").pop();
-                    const arg = call[2].trim();
-                    words = arg.startsWith("{") ? root.explainTable(call[1], arg, value) : root.explain(name, value(arg.split(/,(?![^(]*\))/)[0] ?? ""));
-                } else if (/function/.test(body)) {
-                    words = "a Lua function in your config";
-                } else {
-                    continue;
-                }
+            if (words.length === 0 || words.length > 60)
+                words = explainBody(body);
+            if (words.length === 0) {
+                // Nothing recognisable: the code itself, briefly, beats a shrug.
+                const code = body.replace(/\s+/g, " ").replace(/^function\s*\(\)\s*/, "").replace(/\s*end$/, "").trim();
+                words = code.length > 0 ? (code.length > 48 ? `runs ${code.slice(0, 46)}…` : `runs ${code}`) : "";
             }
+            if (words.length === 0)
+                continue;
 
-            const parts = m[1].split("+").map(p => p.trim()).filter(p => p.length > 0);
-            const key = parts.pop() ?? "";
-            const mods = parts.map(p => {
-                const u = p.toUpperCase();
-                return u === "CONTROL" ? "CTRL" : (u === "MOD4" || u === "WIN" || u === "META") ? "SUPER" : u;
+            const keys = combo.split("+").map(p => p.trim()).filter(p => p.length > 0);
+            const key = keys.pop() ?? "";
+            const mods = keys.map(p => {
+                const u = p.toUpperCase().replace(/^\$/, "");
+                return u === "CONTROL" ? "CTRL" : (u === "MOD4" || u === "WIN" || u === "META" || u === "MAINMOD" || u === "MOD") ? "SUPER" : u;
             });
             out[`${root.maskOf(mods)}:${root.norm(key)}`] = words;
         }
@@ -373,6 +468,76 @@ Singleton {
     function removeOwn(mods, key) {
         const m = root.maskOf(mods);
         root.save(root.own.filter(b => !(root.maskOf(b.mods) === m && root.norm(b.key) === root.norm(key))));
+    }
+
+    /*
+     * Binds added to the shell after you installed it. The binds file in your
+     * Hyprland folder is written once at install and again only when you change
+     * a bind, so a newer default (the launcher) never reached it. Each upgrade
+     * runs once: it gives the action the first of its keys that nothing in your
+     * own config already uses, and rewrites the file.
+     */
+    readonly property var upgrades: [
+        { id: "launcher", action: "launcher", tries: [[["SUPER"], "SPACE"], [["ALT"], "SPACE"], [["SUPER"], "A"]] },
+        // For keyboards without Print: a region screenshot on letters.
+        { id: "shotLetters", action: "screenshotRegion", tries: [[["SUPER", "SHIFT"], "S"], [["SUPER", "ALT"], "S"], [["SUPER", "CTRL"], "S"]] },
+        { id: "shotScreen", action: "screenshot", tries: [[["SUPER", "ALT"], "P"], [["SUPER", "CTRL"], "P"]] }
+    ]
+
+    property bool upgradeChecked: false
+
+    // Bound by something other than our own file.
+    function takenElsewhere(mods, key) {
+        const m = root.maskOf(mods);
+        const k = root.norm(key);
+        const ours = root.own.some(b => root.maskOf(b.mods) === m && root.norm(b.key) === k);
+        const matches = root.all.filter(b => b.mask === m && b.k === k);
+        if (matches.length === 0)
+            return false;
+        // Where Hyprland names our binds, anything else on the combination is
+        // someone else's; where it cannot (Lua functions), a lone bind on a
+        // combination we also claim is taken to be ours.
+        if (matches.some(b => b.stratum))
+            return matches.some(b => !b.stratum);
+        return !(ours && matches.length === 1);
+    }
+
+    function isPrintKey(key) {
+        return /^(print|sysrq)$/i.test(key);
+    }
+
+    function upgrade() {
+        const done = Config.get("keybinds.upgraded", []) ?? [];
+        let list = root.own.slice();
+        const applied = [];
+        for (const u of root.upgrades) {
+            if (done.includes(u.id))
+                continue;
+            applied.push(u.id);
+            // Already reachable from a letter key that works: nothing to do.
+            const working = list.some(b => b.action === u.action && !root.isPrintKey(b.key)
+                && !root.takenElsewhere(b.mods, b.key));
+            if (working)
+                continue;
+            const free = u.tries.find(([mods, key]) => !root.takenElsewhere(mods, key)
+                && !list.some(b => root.maskOf(b.mods) === root.maskOf(mods) && root.norm(b.key) === root.norm(key)));
+            if (!free)
+                continue;
+            list = list.filter(b => !(b.action === u.action && !root.isPrintKey(b.key)));
+            list.push({ mods: free[0], key: free[1], action: u.action });
+        }
+        if (applied.length === 0)
+            return;
+        Config.set("keybinds.upgraded", [...done, ...applied]);
+        root.save(list);
+    }
+
+    Timer {
+        id: upgradeLater
+
+        // Once both the binds and whether the config is Lua have been read.
+        interval: 1500
+        onTriggered: root.upgrade()
     }
 
     function resetOwn() {
@@ -502,6 +667,10 @@ Singleton {
                     return;
                 }
                 root.error = "";
+                if (!root.upgradeChecked) {
+                    root.upgradeChecked = true;
+                    upgradeLater.restart();
+                }
                 root.all = list.filter(b => !b.mouse && (b.submap ?? "") === "").map(b => {
                     const mask = (b.modmask ?? 0) & ~root.ignoredBits;
                     const arg = String(b.arg ?? "");

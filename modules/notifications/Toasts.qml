@@ -214,7 +214,7 @@ Variants {
                         // shape; this only carries the words.
                         color: "transparent"
                         border.width: 0
-                        opacity: Math.max(0, Math.min(1, (toast.p - 0.45) / 0.4))
+                        opacity: Math.max(0, Math.min(1, (toast.p - 0.45) / 0.4)) * (1 - Math.min(0.9, Math.abs(row.slide) / Math.max(1, row.width)))
                     }
                 }
 

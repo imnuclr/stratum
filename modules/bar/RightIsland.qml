@@ -74,7 +74,7 @@ Pill {
                         width: 3
                         height: 3
                         radius: 1.5
-                        color: gridMouse.containsMouse || Shell.openPanel === "controlCentre" ? Theme.fg : Theme.fgDim
+                        color: gridMouse.containsMouse || Shell.openPanel === "control" ? Theme.fg : Theme.fgDim
 
                         Behavior on color {
                             ColorAnimation {
@@ -94,7 +94,7 @@ Pill {
                 anchors.margins: -6
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Shell.toggle("controlCentre")
+                onClicked: Shell.toggle("control")
             }
         }
     }
