@@ -36,7 +36,7 @@ Canvas {
 
     DotIcon {
         anchors.centerIn: parent
-        width: parent.width * 0.36
+        width: parent.width * 0.46
         height: width
         name: "headphones"
         color: Theme.fgBright

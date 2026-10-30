@@ -64,12 +64,14 @@ Item {
             source: root.source
             visible: root.source.length > 0
         }
-
-        NoCover {
-            anchors.centerIn: parent
-            width: root.size - 10
-            height: width
-            visible: root.source.length === 0
-        }
     }
+
+    // Outside the turning disc: a spinning pair of headphones only looks broken.
+    NoCover {
+        anchors.centerIn: parent
+        width: root.size - 10
+        height: width
+        visible: root.source.length === 0
+    }
+
 }
