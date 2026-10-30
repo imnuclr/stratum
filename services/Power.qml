@@ -84,12 +84,13 @@ Singleton {
      * costs least to notice, balanced leaves things alone.
      */
     readonly property var savers: [
-        { key: "refresh", title: "Lower the refresh rate", detail: "The built-in screen runs at its slowest rate.", eco: true, balanced: false, needsBattery: true },
+        { key: "refresh", title: "Lower the refresh rate", detail: "Every screen runs at its slowest rate at its current resolution.", eco: true, balanced: false },
         { key: "effects", title: "No blur or shadows", detail: "Hyprland's heaviest effects on windows.", eco: true, balanced: false },
         { key: "motion", title: "No animations", detail: "Panels and popouts appear without moving.", eco: true, balanced: false },
-        { key: "widgets", title: "Pause desktop widgets", detail: "Clocks and gauges stop updating until you switch back.", eco: true, balanced: false },
+        { key: "widgets", title: "Slower desktop widgets", detail: "Readings update every few seconds instead of every second.", eco: true, balanced: false },
+        { key: "widgetsStop", title: "Stop desktop widgets", detail: "Freezes them, with a pause sign, until you switch back.", eco: false, balanced: false },
         { key: "drift", title: "Still wallpaper", detail: "No drifting between workspaces.", eco: true, balanced: false },
-        { key: "dim", title: "Dim the screen", detail: "Down to 40% when switching, if brighter.", eco: false, balanced: false },
+        { key: "dim", title: "Dim the screen", detail: "Down to 40% when switching, if brighter.", eco: true, balanced: false },
         { key: "bluetooth", title: "Turn off Bluetooth", detail: "When switching to this profile.", eco: false, balanced: false }
     ]
 
@@ -148,10 +149,12 @@ Singleton {
     Component.onCompleted: {
         if (root.noEffects)
             Hypr.setEffects(false);
+        if (root.lowRefresh)
+            root.applyRefresh("min");
     }
 
     function applyRefresh(which) {
-        if (!root.hasBattery || !Config.get("power.ecoRefresh", true))
+        if (!Config.get("power.ecoRefresh", true))
             return;
         root.wantRefresh = which;
         readMonitors.running = true;
@@ -171,8 +174,6 @@ Singleton {
                     return;
                 }
                 for (const m of monitors) {
-                    if (!/^eDP/.test(m.name))
-                        continue;
                     // Rates on offer at the resolution already in use.
                     const rates = [];
                     for (const mode of m.availableModes ?? []) {

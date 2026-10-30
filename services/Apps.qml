@@ -47,19 +47,48 @@ Singleton {
 
     function open(name) {
         root.pending = { name: name, entry: root.entryFor(name) };
-        clients.running = false;
-        clients.running = true;
+        monitors.running = false;
+        monitors.running = true;
+    }
+
+    // The focused monitor's ordinary workspace, and the scratchpad open over it
+    // if there is one. Hyprland counts a shown scratchpad as the focused
+    // workspace, so asking for "the current workspace" moved the window right
+    // back into the scratchpad it was being rescued from.
+    property int here: 1
+    property string overlay: ""
+
+    Process {
+        id: monitors
+
+        command: ["hyprctl", "monitors", "-j"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const m = JSON.parse(text).find(x => x.focused);
+                    root.here = m?.activeWorkspace?.id ?? root.here;
+                    root.overlay = (m?.specialWorkspace?.name ?? "").replace(/^special:/, "");
+                } catch (e) {}
+                clients.running = false;
+                clients.running = true;
+            }
+        }
     }
 
     property var pending: null
 
-    function currentWorkspace() {
-        return Hypr.focusedWorkspace?.id ?? 1;
-    }
-
     function bring(client) {
-        const here = root.currentWorkspace();
+        const here = root.here;
         const addr = client.address;
+        // Put the scratchpad away first, so the window lands on the workspace
+        // underneath and that is what is showing.
+        if (root.overlay.length > 0) {
+            Hyprland.dispatch(Hypr.lua
+                ? `hl.dsp.workspace.toggle_special("${root.overlay}")`
+                : `togglespecialworkspace ${root.overlay}`);
+            root.overlay = "";
+        }
         if (client.workspace?.id !== here) {
             Hyprland.dispatch(Hypr.lua
                 ? `hl.dsp.window.move({ window = "address:${addr}", workspace = "${here}", follow = false })`
@@ -113,8 +142,10 @@ Singleton {
                 watch.stop();
                 return;
             }
-            clients.running = false;
-            clients.running = true;
+            // Through the monitors again: a rule may have opened the scratchpad
+            // along with the new window.
+            monitors.running = false;
+            monitors.running = true;
         }
     }
 }

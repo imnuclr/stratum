@@ -39,7 +39,7 @@ PanelWindow {
     // Any window on this monitor's workspace counts as covering the desktop.
     readonly property var workspace: Hyprland.monitorFor(win.monitor)?.activeWorkspace ?? null
     readonly property bool covered: (win.workspace?.toplevels?.values?.length ?? 0) > 0
-    readonly property bool live: win.shown && (win.editing || (!win.covered && !Power.saving("widgets")))
+    readonly property bool live: win.shown && (win.editing || !win.covered)
     /*
      * Widgets belong to the bare desktop. With a window on the workspace they
      * fade back out of the way — through a translucent terminal, or in the gaps
@@ -350,6 +350,31 @@ PanelWindow {
                                     easing.type: Easing.Bezier
                                     easing.bezierCurve: Theme.smooth
                                 }
+                            }
+                        }
+
+                        // Stopped by an energy saver: said, so a frozen reading is
+                        // not mistaken for a real one.
+                        Rectangle {
+                            readonly property bool polls: ["cpu", "gpu", "memory", "disk", "stats", "network"].includes(frame.modelData.type)
+
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.margins: frame.round ? frame.width * 0.12 : Theme.space(2)
+                            width: 24
+                            height: 24
+                            radius: 12
+                            color: Qt.alpha(Theme.deep, 0.8)
+                            border.width: 1
+                            border.color: Theme.lineHi
+                            visible: polls && !win.editing && Power.saving("widgetsStop")
+
+                            Glyph {
+                                anchors.centerIn: parent
+                                name: "pause"
+                                size: 11
+                                filled: true
+                                color: Theme.fg
                             }
                         }
 

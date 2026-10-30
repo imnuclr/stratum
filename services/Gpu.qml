@@ -38,11 +38,22 @@ Singleton {
         root.watchers = Math.max(0, root.watchers - 1);
     }
 
+    // Widgets on an energy saver: kept running, at the slow tick.
+    property int slowWatchers: 0
+
+    function watchSlowly() {
+        root.slowWatchers++;
+    }
+
+    function unwatchSlowly() {
+        root.slowWatchers = Math.max(0, root.slowWatchers - 1);
+    }
+
     Timer {
-        running: root.watchers > 0
+        running: root.watchers > 0 || root.slowWatchers > 0
         repeat: true
         triggeredOnStart: true
-        interval: 2000
+        interval: root.watchers > 0 ? 2000 : 6000
         onTriggered: {
             if (!probe.running)
                 probe.running = true;

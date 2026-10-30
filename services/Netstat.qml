@@ -46,6 +46,17 @@ Singleton {
         root.watchers = Math.max(0, root.watchers - 1);
     }
 
+    // Widgets on an energy saver: kept running, at the slow tick.
+    property int slowWatchers: 0
+
+    function watchSlowly() {
+        root.slowWatchers++;
+    }
+
+    function unwatchSlowly() {
+        root.slowWatchers = Math.max(0, root.slowWatchers - 1);
+    }
+
     /*
      * Split rather than one string: the strip renders the number in dot numerals
      * and the unit as a caps label, which cannot be done to one piece of text.
