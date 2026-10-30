@@ -10,12 +10,16 @@ Row {
 
     property var values: []
     property int rows: 6
-    property real cell: 7
-    property real dotSize: 4.2
+    property real cell: Theme.dotPitch
+    property real dotSize: Theme.dot
     property color onColor: Theme.dotOn
     property color offColor: Theme.dotOff
 
-    spacing: cell - dotSize
+    // Columns can be spread wider than the dots are apart, to fill a width,
+    // without the dots themselves changing size.
+    property real columnSpacing: -1
+
+    spacing: root.columnSpacing >= 0 ? root.columnSpacing : cell - dotSize
 
     Repeater {
         model: root.values.length

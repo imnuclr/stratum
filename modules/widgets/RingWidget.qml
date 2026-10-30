@@ -32,8 +32,6 @@ Item {
         anchors.centerIn: parent
         width: root.unit - root.unit * 0.1
         height: width
-        count: 56
-        dotSize: Math.max(2.4, width / 36)
         value: root.value
     }
 

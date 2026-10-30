@@ -57,8 +57,6 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         width: root.size
         height: root.size
-        count: 44
-        dotSize: 4.2
         value: root.live
         // The ring is already following the pointer; easing behind it would feel
         // like lag.

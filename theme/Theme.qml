@@ -66,6 +66,14 @@ Singleton {
     readonly property color warn: pick("color.warn", "#FBBF24")
     readonly property color crit: pick("color.crit", "#EF4444")
 
+    // --- dots ---
+    // One dot, everywhere: rings, bars, fields, icons and dividers all draw
+    // their dots this size and this far apart, and a larger ring has more dots
+    // rather than bigger ones. Pictures (album art, the wallpaper) are the
+    // exception, because there the dot size is the picture's resolution.
+    readonly property real dot: pick("dot.size", 4)
+    readonly property real dotPitch: pick("dot.pitch", 8)
+
     // --- geometry ---
     readonly property int rTile: pick("radius.tile", 20)
     readonly property int rSheet: pick("radius.sheet", 28)

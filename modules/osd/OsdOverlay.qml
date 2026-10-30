@@ -104,7 +104,7 @@ Variants {
 
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Osd.level >= 0
-                    spacing: 6
+                    spacing: Theme.dotPitch - Theme.dot
 
                     Behavior on shown {
                         NumberAnimation {
@@ -122,9 +122,9 @@ Variants {
 
                             readonly property real amount: Math.max(0, Math.min(1, level.shown * level.count - index))
 
-                            width: 3.4
-                            height: 3.4
-                            radius: 1.7
+                            width: Theme.dot
+                            height: Theme.dot
+                            radius: Theme.dot / 2
                             anchors.verticalCenter: parent.verticalCenter
                             color: Qt.tint(Theme.dotOff, Qt.alpha(Osd.dim ? Theme.fgDim : Theme.dotOn, amount))
                             scale: 1 + amount * 0.25

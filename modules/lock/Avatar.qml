@@ -20,8 +20,6 @@ Item {
     DotRing {
         anchors.fill: parent
         value: 1
-        count: 48
-        dotSize: Math.max(2.4, root.size * 0.03)
         onColor: Theme.fg
     }
 

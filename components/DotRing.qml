@@ -8,8 +8,10 @@ Item {
     id: root
 
     property real value: 0
-    property int count: 44
-    property real dotSize: 3.8
+    property real dotSize: Theme.dot
+    // As many as fit at the standard spacing, so a big ring has more dots rather
+    // than bigger ones.
+    property int count: Math.max(12, Math.round(2 * Math.PI * Math.max(1, Math.min(width, height) / 2 - dotSize) / Theme.dotPitch))
     property color onColor: Theme.dotOn
     property color offColor: Theme.dotOff
 

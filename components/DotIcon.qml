@@ -14,10 +14,9 @@ Canvas {
     id: root
 
     property string name: ""
-    // Distance between dots, in the icon's own 24-unit grid. Smaller is finer.
-    property real pitch: 1.55
-    // Dot diameter as a share of the pitch.
-    property real dotShare: 0.62
+    // The standard dot, set a little closer than elsewhere so curves still read.
+    property real dotPx: Theme.dot
+    property real pitchPx: Theme.dot * 1.6
     property color color: Theme.fg
 
     implicitWidth: 64
@@ -26,7 +25,7 @@ Canvas {
     onNameChanged: requestPaint()
     onColorChanged: requestPaint()
     onWidthChanged: requestPaint()
-    onPitchChanged: requestPaint()
+    onPitchPxChanged: requestPaint()
 
     // The path as polylines in icon units: arcs and curves broken into short
     // straight pieces, each subpath its own list of points.
@@ -153,7 +152,8 @@ Canvas {
         if (root.name.length === 0)
             return;
         const scale = Math.min(root.width, root.height) / 24;
-        const r = root.pitch * root.dotShare / 2 * scale;
+        const r = root.dotPx / 2;
+        const pitch = root.pitchPx / scale;
         ctx.fillStyle = root.color;
         ctx.beginPath();
         const dot = (px, py) => {
@@ -166,7 +166,7 @@ Canvas {
             let length = 0;
             for (let k = 1; k < line.length; k++)
                 length += Math.hypot(line[k][0] - line[k - 1][0], line[k][1] - line[k - 1][1]);
-            const n = Math.max(0, Math.round(length / root.pitch));
+            const n = Math.max(0, Math.round(length / pitch));
             const step = n > 0 ? length / n : 0;
             dot(line[0][0], line[0][1]);
             let next = step;

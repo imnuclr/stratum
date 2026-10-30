@@ -39,8 +39,6 @@ Canvas {
         width: parent.width * 0.36
         height: width
         name: "headphones"
-        // Coarser on a small disc, so the dots stay dots.
-        pitch: parent.width < 120 ? 2.2 : 1.55
         color: Theme.fgBright
     }
 }

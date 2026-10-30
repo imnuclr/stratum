@@ -10,7 +10,7 @@ Item {
     id: root
 
     property real spacingY: 6
-    property real dotSize: 2.4
+    property real dotSize: Theme.dot
     // Theme.line is sized for a hairline; broken into dots at this pitch it
     // disappears, so the rule carries the dot palette's "off" value instead.
     property color color: Theme.dotOff
