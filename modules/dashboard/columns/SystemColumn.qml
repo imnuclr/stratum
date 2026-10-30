@@ -105,19 +105,31 @@ Item {
             }
         }
 
+        /*
+         * Each processor core's load right now: one column per core, filled from
+         * the bottom, so a full column is a core working flat out. The title
+         * carries the current clock speed. Spread across the room it has, so a
+         * machine with eight cores does not leave half the column empty.
+         */
         Column {
+            id: cores
+
+            width: parent.width - 180 - Theme.space(4)
             spacing: Theme.space(2)
+
+            readonly property int count: Math.max(1, SysStats.cores.length)
+            readonly property real pitch: Math.max(6, Math.min(18, cores.width / cores.count))
 
             SectionLabel {
                 text: SysStats.frequencyLabel.length > 0 ? `cores · ${SysStats.frequencyLabel}` : "cores"
             }
 
-            // One column per core, all sixteen in a single block — splitting them
-            // into two rows of eight implies a grouping the cores do not have.
+            // One column per core, all of them in a single block — splitting them
+            // into rows implies a grouping the cores do not have.
             DotField {
-                rows: 7
-                cell: 9.4
-                dotSize: 4.4
+                rows: 8
+                cell: cores.pitch
+                dotSize: cores.pitch * 0.48
                 values: SysStats.cores
             }
         }
