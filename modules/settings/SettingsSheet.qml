@@ -80,12 +80,24 @@ FloatingWindow {
     // What the sidebar's search box holds.
     property string filter: ""
 
+    // Individual settings matching the search, best first.
+    readonly property var found: root.filter.trim().length > 0 ? SettingsSearch.search(root.filter, 8) : []
+
+    // A page matches by its name, its words (forgiving spelling), or by
+    // holding a setting that does.
     function matches(p) {
-        const q = root.filter.trim().toLowerCase();
+        const q = root.filter.trim();
         if (q.length === 0)
             return true;
-        return `${p.label} ${p.words}`.toLowerCase().split(/\s+/).some(w => w.startsWith(q))
-            || p.name.toLowerCase().includes(q);
+        if (root.found.some(r => r.page === p.label))
+            return true;
+        const words = SettingsSearch.tokens(`${p.name} ${p.words}`);
+        return SettingsSearch.tokens(q).every(t => words.some(w => SettingsSearch.wordScore(t, w) > 0));
+    }
+
+    function go(result) {
+        Shell.settingsPage = result.page;
+        Shell.settingsFocus = result.title;
     }
 
     onOpenChanged: {
@@ -127,6 +139,10 @@ FloatingWindow {
             placeholder: "search settings"
             onTextChanged: root.filter = text
             onAccepted: {
+                if (root.found.length > 0) {
+                    root.go(root.found[0]);
+                    return;
+                }
                 const hit = root.pages.find(p => root.matches(p));
                 if (hit)
                     Shell.settingsPage = hit.label;
@@ -159,6 +175,90 @@ FloatingWindow {
 
                 width: root.railWidth
                 spacing: Theme.space(3)
+
+                // The settings themselves, when searching: click one to go to
+                // it on its page.
+                Column {
+                    width: rail.width
+                    spacing: 2
+                    visible: root.found.length > 0
+
+                    SectionLabel {
+                        leftPadding: Theme.space(3)
+                        bottomPadding: Theme.space(1)
+                        text: "settings"
+                        color: Theme.fgFaint
+                    }
+
+                    Repeater {
+                        model: root.found
+
+                        Rectangle {
+                            id: hit
+
+                            required property var modelData
+                            required property int index
+
+                            readonly property var pageInfo: root.pages.find(p => p.label === hit.modelData.page)
+
+                            width: rail.width
+                            height: 46
+                            radius: Theme.rInner
+                            color: resultHover.hovered ? Theme.surfaceTop : "transparent"
+
+                            Glyph {
+                                id: hitIcon
+
+                                anchors.left: parent.left
+                                anchors.leftMargin: Theme.space(3)
+                                anchors.verticalCenter: parent.verticalCenter
+                                name: hit.pageInfo?.icon ?? "settings"
+                                size: 15
+                                color: Theme.fgDim
+                            }
+
+                            Column {
+                                anchors.left: hitIcon.right
+                                anchors.leftMargin: Theme.space(3)
+                                anchors.right: parent.right
+                                anchors.rightMargin: Theme.space(2)
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 1
+
+                                Text {
+                                    width: parent.width
+                                    elide: Text.ElideRight
+                                    text: hit.modelData.title
+                                    color: Theme.fg
+                                    font.family: Theme.fontUi
+                                    font.pixelSize: 13
+                                    font.weight: Font.Medium
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    elide: Text.ElideRight
+                                    text: hit.pageInfo?.name ?? hit.modelData.page
+                                    color: Theme.fgDim
+                                    font.family: Theme.fontUi
+                                    font.pixelSize: 11
+                                    renderType: Text.NativeRendering
+                                }
+                            }
+
+                            HoverHandler {
+                                id: resultHover
+
+                                cursorShape: Qt.PointingHandCursor
+                            }
+
+                            TapHandler {
+                                onTapped: root.go(hit.modelData)
+                            }
+                        }
+                    }
+                }
 
                 Repeater {
                     model: root.groups

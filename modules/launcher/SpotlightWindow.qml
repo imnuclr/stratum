@@ -189,16 +189,15 @@ PanelWindow {
 
             const apps = Launcher.rankApps(q, 8).map(e => root.appRow(e, "apps"));
 
-            const pages = root.pages
-                .map(p => ({ p: p, s: Math.max(Launcher.score(p.page, q), ...p.words.split(" ").map(w => Launcher.score(w, q) * 0.8)) }))
-                .filter(x => x.s >= 40)
-                .sort((a, b) => b.s - a.s)
-                .slice(0, 4)
-                .map(x => ({
-                    group: "settings", title: x.p.page, sub: "settings", icon: "settings", kind: "settings", score: x.s,
-                    hint: "open settings here",
+            // Single settings, from the same index the settings search uses.
+            const pages = SettingsSearch.search(q, 4)
+                .filter(r => r.score >= 50)
+                .map(r => ({
+                    group: "settings", title: r.title, sub: `settings · ${r.page}`, icon: "settings", kind: "settings",
+                    score: Math.min(95, r.score), hint: "open it in settings",
                     act: () => {
-                        Shell.settingsPage = x.p.page;
+                        Shell.settingsPage = r.page;
+                        Shell.settingsFocus = r.title;
                         Shell.open("settings");
                     },
                     keep: true

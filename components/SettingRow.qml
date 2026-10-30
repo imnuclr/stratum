@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import qs.theme
 
 /*
@@ -22,6 +23,57 @@ Item {
         slot.height - root.extra + Theme.space(3) * 2)
 
     implicitHeight: root.base + root.extra
+
+    /*
+     * Brought into view and flashed when settings search chose it. The page
+     * may still be loading when the choice is made, so this is asked on
+     * creation as well as on change.
+     */
+    readonly property bool sought: Shell.settingsFocus.length > 0 && Shell.settingsFocus.toLowerCase() === String(root.title).toLowerCase()
+
+    onSoughtChanged: if (sought) Qt.callLater(root.reveal)
+    Component.onCompleted: if (sought) revealLater.restart()
+
+    Timer {
+        id: revealLater
+
+        interval: 120
+        onTriggered: root.reveal()
+    }
+
+    function reveal() {
+        if (!root.sought || !root.visible)
+            return;
+        let p = root.parent;
+        while (p && p.contentY === undefined)
+            p = p.parent;
+        if (p) {
+            const y = root.mapToItem(p.contentItem, 0, 0).y - 32;
+            p.contentY = Math.max(0, Math.min(y, p.contentHeight - p.height));
+        }
+        flash.restart();
+        Shell.settingsFocus = "";
+    }
+
+    Rectangle {
+        id: glow
+
+        anchors.fill: parent
+        anchors.leftMargin: -Theme.space(2)
+        anchors.rightMargin: -Theme.space(2)
+        radius: Theme.rInner
+        color: Theme.accent
+        opacity: 0
+        z: -1
+
+        SequentialAnimation {
+            id: flash
+
+            NumberAnimation { target: glow; property: "opacity"; to: 0.28; duration: 220; easing.type: Easing.Bezier; easing.bezierCurve: Theme.smooth }
+            PauseAnimation { duration: 500 }
+            NumberAnimation { target: glow; property: "opacity"; to: 0; duration: 900; easing.type: Easing.Bezier; easing.bezierCurve: Theme.smooth }
+        }
+    }
 
     Column {
         id: copy
