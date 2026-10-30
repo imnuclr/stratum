@@ -49,7 +49,8 @@ SettingsPage {
             width: parent.width
             title: "Colours from wallpaper"
             detail: !Palette.available
-                ? "Needs matugen, which is not installed."
+                ? (Palette.searched === "searching" ? "Looking for matugen…"
+                    : `matugen wasn't found (${Palette.searched}). If it is installed, set its path: stratum ipc config set theme.matugen '"/path/to/matugen"'`)
                 : (Palette.error.length > 0 ? Palette.error
                     : `Accent follows the picture; full also tints the surfaces. Using ${Palette.binary}.`)
 
@@ -207,6 +208,36 @@ SettingsPage {
                         if (/^#([0-9a-fA-F]{6})$/.test(hex))
                             Theme.setUser("color.accent", hex.toUpperCase());
                     }
+                }
+            }
+        }
+    }
+
+    // The same colours in your apps. Each switch writes that app's theme and,
+    // the first time, adds the one line that loads it.
+    SettingCard {
+        title: "apps"
+        footnote: "Follows the accent, light or dark, and matugen's colours when those are on. Turning one off stops updating it; your app keeps the last colours until you change its theme."
+
+        Repeater {
+            model: [
+                { id: "terminal", title: "Terminal", detail: "kitty and ghostty change at once; foot and alacritty from the next window." },
+                { id: "gtk", title: "GTK apps", detail: "Files, Text Editor and other GTK and libadwaita apps, from their next launch." },
+                { id: "spotify", title: "Spotify", detail: "Through Spicetify. Switching on restarts Spotify once to apply the theme." },
+                { id: "discord", title: "Vesktop / Discord", detail: "Through Vencord. Then pick Stratum under Vencord → Themes, once." }
+            ]
+
+            SettingRow {
+                id: appRow
+
+                required property var modelData
+
+                title: appRow.modelData.title
+                detail: appRow.modelData.detail
+
+                Switch {
+                    checked: Config.get(`apps.theme.${appRow.modelData.id}`, false)
+                    onToggled: value => value ? AppTheme.connect(appRow.modelData.id) : AppTheme.disconnect(appRow.modelData.id)
                 }
             }
         }

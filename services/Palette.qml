@@ -111,24 +111,83 @@ Singleton {
         return out;
     }
 
+    /*
+     * Where matugen was looked for, and what happened, for `stratum ipc palette
+     * status` and the line under the setting.
+     */
+    property string searched: "not yet"
+    // The path as configured, when it lives somewhere no search would find.
+    readonly property string configured: Config.get("theme.matugen", "")
+
     // Looks for the program again: something installed after the shell started
     // is picked up the next time its settings are opened.
     function find() {
-        if (!probe.running && root.binary.length === 0)
-            probe.running = true;
+        if (probe.running)
+            return;
+        root.searched = "searching";
+        /*
+         * The command is set here, at the moment of starting, rather than bound
+         * on the Process with running: true. Bound, it could start before the
+         * script it names had a value — the one search the shell ever made then
+         * ran nothing, and matugen was "not installed" for good.
+         */
+        probe.command = ["sh", "-c", Bin.finder, "sh", "matugen"];
+        if (root.configured.length > 0)
+            probe.command = ["sh", "-c", '[ -x "$1" ] && echo "$1"', "sh", root.configured];
+        probe.running = true;
+    }
+
+    Component.onCompleted: root.find()
+    onConfiguredChanged: {
+        root.binary = "";
+        root.find();
     }
 
     Process {
         id: probe
 
-        running: true
-        command: ["sh", "-c", Bin.finder, "sh", "matugen"]
+        onExited: (code, status) => {
+            if (root.binary.length === 0)
+                root.searched = code === 0 ? "found nothing" : `not found (search exited ${code})`;
+        }
 
         stdout: StdioCollector {
             onStreamFinished: {
-                root.binary = text.trim();
+                const found = text.trim().split("\n").pop() ?? "";
+                if (found.length > 0) {
+                    root.binary = found;
+                    root.searched = `found ${found}`;
+                }
                 root.refresh();
             }
+        }
+    }
+
+    // `stratum ipc palette status` — what the shell knows about matugen.
+    IpcHandler {
+        target: "palette"
+
+        function status(): string {
+            return [
+                `mode:     ${root.mode}`,
+                `matugen:  ${root.binary || "(none)"}`,
+                `search:   ${root.searched}`,
+                `image:    ${root.image || "(no wallpaper)"}`,
+                `error:    ${root.error || "(none)"}`,
+                `colours:  ${JSON.stringify(Theme.generated?.color ?? {})}`
+            ].join("\n");
+        }
+
+        function find(): string {
+            root.binary = "";
+            root.find();
+            return "searching again — ask for status in a second";
+        }
+
+        function run(): string {
+            root.cache = ({});
+            root.refresh();
+            return "running matugen — ask for status in a second";
         }
     }
 

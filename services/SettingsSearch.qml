@@ -25,6 +25,10 @@ Singleton {
         ["appearance", "Colours from wallpaper", "matugen material you dynamic palette colors tint scheme generate"],
         ["appearance", "Accent", "accent highlight colour color tint red emphasis"],
         ["appearance", "Custom colour", "custom color hex picker hue any rgb"],
+        ["appearance", "Terminal", "terminal kitty alacritty foot ghostty colours theme apps"],
+        ["appearance", "Spotify", "spotify spicetify theme colours apps music"],
+        ["appearance", "Vesktop / Discord", "discord vesktop vencord theme colours apps"],
+        ["appearance", "GTK apps", "gtk libadwaita gnome apps accent theme"],
         ["appearance", "Blur", "blur frosted glass transparency windows hyprland intensity strength effects"],
         ["appearance", "24-hour time", "clock time format 12 hour 24 hour am pm military"],
         // motion

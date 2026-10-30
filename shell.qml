@@ -48,6 +48,8 @@ ShellRoot {
         Binds.refresh();
         // Puts your chosen window blur in place.
         Decor.blur;
+        // Keeps app themes in step with the shell's colours.
+        AppTheme.palette;
     }
 
     // Quickshell singletons are lazy, and a lazy singleton never registers its
