@@ -194,7 +194,7 @@ Variants {
 
             property: "opacity"
             to: 1
-            duration: Config.get("wallpaper.fadeMs", 350)
+            duration: Config.get("wallpaper.fadeMs", 150)
             easing.type: Easing.Bezier
             easing.bezierCurve: Theme.soft
 

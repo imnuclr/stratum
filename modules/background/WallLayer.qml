@@ -62,9 +62,11 @@ Item {
         sourceSize.width: root.pixelWidth
         sourceSize.height: root.pixelHeight
         asynchronous: true
-        cache: false
+        // Kept, so going back to a picture already seen is instant, and so the
+        // picker can have its neighbours decoded before they are asked for.
+        cache: true
         // For the shader, which reads a cell's average from a coarser level.
-        mipmap: true
+        mipmap: root.look === "dots"
 
         onStatusChanged: {
             if (status === Image.Ready) {
