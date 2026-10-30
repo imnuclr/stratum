@@ -27,6 +27,7 @@ Sheet {
     hoverDismiss: true
     originX: 1
     originY: 0
+    deep: true
     sheetWidth: Config.get("notifications.width", 380)
     sheetHeight: Math.min(availableHeight, body.implicitHeight + Theme.space(4) * 2)
 

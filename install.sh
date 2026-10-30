@@ -73,6 +73,7 @@ check nvidia-smi      "gpu metrics"
 check gpu-screen-recorder "screen recording"
 check hyprsunset      "night light"
 check matugen         "colour theming from wallpaper"
+check rembg           "wallpaper cutouts for depth (pipx install 'rembg[cli,cpu]')"
 
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;

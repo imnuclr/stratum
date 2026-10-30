@@ -74,6 +74,8 @@ PanelWindow {
      * underneath.
      */
     property bool centered: false
+    // Black with a pale outline, as the notification cards are.
+    property bool deep: false
     property int sheetWidth: 400
     property int sheetHeight: 500
 
@@ -409,9 +411,9 @@ PanelWindow {
                     width: parent.width
                     height: parent.height
                     radius: Theme.rSheet
-                    color: Theme.surface
+                    color: root.deep ? Theme.deep : Theme.surface
                     border.width: 1
-                    border.color: Theme.lineHi
+                    border.color: root.deep ? Theme.outline : Theme.lineHi
 
                     transformOrigin: {
                         if (root.centered)

@@ -180,12 +180,20 @@ Variants {
                     width: toast.pillWidth + (toast.width - toast.pillWidth) * toast.p
                     height: toast.pillHeight + (toast.fullHeight - toast.pillHeight) * toast.p
                     radius: Math.min(height / 2, Theme.rTile)
-                    color: linger.hovered ? Theme.surfaceTop : Theme.surfaceHi
+                    color: linger.hovered ? Qt.lighter(Theme.deep, 3) : Theme.deep
+                    border.width: 1
+                    border.color: linger.hovered ? Theme.fg : Theme.outline
                     opacity: toast.slot
                     clip: true
                     visible: toast.p > 0.001
 
                     Behavior on color {
+                        ColorAnimation {
+                            duration: Theme.micro
+                        }
+                    }
+
+                    Behavior on border.color {
                         ColorAnimation {
                             duration: Theme.micro
                         }
@@ -201,6 +209,7 @@ Variants {
                         // The card behind it is the surface, and it is what changes
                         // shape; this only carries the words.
                         color: "transparent"
+                        border.width: 0
                         opacity: Math.max(0, Math.min(1, (toast.p - 0.6) / 0.4))
                     }
                 }

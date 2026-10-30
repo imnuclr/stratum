@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.config
 import qs.services
@@ -58,7 +59,10 @@ Variants {
          * opacity 0 above it, fades in once it has something to show, and only
          * when it fully covers the old one is the old one emptied.
          */
-        property Image pending: null
+        // A layer, not an Image: the layers are WallLayer items and a typed property
+        // rejects them, which stopped a wallpaper that arrived after startup from
+        // ever being set.
+        property var pending: null
         property bool topIsA: true
 
         function show(url) {
@@ -90,44 +94,71 @@ Variants {
             layerA.source = win.wanted;
         }
 
-        WallLayer {
-            id: layerA
+        // Drifts a little with the workspace, less than the subject does, so the
+        // two read as being at different distances. Scaled up enough that its
+        // edges never come into view.
+        readonly property int workspace: Hyprland.monitorFor(win.modelData)?.activeWorkspace?.id ?? 1
+        readonly property int count: Config.get("bar.workspaces.count", 6)
+        readonly property real across: win.count > 1
+            ? ((((win.workspace - 1) % win.count) + win.count) % win.count) / (win.count - 1) * 2 - 1
+            : 0
+        readonly property bool drift: Config.get("wallpaper.parallax", true)
+
+        Item {
+            id: stage
 
             anchors.fill: parent
-            opacity: 0
-            pixelWidth: win.modelData.width
-            pixelHeight: win.modelData.height
-            look: win.look
-            mono: win.mono
-            dotSize: win.dotSize
-            light: win.light
+            scale: win.drift ? Config.get("wallpaper.parallaxScale", 1.08) : 1
+            x: win.drift ? -win.across * Config.get("wallpaper.parallaxDepth", 70) * 0.4 : 0
 
-            onReady: {
-                if (win.pending === layerA) {
-                    fade.target = layerA;
-                    fade.restart();
+            Behavior on x {
+                NumberAnimation {
+                    duration: Theme.sheetMs * 1.6
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
                 }
             }
-        }
 
-        WallLayer {
-            id: layerB
+            WallLayer {
+                id: layerA
 
-            anchors.fill: parent
-            opacity: 0
-            pixelWidth: win.modelData.width
-            pixelHeight: win.modelData.height
-            look: win.look
-            mono: win.mono
-            dotSize: win.dotSize
-            light: win.light
+                anchors.fill: parent
+                opacity: 0
+                pixelWidth: win.modelData.width
+                pixelHeight: win.modelData.height
+                look: win.look
+                mono: win.mono
+                dotSize: win.dotSize
+                light: win.light
 
-            onReady: {
-                if (win.pending === layerB) {
-                    fade.target = layerB;
-                    fade.restart();
+                onReady: {
+                    if (win.pending === layerA) {
+                        fade.target = layerA;
+                        fade.restart();
+                    }
                 }
             }
+
+            WallLayer {
+                id: layerB
+
+                anchors.fill: parent
+                opacity: 0
+                pixelWidth: win.modelData.width
+                pixelHeight: win.modelData.height
+                look: win.look
+                mono: win.mono
+                dotSize: win.dotSize
+                light: win.light
+
+                onReady: {
+                    if (win.pending === layerB) {
+                        fade.target = layerB;
+                        fade.restart();
+                    }
+                }
+            }
+
         }
 
         NumberAnimation {
