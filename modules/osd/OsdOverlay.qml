@@ -93,15 +93,43 @@ Variants {
                     color: Osd.dim ? Theme.fgDim : Theme.fg
                 }
 
-                // A level when there is one.
-                DotBar {
+                // A level when there is one. The level glides to each new value and the
+                // dot at its edge fills in by degrees, so a step of a couple of percent
+                // is something to see rather than a number changing.
+                Row {
+                    id: level
+
+                    property real shown: Osd.level >= 0 ? Osd.level : 0
+                    readonly property int count: 14
+
                     anchors.verticalCenter: parent.verticalCenter
                     visible: Osd.level >= 0
-                    count: 14
-                    dotSize: 3.2
-                    value: Osd.level
-                    litScale: 1.25
-                    onColor: Osd.dim ? Theme.fgDim : Theme.dotOn
+                    spacing: 6
+
+                    Behavior on shown {
+                        NumberAnimation {
+                            duration: 110
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.soft
+                        }
+                    }
+
+                    Repeater {
+                        model: level.count
+
+                        Rectangle {
+                            required property int index
+
+                            readonly property real amount: Math.max(0, Math.min(1, level.shown * level.count - index))
+
+                            width: 3.4
+                            height: 3.4
+                            radius: 1.7
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Qt.tint(Theme.dotOff, Qt.alpha(Osd.dim ? Theme.fgDim : Theme.dotOn, amount))
+                            scale: 1 + amount * 0.25
+                        }
+                    }
                 }
 
                 Text {
