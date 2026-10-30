@@ -116,6 +116,23 @@ Singleton {
         return "bluetooth";
     }
 
+    // The stroke icon for a WMO weather code, as open-meteo reports it.
+    function weather(code, day) {
+        if (code === 0)
+            return day ? "sun" : "moon";
+        if (code === 1 || code === 2)
+            return day ? "cloud-sun" : "cloud";
+        if (code === 45 || code === 48)
+            return "cloud-fog";
+        if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82))
+            return "cloud-rain";
+        if ((code >= 71 && code <= 77) || code === 85 || code === 86)
+            return "cloud-snow";
+        if (code >= 95)
+            return "cloud-lightning";
+        return "cloud";
+    }
+
     function volume(level, muted) {
         if (muted)
             return "volume-mute";
