@@ -27,7 +27,6 @@ Item {
                 width: 60
                 height: 60
                 name: Icons.weather(Weather.code, Weather.day)
-                pitch: 1.9
             }
 
             Row {
@@ -89,7 +88,6 @@ Item {
                         // Always the daytime variant: a row of crescent moons
                         // for four consecutive days reads as a bug.
                         name: Icons.weather(modelData.code, true)
-                        pitch: 2.4
                         color: Theme.fgBright
                     }
 

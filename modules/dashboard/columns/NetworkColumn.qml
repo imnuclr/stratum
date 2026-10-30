@@ -57,8 +57,6 @@ Item {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         rows: 11
-        cell: 7.4
-        dotSize: 3.6
         upper: Netstat.txHistory
         lower: Netstat.rxHistory
     }

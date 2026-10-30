@@ -20,7 +20,6 @@ Item {
     property string caption: ""
     property real size: 92
     property real numberSize: root.size * 0.25
-    property int dots: 44
 
     property real shownNumber: Math.max(0, root.number)
 
@@ -40,8 +39,6 @@ Item {
 
         width: root.size
         height: root.size
-        count: root.dots
-        dotSize: Math.max(2.4, root.size / 22)
         value: root.value
 
         DotText {

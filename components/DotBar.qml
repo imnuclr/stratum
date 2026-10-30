@@ -10,7 +10,7 @@ Row {
 
     property real value: 0
     property int count: 16
-    property real dotSize: 3.4
+    property real dotSize: Theme.dot
     /*
      * Lit dots drawn slightly larger than unlit ones. Colour alone separates
      * them only while the two are side by side; the size difference is what
@@ -22,7 +22,7 @@ Row {
 
     readonly property int lit: Math.round(count * Math.max(0, Math.min(1, value)))
 
-    spacing: dotSize
+    spacing: Theme.dotPitch - dotSize
 
     Repeater {
         model: root.count

@@ -97,7 +97,6 @@ Item {
                     DotBar {
                         anchors.verticalCenter: parent.verticalCenter
                         count: 6
-                        dotSize: 2.6
                         litScale: 1.5
                         value: modelData.usage
                     }
@@ -118,7 +117,6 @@ Item {
             spacing: Theme.space(2)
 
             readonly property int count: Math.max(1, SysStats.cores.length)
-            readonly property real pitch: Math.max(6, Math.min(18, cores.width / cores.count))
 
             SectionLabel {
                 text: SysStats.frequencyLabel.length > 0 ? `cores · ${SysStats.frequencyLabel}` : "cores"
@@ -128,8 +126,8 @@ Item {
             // into rows implies a grouping the cores do not have.
             DotField {
                 rows: 8
-                cell: cores.pitch
-                dotSize: cores.pitch * 0.48
+                // Same dots as everything else, the columns spread to the width.
+                columnSpacing: Math.max(Theme.dotPitch - Theme.dot, Math.min(28, (cores.width - cores.count * Theme.dot) / Math.max(1, cores.count - 1)))
                 values: SysStats.cores
             }
         }

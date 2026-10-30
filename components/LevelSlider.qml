@@ -10,7 +10,7 @@ Item {
 
     property real value: 0
     property int count: 24
-    property real dotSize: 4
+    property real dotSize: Theme.dot
     property real step: 0.02
     property bool enabled: true
 
