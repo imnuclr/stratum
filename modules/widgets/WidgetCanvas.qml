@@ -415,9 +415,9 @@ PanelWindow {
                         readonly property var list: [Widgets.styleOption].concat(frame.def.options ?? [])
                         readonly property bool open: win.optionsFor === frame.modelData.id
                         // To the right if it fits, otherwise to the left.
-                        readonly property bool right: frame.x + frame.width + 12 + width < field.width
+                        readonly property bool onRight: frame.x + frame.width + 12 + width < field.width
 
-                        x: options.right ? frame.width + 12 : -width - 12
+                        x: options.onRight ? frame.width + 12 : -width - 12
                         y: Math.max(-frame.y, Math.min(0, field.height - frame.y - height))
                         width: optionsBody.implicitWidth + Theme.space(4) * 2
                         height: optionsBody.implicitHeight + Theme.space(4) * 2
