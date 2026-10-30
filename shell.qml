@@ -42,7 +42,7 @@ ShellRoot {
         Config.ready;
         Theme.ready;
         // Lazy, so touched here: nothing else asks for it until a colour is wanted.
-        Palette.mode;
+        WallColours.mode;
         Cutout.enabled;
         // Reads the binds now, which also brings an old binds file up to date.
         Binds.refresh();
@@ -174,33 +174,33 @@ ShellRoot {
     }
 
     // `stratum ipc palette status` — what the shell knows about matugen. Here
-    // rather than in Palette: a handler inside a lazy singleton never registers.
+    // rather than in WallColours: a handler inside a lazy singleton never registers.
     IpcHandler {
         target: "palette"
 
         function status(): string {
-            // Undefined here means Palette itself failed to load: see the log.
-            if (Palette.mode === undefined)
-                return "Palette did not load — run: qs -c stratum log | grep -i -B2 -A6 palette";
+            // Undefined here means the service failed to load: see the log.
+            if (WallColours.mode === undefined)
+                return "WallColours did not load — see: stratum log";
             return [
-                `mode:     ${Palette.mode}`,
-                `matugen:  ${Palette.binary || "(none)"}`,
-                `search:   ${Palette.searched}`,
-                `image:    ${Palette.image || "(no wallpaper)"}`,
-                `error:    ${Palette.error || "(none)"}`,
+                `mode:     ${WallColours.mode}`,
+                `matugen:  ${WallColours.binary || "(none)"}`,
+                `search:   ${WallColours.searched}`,
+                `image:    ${WallColours.image || "(no wallpaper)"}`,
+                `error:    ${WallColours.error || "(none)"}`,
                 `colours:  ${JSON.stringify(Theme.generated?.color ?? {})}`
             ].join("\n");
         }
 
         function find(): string {
-            Palette.binary = "";
-            Palette.find();
+            WallColours.binary = "";
+            WallColours.find();
             return "searching again — ask for status in a second";
         }
 
         function run(): string {
-            Palette.cache = ({});
-            Palette.refresh();
+            WallColours.cache = ({});
+            WallColours.refresh();
             return "running matugen — ask for status in a second";
         }
     }
