@@ -52,7 +52,7 @@ Work that doesn't belong to a phase above:
 - `Tray.qml` uses a conditional `duration` on a Behavior, the pattern that silently
   failed elsewhere (DESIGN.md, lesson 45). Unchecked.
 - `debug.trace` is on by default; decide whether it should be off.
-- Battery and power profiles were written on a desktop and have not been seen on a laptop yet.
+- Battery and power profiles: detection fixed after a first run on a laptop; the bar battery and profile control are still to be confirmed by eye.
 - Clicking is untested in automated checks: it needs `ydotoold`, which has not been
   started.
 

@@ -27,7 +27,7 @@ Singleton {
     }
     readonly property UPowerDevice display: UPower.displayDevice
     readonly property UPowerDevice device: display?.isPresent && display.type === UPowerDeviceType.Battery ? display : realBattery
-    readonly property bool hasBattery: !!UPower.ready && (!!realBattery || (!!display?.isPresent && display.type === UPowerDeviceType.Battery))
+    readonly property bool hasBattery: !!realBattery || (!!display?.isPresent && display.type === UPowerDeviceType.Battery)
 
     readonly property real percentage: device?.percentage ?? 0
     readonly property bool charging: device?.state === UPowerDeviceState.Charging
@@ -44,23 +44,6 @@ Singleton {
     readonly property var profiles: PowerProfiles.hasPerformanceProfile
         ? ["power-saver", "balanced", "performance"]
         : ["power-saver", "balanced"]
-
-    // Temporary: prints what UPower reports so a laptop that shows nothing can
-    // be diagnosed from `qs -c stratum log`.
-    function report() {
-        const list = [];
-        for (const d of UPower.devices.values)
-            list.push(`${d.nativePath || d.model} type=${d.type} laptop=${d.isLaptopBattery} pct=${d.percentage}`);
-        console.log(`[power] ready=${UPower.ready} hasBattery=${hasBattery} display(present=${display?.isPresent} type=${display?.type}) devices=[${list.join("; ")}] profile=${profile} perf=${PowerProfiles.hasPerformanceProfile}`);
-    }
-
-    Component.onCompleted: report()
-
-    Timer {
-        running: true
-        interval: 5000
-        onTriggered: root.report()
-    }
 
     function nameOf(p) {
         if (p === PowerProfile.PowerSaver)
