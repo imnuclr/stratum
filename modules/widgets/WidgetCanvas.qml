@@ -474,6 +474,12 @@ PanelWindow {
                             }
                         }
 
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.AllButtons
+                            hoverEnabled: true
+                        }
+
                         Column {
                             id: optionsBody
 
@@ -514,6 +520,58 @@ PanelWindow {
             }
         }
 
+        // The gallery, put away: one small pill to bring it back.
+        Rectangle {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: 24
+            width: pillRow.implicitWidth + Theme.space(5) * 2
+            height: 40
+            radius: 20
+            color: pillHover.hovered ? Theme.surfaceTop : Qt.alpha(Theme.deep, 0.85)
+            border.width: 1
+            border.color: Theme.outline
+            opacity: win.editing && win.focused && gallery.folded ? 1 : 0
+            visible: opacity > 0.01
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.standard
+                }
+            }
+
+            Row {
+                id: pillRow
+
+                anchors.centerIn: parent
+                spacing: Theme.space(2)
+
+                Glyph {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "chevron-left"
+                    size: 13
+                    color: Theme.fg
+                }
+
+                SectionLabel {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "widgets"
+                    color: Theme.fg
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: gallery.folded = false
+            }
+
+            HoverHandler {
+                id: pillHover
+            }
+        }
+
         /*
          * The gallery: every widget there is, shown as itself, down the right-hand
          * side. Clicking one adds it to the desktop. See-through and narrow, so the
@@ -532,7 +590,7 @@ PanelWindow {
             anchors.topMargin: 24
             anchors.bottomMargin: 24
             width: panelWidth
-            x: !(win.editing && win.focused) ? win.width + 40 : (gallery.folded ? win.width - 18 : win.width - panelWidth - 16)
+            x: !(win.editing && win.focused) || gallery.folded ? win.width + 40 : win.width - panelWidth - 16
             visible: x < win.width + 30
 
             Behavior on x {
@@ -540,35 +598,6 @@ PanelWindow {
                     duration: Theme.sheetMs
                     easing.type: Easing.Bezier
                     easing.bezierCurve: Theme.soft
-                }
-            }
-
-            // The tab it folds to.
-            Rectangle {
-                anchors.right: panel.left
-                anchors.rightMargin: -1
-                anchors.verticalCenter: parent.verticalCenter
-                width: 22
-                height: 64
-                radius: 11
-                color: Qt.alpha(Theme.deep, 0.85)
-                border.width: 1
-                border.color: Theme.outline
-
-                Glyph {
-                    anchors.centerIn: parent
-                    name: "chevron-left"
-                    size: 14
-                    rotation: gallery.folded ? 0 : 180
-                    color: Theme.fg
-                }
-
-                HoverHandler {
-                    cursorShape: Qt.PointingHandCursor
-                }
-
-                TapHandler {
-                    onTapped: gallery.folded = !gallery.folded
                 }
             }
 
@@ -580,6 +609,16 @@ PanelWindow {
                 color: Qt.alpha(Theme.deep, 0.78)
                 border.width: 1
                 border.color: Theme.outline
+
+                // Takes every press, hover and scroll that lands on the panel, so
+                // nothing reaches the widgets underneath it. Its own buttons sit
+                // above this and still get theirs.
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.AllButtons
+                    hoverEnabled: true
+                    onWheel: wheel => wheel.accepted = true
+                }
 
                 Column {
                     id: head
@@ -596,9 +635,37 @@ PanelWindow {
 
                         SectionLabel {
                             anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - resetChip.width - doneChip.width - Theme.space(2) * 2
+                            width: parent.width - resetChip.width - doneChip.width - foldChip.width - Theme.space(2) * 3
                             text: "widgets"
                             color: Theme.fgBright
+                        }
+
+                        // Puts the gallery away, to see what is behind it.
+                        Rectangle {
+                            id: foldChip
+
+                            width: 30
+                            height: 30
+                            radius: 15
+                            color: foldHover.hovered ? Theme.surfaceTop : "transparent"
+
+                            Glyph {
+                                anchors.centerIn: parent
+                                name: "chevron-left"
+                                rotation: 180
+                                size: 14
+                                color: Theme.fgBright
+                            }
+
+                            HoverHandler {
+                                id: foldHover
+
+                                cursorShape: Qt.PointingHandCursor
+                            }
+
+                            TapHandler {
+                                onTapped: gallery.folded = true
+                            }
                         }
 
                         Rectangle {
