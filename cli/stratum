@@ -46,6 +46,62 @@ stop() {
   say "stopped (forced)"
 }
 
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+
+# Everything that has to be true for the shell to work, checked and explained.
+doctor() {
+  local bad=0
+  good() { printf '  \033[32m✓\033[0m %s\n' "$1"; }
+  poor() { printf '  \033[33m!\033[0m %s\n' "$1"; bad=1; }
+  tool() {
+    if command -v "$1" >/dev/null; then good "$1 — $2"; else poor "$1 missing — $2"; fi
+  }
+
+  echo "  Stratum $(git -C "$ROOT" log -1 --format='%h (%cs)' 2>/dev/null) on branch $(git -C "$ROOT" branch --show-current 2>/dev/null)"
+  if git -C "$ROOT" fetch -q 2>/dev/null; then
+    local behind; behind=$(git -C "$ROOT" rev-list --count HEAD..@{u} 2>/dev/null || echo 0)
+    [ "$behind" -gt 0 ] && poor "$behind update(s) waiting — run: stratum update" || good "up to date"
+  fi
+  running && good "shell running" || poor "shell not running — stratum start"
+
+  tool qs "quickshell, the runtime"
+  tool grim "screenshots"; tool slurp "region select"; tool satty "screenshot annotation"
+  tool wl-copy "clipboard (launcher calculator)"
+  tool wpctl "volume (pipewire)"
+  tool brightnessctl "laptop backlight"; tool ddcutil "external monitor brightness"
+  tool powerprofilesctl "power profiles"; tool hyprsunset "night light"
+  tool gpu-screen-recorder "screen recording"; tool matugen "colours from the wallpaper"
+  tool plocate "launcher file search (falls back to find)"
+  tool zenity "file chooser in settings"
+  command -v rembg >/dev/null && good "rembg — wallpaper depth" || printf '  · rembg not installed (optional: wallpaper depth)\n'
+
+  # The keybinds only work if Hyprland loads the file Stratum writes.
+  local hypr="${XDG_CONFIG_HOME:-$HOME/.config}/hypr" cfg file
+  if [ -f "$hypr/hyprland.lua" ]; then cfg="$hypr/hyprland.lua"; file="$hypr/stratum-binds.lua"
+  else cfg="$hypr/hyprland.conf"; file="$hypr/stratum-binds.conf"; fi
+  [ -f "$file" ] && good "binds file $file" || poor "no binds file — run the installer, or open Settings → Keybinds"
+  if grep -rqF "stratum-binds" "$hypr" --include='*.lua' --include='*.conf' --exclude='stratum-binds.*' 2>/dev/null; then
+    good "Hyprland loads the binds file"
+  else
+    poor "Hyprland does not load $file — add it to $cfg (see docs/TROUBLESHOOTING.md)"
+  fi
+  if command -v hyprctl >/dev/null; then
+    hyprctl binds 2>/dev/null | grep -q "stratum:launcher\|apps open\|launcher" \
+      && good "launcher key is bound" || poor "no launcher key bound in Hyprland — reload Hyprland, or bind one in Settings → Keybinds"
+  fi
+  if command -v ddcutil >/dev/null && ! id -nG | grep -qw i2c && getent group i2c >/dev/null; then
+    poor "not in the i2c group — external monitor brightness needs: sudo usermod -aG i2c $USER (then log out and in)"
+  fi
+
+  [ "$bad" = 0 ] && echo "  all good" || echo "  see docs/TROUBLESHOOTING.md for each of these"
+  return $bad
+}
+
+update() {
+  git -C "$ROOT" pull --ff-only || die "could not update — local changes? see: git -C $ROOT status"
+  running && { stop; start; } || say "updated — start it with: stratum start"
+}
+
 case "${1:-help}" in
   start)   start ;;
   stop)    stop ;;
@@ -64,6 +120,8 @@ case "${1:-help}" in
   # what made the first attempt at reading them useless.
   trace)   qs -c "$CONFIG" log 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep '\[trace\]' | tail -n "${2:-40}" ;;
   ipc)     shift; exec qs -c "$CONFIG" ipc call "$@" ;;
+  doctor)  doctor ;;
+  update)  update ;;
   *)
     cat <<USAGE
 
@@ -77,6 +135,8 @@ case "${1:-help}" in
     stratum log [N]            follow the log
     stratum trace [N]          just the shell's trace lines
     stratum ipc ...            raw IPC, e.g. stratum ipc panel toggle control
+    stratum doctor             check everything it needs, and say what is wrong
+    stratum update             pull the latest version and restart
 
   See also: stratumctl (panels), shellctl (switch between installed shells)
 
