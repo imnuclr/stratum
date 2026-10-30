@@ -25,6 +25,7 @@ Singleton {
         ["appearance", "Colours from wallpaper", "matugen material you dynamic palette colors tint scheme generate"],
         ["appearance", "Accent", "accent highlight colour color tint red emphasis"],
         ["appearance", "Custom colour", "custom color hex picker hue any rgb"],
+        ["appearance", "Blur", "blur frosted glass transparency windows hyprland intensity strength effects"],
         ["appearance", "24-hour time", "clock time format 12 hour 24 hour am pm military"],
         // motion
         ["motion", "Animation speed", "animation speed motion fast slow reduce transitions effects"],

@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import qs.components
 import qs.config
@@ -7,13 +8,15 @@ import qs.services
 import qs.theme
 
 /*
- * Type to find anything: an app, a file, a settings page, something the shell
- * can do, or the answer to a sum. Results come in groups, the best one first,
- * with a preview of whichever is chosen beside them.
+ * Type to find anything: an app, a file, a setting, an open window, something
+ * the shell can do, or the answer to a sum. Results come in groups, the best one
+ * first, with a preview of whichever is chosen beside them.
+ *
+ * Start with > to search one kind only: >app, >file, >set, >do, >win, >web,
+ * >run, and = for a sum. A bare > lists them.
  *
  * It takes the keyboard outright while open — it is reached by a key and used
- * by typing, so there is no window behind it that should still be getting keys.
- * Esc, a click outside, or the key again closes it.
+ * by typing. Esc, a click outside, or the key again closes it.
  */
 PanelWindow {
     id: root
@@ -24,18 +27,28 @@ PanelWindow {
         && (Shell.openScreen.length === 0 ? monitor.name === Shell.fallbackScreen : Shell.openScreen === monitor.name)
 
     property string query: ""
+    // The > command chosen, shown as a chip in front of what is typed.
+    property string mode: ""
     // Everything listed, group headers included, as { header } or a result.
     property var rows: []
     property int sel: -1
+    // Open windows, read when the launcher opens, for >win.
+    property var windows: []
 
     readonly property var chosen: root.sel >= 0 && root.sel < root.rows.length ? root.rows[root.sel] : null
 
-    readonly property int cardWidth: Math.min(860, monitor.width - 80)
-    readonly property int cardHeight: Math.min(540, monitor.height - 120)
+    readonly property int cardWidth: Math.min(880, monitor.width - 80)
+    readonly property int cardHeight: Math.min(560, monitor.height - 120)
 
+    /*
+     * Mapped the whole time, with no input region while closed, as the sheets
+     * are. A surface that appears on open gets Hyprland's layer animation, and
+     * on a full-screen surface that is the dimmed backdrop visibly sliding in
+     * behind the card. Already mapped, only the shell's own fade is seen.
+     */
     screen: monitor
     color: "transparent"
-    visible: root.open || card.opacity > 0
+    visible: true
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "stratum-launcher"
@@ -57,16 +70,51 @@ PanelWindow {
         if (!root.open)
             return;
         Launcher.loadRecent();
+        clients.running = false;
+        clients.running = true;
+        root.mode = "";
         input.text = Launcher.preset;
         Launcher.preset = "";
         root.rebuild();
         input.forceActiveFocus();
     }
 
-    onQueryChanged: {
-        Launcher.searchFiles(root.query);
+    // What follows a command, or the whole query when there is none.
+    readonly property var parsed: {
+        const raw = root.query;
+        if (root.mode.length > 0)
+            return { cmd: root.mode, rest: raw.trim(), picking: false };
+        if (raw.startsWith("=") && raw.length > 1)
+            return { cmd: "calc", rest: raw.slice(1).trim(), picking: false };
+        const m = /^>(\w*)(\s+([\s\S]*))?$/.exec(raw);
+        if (!m)
+            return { cmd: "", rest: raw.trim(), picking: false };
+        const hit = root.commands.find(c => c.key === m[1] || c.also.includes(m[1]));
+        // Still choosing which command: typing ">ap" or a bare ">".
+        if (!hit || m[2] === undefined)
+            return { cmd: hit && m[2] !== undefined ? hit.key : "", rest: m[1], picking: true };
+        return { cmd: hit.key, rest: (m[3] ?? "").trim(), picking: false };
+    }
+
+    onModeChanged: root.rebuild()
+
+    onParsedChanged: {
+        const p = root.parsed;
+        Launcher.searchFiles(p.picking ? "" : (p.cmd === "" || p.cmd === "file" ? p.rest : ""));
         root.rebuild();
     }
+
+    // The > commands, for searching one kind of thing.
+    readonly property var commands: [
+        { key: "app", also: ["apps", "a"], title: "apps", detail: "applications only", icon: "app" },
+        { key: "file", also: ["files", "f"], title: "files", detail: "files and folders in your home", icon: "file" },
+        { key: "set", also: ["settings", "s"], title: "settings", detail: "a setting, by name or what it does", icon: "settings" },
+        { key: "do", also: ["action", "actions"], title: "actions", detail: "lock, screenshot, wallpaper…", icon: "bolt" },
+        { key: "win", also: ["window", "windows", "w"], title: "windows", detail: "jump to an open window", icon: "sidebar" },
+        { key: "web", also: ["g", "search"], title: "web", detail: "search the web", icon: "globe" },
+        { key: "run", also: ["sh", "cmd", "$"], title: "run", detail: "run a command", icon: "terminal" },
+        { key: "calc", also: ["c", "math"], title: "calculator", detail: "or start with =", icon: "calc" }
+    ]
 
     Connections {
         target: Launcher
@@ -82,17 +130,23 @@ PanelWindow {
         }
     }
 
-    // Settings pages, found by what they hold as much as by their name.
-    readonly property var pages: [
-        { page: "wallpaper", words: "wallpaper background picture photo image" },
-        { page: "appearance", words: "appearance theme dark light colour color accent font dots" },
-        { page: "bar", words: "bar panel top edge column height width workspaces" },
-        { page: "displays", words: "displays monitors screens resolution refresh rate scale brightness arrange" },
-        { page: "widgets", words: "widgets desktop clock weather" },
-        { page: "keybinds", words: "keybinds keyboard shortcuts keys hotkeys" },
-        { page: "notifications", words: "notifications toasts do not disturb" },
-        { page: "advanced", words: "advanced debug config files" }
-    ]
+    Process {
+        id: clients
+
+        command: ["hyprctl", "clients", "-j"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.windows = JSON.parse(text).filter(c => c.mapped !== false && (c.title || c.class));
+                } catch (e) {
+                    root.windows = [];
+                }
+                if (root.open && root.parsed.cmd === "win")
+                    root.rebuild(true);
+            }
+        }
+    }
 
     // Things the shell can do, as { title, icon, words, act }.
     readonly property var actions: [
@@ -164,59 +218,166 @@ PanelWindow {
         };
     }
 
+    function windowRow(c, group) {
+        const cls = String(c.class ?? "");
+        return {
+            group: group,
+            title: c.title || cls,
+            sub: `${cls} · workspace ${c.workspace?.name ?? "?"}`,
+            icon: "sidebar",
+            image: Quickshell.iconPath(cls.toLowerCase(), true) ?? "",
+            kind: "window",
+            about: `${cls} on workspace ${c.workspace?.name ?? "?"}`,
+            hint: "go to it",
+            act: () => Hypr.focusWindow(c.address)
+        };
+    }
+
+    // Each kind of result for a query, so a command can ask for just one.
+    function appsFor(q, n) {
+        return Launcher.rankApps(q, n).map(e => root.appRow(e, "apps"));
+    }
+
+    function settingsFor(q, n) {
+        return SettingsSearch.search(q, n)
+            .filter(r => r.score >= 50)
+            .map(r => ({
+                group: "settings", title: r.title, sub: `settings · ${r.page}`, icon: "settings", kind: "settings",
+                score: Math.min(95, r.score), hint: "open it in settings",
+                act: () => {
+                    Shell.settingsPage = r.page;
+                    Shell.settingsFocus = r.title;
+                    Shell.open("settings");
+                },
+                keep: true
+            }));
+    }
+
+    function actionsFor(q, n) {
+        return root.actions
+            .map(a => ({ a: a, s: q.length === 0 ? 50 : Math.max(Launcher.score(a.title, q), ...a.words.split(" ").map(w => Launcher.score(w, q) * 0.85)) }))
+            .filter(x => x.s >= 40)
+            .sort((a, b) => b.s - a.s)
+            .slice(0, n)
+            .map(x => ({ group: "actions", title: x.a.title, sub: "stratum", icon: x.a.icon, kind: "action", score: x.s, hint: "do it", act: x.a.act, keep: x.a.keep }));
+    }
+
+    function filesFor(q, n) {
+        const recent = !Config.get("launcher.recent", true) ? [] : Launcher.recent
+            .filter(p => q.length === 0 || Launcher.score(p.slice(p.lastIndexOf("/") + 1), q) >= 40)
+            .slice(0, 4);
+        const found = Config.get("launcher.files", true) ? Launcher.files : [];
+        return [...recent, ...found.filter(p => !recent.includes(p))]
+            .slice(0, n)
+            .map(p => root.fileRow(p, "files"));
+    }
+
+    function windowsFor(q, n) {
+        return root.windows
+            .map(c => ({ c: c, s: q.length === 0 ? 50 : Math.max(Launcher.score(c.title, q), Launcher.score(c.class, q)) }))
+            .filter(x => x.s > 0)
+            .sort((a, b) => b.s - a.s)
+            .slice(0, n)
+            .map(x => root.windowRow(x.c, "windows"));
+    }
+
+    function webFor(q) {
+        if (q.length === 0)
+            return [];
+        const engine = Config.get("launcher.engine", "duckduckgo");
+        const engines = {
+            duckduckgo: "https://duckduckgo.com/?q=",
+            google: "https://www.google.com/search?q=",
+            brave: "https://search.brave.com/search?q=",
+            startpage: "https://www.startpage.com/do/search?q="
+        };
+        return [{
+            group: "web", title: `search the web for “${q}”`, sub: engine, icon: "globe", kind: "web",
+            hint: "open in your browser",
+            act: () => Quickshell.execDetached(["xdg-open", (engines[engine] ?? engines.duckduckgo) + encodeURIComponent(q)])
+        }];
+    }
+
+    function calcFor(q) {
+        const sum = Launcher.calc(q);
+        if (sum === null)
+            return [];
+        return [{
+            group: "calculator", title: String(sum), sub: `${q} =`, icon: "calc", kind: "calc",
+            hint: "copy the answer", act: () => Quickshell.execDetached(["wl-copy", String(sum)])
+        }];
+    }
+
+    function runFor(q) {
+        if (q.length === 0)
+            return [];
+        return [{
+            group: "run", title: q, sub: "run this command", icon: "terminal", kind: "run",
+            about: "Runs in the background, detached from the shell.",
+            hint: "run it", act: () => Quickshell.execDetached(["sh", "-c", q])
+        }];
+    }
+
+    function commandRows(prefix) {
+        return root.commands
+            .filter(c => prefix.length === 0 || c.key.startsWith(prefix) || c.also.some(a => a.startsWith(prefix)))
+            .map(c => ({
+                group: "search one kind", title: c.key === "calc" ? "= or >calc" : `>${c.key}`, sub: c.detail, icon: c.icon,
+                kind: "command", about: `Type >${c.key} and then what to look for, to search ${c.title} only.`,
+                hint: "use it", keep: true,
+                act: () => {
+                    input.text = `>${c.key} `;
+                    input.cursorPosition = input.text.length;
+                }
+            }));
+    }
+
     /*
      * Builds the list for what is typed. `keep` holds the choice where it is when
      * results arrive late (file search, recents), so the row under your thumb
      * does not jump while you are about to press Enter on it.
      */
     function rebuild(keep) {
-        const q = root.query.trim();
+        const p = root.parsed;
+        const q = p.rest;
         const before = keep ? root.chosen : null;
         const groups = [];
 
-        if (q.length === 0) {
-            groups.push(["frequent", Launcher.rankApps("", 8).map(e => root.appRow(e, "frequent"))]);
+        if (p.picking) {
+            groups.push(["search one kind", root.commandRows(q)]);
+        } else if (p.cmd === "app") {
+            groups.push(["apps", root.appsFor(q, 30)]);
+        } else if (p.cmd === "file") {
+            groups.push(["files", root.filesFor(q, 24)]);
+        } else if (p.cmd === "set") {
+            groups.push(["settings", q.length > 0 ? root.settingsFor(q, 20) : []]);
+        } else if (p.cmd === "do") {
+            groups.push(["actions", root.actionsFor(q, 30)]);
+        } else if (p.cmd === "win") {
+            groups.push(["windows", root.windowsFor(q, 30)]);
+        } else if (p.cmd === "web") {
+            groups.push(["web", root.webFor(q)]);
+        } else if (p.cmd === "run") {
+            groups.push(["run", root.runFor(q)]);
+        } else if (p.cmd === "calc") {
+            groups.push(["calculator", root.calcFor(q)]);
+        } else if (q.length === 0) {
+            // Only what you have actually used: a list of every app A to Z is
+            // not a suggestion.
+            const used = Launcher.rankApps("", 8).filter(e => (Launcher.counts[e.id] ?? 0) > 0);
+            groups.push(["frequent", used.map(e => root.appRow(e, "frequent"))]);
             if (Config.get("launcher.recent", true))
-                groups.push(["recent files", Launcher.recent.slice(0, 6).map(p => root.fileRow(p, "recent files"))]);
+                groups.push(["recent files", Launcher.recent.slice(0, 5).map(f => root.fileRow(f, "recent files"))]);
+            if (used.length === 0)
+                groups.push(["search one kind", root.commandRows("")]);
         } else {
-            const sum = Config.get("launcher.calc", true) ? Launcher.calc(q) : null;
-            if (sum !== null) {
-                groups.push(["calculator", [{
-                    group: "calculator", title: String(sum), sub: `${q} =`, icon: "calc", kind: "calc",
-                    hint: "copy the answer", act: () => Quickshell.execDetached(["wl-copy", String(sum)])
-                }]]);
-            }
+            if (Config.get("launcher.calc", true))
+                groups.push(["calculator", root.calcFor(q)]);
 
-            const apps = Launcher.rankApps(q, 8).map(e => root.appRow(e, "apps"));
-
-            // Single settings, from the same index the settings search uses.
-            const pages = SettingsSearch.search(q, 4)
-                .filter(r => r.score >= 50)
-                .map(r => ({
-                    group: "settings", title: r.title, sub: `settings · ${r.page}`, icon: "settings", kind: "settings",
-                    score: Math.min(95, r.score), hint: "open it in settings",
-                    act: () => {
-                        Shell.settingsPage = r.page;
-                        Shell.settingsFocus = r.title;
-                        Shell.open("settings");
-                    },
-                    keep: true
-                }));
-
-            const acts = root.actions
-                .map(a => ({ a: a, s: Math.max(Launcher.score(a.title, q), ...a.words.split(" ").map(w => Launcher.score(w, q) * 0.85)) }))
-                .filter(x => x.s >= 40)
-                .sort((a, b) => b.s - a.s)
-                .slice(0, 4)
-                .map(x => ({ group: "actions", title: x.a.title, sub: "stratum", icon: x.a.icon, kind: "action", score: x.s, hint: "do it", act: x.a.act, keep: x.a.keep }));
-
-            const recent = !Config.get("launcher.recent", true) ? [] : Launcher.recent
-                .filter(p => Launcher.score(p.slice(p.lastIndexOf("/") + 1), q) >= 40)
-                .slice(0, 4);
-            const found = Config.get("launcher.files", true) ? Launcher.files : [];
-            const files = [...recent, ...found.filter(p => !recent.includes(p))]
-                .slice(0, 8)
-                .map(p => root.fileRow(p, "files"));
+            const apps = root.appsFor(q, 8);
+            const pages = root.settingsFor(q, 4);
+            const acts = root.actionsFor(q, 4);
+            const wins = root.windowsFor(q, 3).filter(w => Launcher.score(w.title, q) >= 60);
 
             // The best of everything leads, whatever kind it is.
             const best = [
@@ -234,21 +395,9 @@ PanelWindow {
                 }
             }
 
-            groups.push(["apps", apps], ["actions", acts], ["settings", pages], ["files", files]);
-            const engine = Config.get("launcher.engine", "duckduckgo");
-            const engines = {
-                duckduckgo: "https://duckduckgo.com/?q=",
-                google: "https://www.google.com/search?q=",
-                brave: "https://search.brave.com/search?q=",
-                startpage: "https://www.startpage.com/do/search?q="
-            };
-            if (Config.get("launcher.web", true)) {
-                groups.push(["web", [{
-                    group: "web", title: `search the web for “${q}”`, sub: engine, icon: "globe", kind: "web",
-                    hint: "open in your browser",
-                    act: () => Quickshell.execDetached(["xdg-open", (engines[engine] ?? engines.duckduckgo) + encodeURIComponent(q)])
-                }]]);
-            }
+            groups.push(["apps", apps], ["windows", wins], ["actions", acts], ["settings", pages], ["files", root.filesFor(q, 8)]);
+            if (Config.get("launcher.web", true))
+                groups.push(["web", root.webFor(q)]);
         }
 
         const rows = [];
@@ -264,6 +413,8 @@ PanelWindow {
         if (before)
             at = rows.findIndex(r => !r.header && r.title === before.title && r.group === before.group);
         root.sel = at >= 0 ? at : rows.findIndex(r => !r.header);
+        if (!keep)
+            list.positionViewAtBeginning();
     }
 
     function move(step) {
@@ -310,12 +461,13 @@ PanelWindow {
         }
     }
 
+
     // Dims the desktop so the card is the only thing to look at; a click on it
-    // closes the launcher.
+    // closes the launcher. Fades only: nothing about it moves.
     Rectangle {
         anchors.fill: parent
         color: "#000000"
-        opacity: root.open ? 0.35 : 0
+        opacity: root.open ? 0.28 : 0
 
         Behavior on opacity {
             NumberAnimation {
@@ -336,7 +488,7 @@ PanelWindow {
         id: card
 
         x: Math.round((root.width - root.cardWidth) / 2)
-        y: Math.round(root.height * 0.18) + (root.open ? 0 : -12)
+        y: Math.round(root.height * 0.16)
         width: root.cardWidth
         height: root.cardHeight
         radius: Theme.rSheet
@@ -344,26 +496,23 @@ PanelWindow {
         border.width: 1
         border.color: Theme.lineHi
         opacity: root.open ? 1 : 0
-        scale: root.open ? 1 : 0.98
+        // Grows very slightly into place rather than travelling.
+        scale: root.open ? 1 : 0.985
+        visible: opacity > 0.01
 
         Behavior on opacity {
             NumberAnimation {
                 duration: Theme.sheetMs
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        Behavior on y {
-            NumberAnimation {
-                duration: Theme.sheetMs
-                easing.type: Easing.OutCubic
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
 
         Behavior on scale {
             NumberAnimation {
                 duration: Theme.sheetMs
-                easing.type: Easing.OutCubic
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
 
@@ -378,45 +527,98 @@ PanelWindow {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            height: 68
+            height: 72
 
             Glyph {
                 id: lens
 
                 anchors.left: parent.left
-                anchors.leftMargin: Theme.space(5)
+                anchors.leftMargin: Theme.space(6)
                 anchors.verticalCenter: parent.verticalCenter
                 name: "search"
-                size: 24
+                size: 22
                 stroke: 2
-                color: Theme.fgBright
+                color: Theme.fgDim
+            }
+
+            // The command in use, as a chip before the text.
+            Rectangle {
+                id: chip
+
+                readonly property var command: root.commands.find(c => c.key === root.mode) ?? null
+
+                anchors.left: lens.right
+                anchors.leftMargin: Theme.space(3)
+                anchors.verticalCenter: parent.verticalCenter
+                visible: !!command
+                width: visible ? chipText.implicitWidth + Theme.space(3) * 2 : 0
+                height: 28
+                radius: 14
+                color: Theme.fg
+
+                Text {
+                    id: chipText
+
+                    anchors.centerIn: parent
+                    text: chip.command?.title ?? ""
+                    color: Theme.bg
+                    font.family: Theme.fontUi
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                    renderType: Text.NativeRendering
+                }
             }
 
             TextInput {
                 id: input
 
-                anchors.left: lens.right
+                anchors.left: chip.visible ? chip.right : lens.right
                 anchors.leftMargin: Theme.space(3)
                 anchors.right: escHint.left
                 anchors.rightMargin: Theme.space(3)
                 anchors.verticalCenter: parent.verticalCenter
                 color: Theme.fg
                 font.family: Theme.fontUi
-                font.pixelSize: 24
+                font.pixelSize: 22
                 selectByMouse: true
                 selectionColor: Theme.fg
                 selectedTextColor: Theme.panel
                 clip: true
                 focus: root.open
 
-                onTextChanged: root.query = text
+                // A finished command (">app ") becomes the chip, and only what
+                // follows it stays in the field.
+                onTextChanged: {
+                    const m = /^>(\w+)\s([\s\S]*)$/.exec(text);
+                    if (root.mode.length === 0 && m) {
+                        const hit = root.commands.find(c => c.key === m[1] || c.also.includes(m[1]));
+                        if (hit) {
+                            root.mode = hit.key;
+                            text = m[2];
+                            return;
+                        }
+                    }
+                    root.query = text;
+                }
 
                 Keys.onEscapePressed: Shell.close()
                 Keys.onUpPressed: root.move(-1)
                 Keys.onDownPressed: root.move(1)
-                Keys.onTabPressed: root.move(1)
+                Keys.onTabPressed: {
+                    // Tab completes a command being picked; otherwise moves down.
+                    if (root.parsed.picking && root.chosen?.kind === "command")
+                        root.activate(root.chosen, false);
+                    else
+                        root.move(1);
+                }
                 Keys.onBacktabPressed: root.move(-1)
                 Keys.onPressed: event => {
+                    // Backspace with nothing typed takes the command chip off.
+                    if (event.key === Qt.Key_Backspace && root.mode.length > 0 && input.text.length === 0) {
+                        root.mode = "";
+                        event.accepted = true;
+                        return;
+                    }
                     if (event.modifiers & Qt.ControlModifier) {
                         if (event.key === Qt.Key_N || event.key === Qt.Key_J) {
                             root.move(1);
@@ -433,21 +635,36 @@ PanelWindow {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: input.text.length === 0
-                    text: "search apps, files, settings…"
+                    text: chip.visible ? `Search ${chip.command?.title ?? ""}…` : "Search apps, files, settings…   or type >"
                     color: Theme.fgFaint
                     font: input.font
                     renderType: Text.NativeRendering
                 }
             }
 
-            SectionLabel {
+            Rectangle {
                 id: escHint
 
                 anchors.right: parent.right
                 anchors.rightMargin: Theme.space(5)
                 anchors.verticalCenter: parent.verticalCenter
-                text: "esc"
-                color: Theme.fgFaint
+                width: escText.implicitWidth + Theme.space(2) * 2
+                height: 22
+                radius: 6
+                color: Theme.surfaceHi
+                border.width: 1
+                border.color: Theme.line
+
+                Text {
+                    id: escText
+
+                    anchors.centerIn: parent
+                    text: "esc"
+                    color: Theme.fgDim
+                    font.family: Theme.fontUi
+                    font.pixelSize: 11
+                    renderType: Text.NativeRendering
+                }
             }
 
             Rectangle {
@@ -463,15 +680,15 @@ PanelWindow {
             id: list
 
             anchors.top: bar.bottom
-            anchors.bottom: parent.bottom
+            anchors.bottom: footer.top
             anchors.left: parent.left
-            anchors.topMargin: Theme.space(2)
-            anchors.bottomMargin: Theme.space(2)
-            width: Math.round(parent.width * 0.54)
+            anchors.topMargin: Theme.space(1)
+            width: Math.round(parent.width * 0.56)
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: root.rows
             highlightMoveDuration: 0
+            bottomMargin: Theme.space(2)
 
             delegate: Item {
                 id: row
@@ -479,23 +696,24 @@ PanelWindow {
                 required property var modelData
                 required property int index
 
+                readonly property bool header: !!row.modelData.header
                 readonly property bool picked: index === root.sel
 
                 width: list.width
-                height: modelData.header ? 30 : 46
+                height: row.header ? 34 : 54
 
                 SectionLabel {
-                    visible: row.modelData.header
+                    visible: row.header
                     anchors.left: parent.left
                     anchors.leftMargin: Theme.space(5)
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: Theme.space(1)
-                    text: row.modelData.title
-                    color: Theme.fgDim
+                    anchors.bottomMargin: 6
+                    text: row.header ? row.modelData.title : ""
+                    color: Theme.fgFaint
                 }
 
                 Rectangle {
-                    visible: !row.modelData.header
+                    visible: !row.header
                     anchors.fill: parent
                     anchors.leftMargin: Theme.space(2)
                     anchors.rightMargin: Theme.space(2)
@@ -506,31 +724,35 @@ PanelWindow {
                     Rectangle {
                         visible: row.picked
                         anchors.left: parent.left
-                        anchors.leftMargin: 6
+                        anchors.leftMargin: 5
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Theme.dot
-                        height: Theme.dot
-                        radius: width / 2
+                        width: 3
+                        height: 18
+                        radius: 1.5
                         color: Theme.accent
                     }
 
-                    Item {
+                    Rectangle {
                         id: thumb
 
                         anchors.left: parent.left
                         anchors.leftMargin: Theme.space(3)
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 28
-                        height: 28
+                        width: 36
+                        height: 36
+                        radius: 10
+                        color: pic.visible ? "transparent" : Theme.surfaceHi
+                        clip: true
 
                         Image {
                             id: pic
 
                             anchors.fill: parent
+                            anchors.margins: row.modelData.kind === "file" ? 0 : 2
                             visible: status === Image.Ready
-                            source: row.modelData.image ?? ""
-                            sourceSize.width: 56
-                            sourceSize.height: 56
+                            source: row.header ? "" : (row.modelData.image ?? "")
+                            sourceSize.width: 72
+                            sourceSize.height: 72
                             fillMode: row.modelData.kind === "file" ? Image.PreserveAspectCrop : Image.PreserveAspectFit
                             asynchronous: true
                             smooth: true
@@ -540,41 +762,40 @@ PanelWindow {
                             anchors.centerIn: parent
                             visible: !pic.visible
                             name: row.modelData.icon ?? "app"
-                            size: 20
+                            size: 18
                             color: row.picked ? Theme.fg : Theme.fgBright
                         }
                     }
 
-                    Text {
-                        id: title
-
+                    Column {
                         anchors.left: thumb.right
                         anchors.leftMargin: Theme.space(3)
-                        anchors.right: sub.left
-                        anchors.rightMargin: Theme.space(2)
-                        anchors.verticalCenter: parent.verticalCenter
-                        elide: Text.ElideRight
-                        text: row.modelData.title
-                        color: Theme.fg
-                        font.family: Theme.fontUi
-                        font.pixelSize: 15
-                        font.weight: row.picked ? Font.Medium : Font.Normal
-                        renderType: Text.NativeRendering
-                    }
-
-                    Text {
-                        id: sub
-
                         anchors.right: parent.right
                         anchors.rightMargin: Theme.space(3)
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(implicitWidth, parent.width * 0.4)
-                        elide: Text.ElideLeft
-                        text: row.modelData.sub ?? ""
-                        color: Theme.fgFaint
-                        font.family: Theme.fontUi
-                        font.pixelSize: 12
-                        renderType: Text.NativeRendering
+                        spacing: 2
+
+                        Text {
+                            width: parent.width
+                            elide: Text.ElideRight
+                            text: row.header ? "" : row.modelData.title
+                            color: Theme.fg
+                            font.family: row.modelData.kind === "command" ? Theme.fontMono : Theme.fontUi
+                            font.pixelSize: 15
+                            font.weight: Font.Medium
+                            renderType: Text.NativeRendering
+                        }
+
+                        Text {
+                            width: parent.width
+                            visible: text.length > 0
+                            elide: row.modelData.kind === "file" ? Text.ElideMiddle : Text.ElideRight
+                            text: row.header ? "" : (row.modelData.sub ?? "")
+                            color: Theme.fgDim
+                            font.family: Theme.fontUi
+                            font.pixelSize: 12
+                            renderType: Text.NativeRendering
+                        }
                     }
 
                     HoverHandler {
@@ -592,14 +813,26 @@ PanelWindow {
                 }
             }
 
-            Text {
+            Column {
                 anchors.centerIn: parent
+                spacing: Theme.space(2)
                 visible: root.rows.length === 0
-                text: "nothing yet — keep typing"
-                color: Theme.fgFaint
-                font.family: Theme.fontUi
-                font.pixelSize: 14
-                renderType: Text.NativeRendering
+
+                Glyph {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    name: "search"
+                    size: 28
+                    color: Theme.fgFaint
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: root.query.length === 0 ? "Start typing" : "Nothing found"
+                    color: Theme.fgDim
+                    font.family: Theme.fontUi
+                    font.pixelSize: 14
+                    renderType: Text.NativeRendering
+                }
             }
         }
 
@@ -607,7 +840,7 @@ PanelWindow {
             id: divider
 
             anchors.top: bar.bottom
-            anchors.bottom: parent.bottom
+            anchors.bottom: footer.top
             anchors.left: list.right
             width: 1
             color: Theme.line
@@ -618,77 +851,77 @@ PanelWindow {
             id: preview
 
             anchors.top: bar.bottom
-            anchors.bottom: parent.bottom
+            anchors.bottom: footer.top
             anchors.left: divider.right
             anchors.right: parent.right
-            anchors.margins: Theme.space(5)
+            anchors.margins: Theme.space(6)
 
             readonly property var item: root.chosen
             readonly property bool photo: !!item && item.kind === "file" && (item.image ?? "").length > 0
 
-            visible: !!item
-
-            // A picture fills the pane; anything else gets its icon, centred.
-            Rectangle {
-                id: frame
-
-                anchors.top: parent.top
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: preview.photo ? parent.width : 112
-                height: preview.photo ? Math.min(parent.height * 0.55, parent.width * 0.75) : 112
-                radius: preview.photo ? Theme.rTile : 28
-                color: Theme.surfaceHi
-                clip: true
-
-                Image {
-                    id: big
-
-                    anchors.fill: parent
-                    anchors.margins: preview.photo ? 0 : 20
-                    visible: status === Image.Ready
-                    source: preview.item?.image ?? ""
-                    sourceSize.width: preview.photo ? 640 : 160
-                    sourceSize.height: preview.photo ? 480 : 160
-                    fillMode: preview.photo ? Image.PreserveAspectCrop : Image.PreserveAspectFit
-                    asynchronous: true
-                    smooth: true
-                }
-
-                DotIcon {
-                    anchors.centerIn: parent
-                    visible: !big.visible
-                    width: 60
-                    height: 60
-                    name: preview.item?.icon ?? "app"
-                    color: Theme.fg
-                }
-            }
+            visible: !!item && !item.header
 
             Column {
-                anchors.top: frame.bottom
-                anchors.topMargin: Theme.space(4)
-                anchors.left: parent.left
-                anchors.right: parent.right
-                spacing: Theme.space(2)
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: -Theme.space(2)
+                width: parent.width
+                spacing: Theme.space(4)
+
+                // A picture fills the width; anything else gets its icon on a tile.
+                Rectangle {
+                    id: frame
+
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: preview.photo ? parent.width : 104
+                    height: preview.photo ? Math.min(preview.height * 0.55, parent.width * 0.75) : 104
+                    radius: preview.photo ? Theme.rTile : 26
+                    color: Theme.surfaceHi
+                    border.width: 1
+                    border.color: Theme.line
+                    clip: true
+
+                    Image {
+                        id: big
+
+                        anchors.fill: parent
+                        anchors.margins: preview.photo ? 0 : 18
+                        visible: status === Image.Ready
+                        source: preview.item?.image ?? ""
+                        sourceSize.width: preview.photo ? 640 : 160
+                        sourceSize.height: preview.photo ? 480 : 160
+                        fillMode: preview.photo ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+                        asynchronous: true
+                        smooth: true
+                    }
+
+                    DotIcon {
+                        anchors.centerIn: parent
+                        visible: !big.visible
+                        width: 56
+                        height: 56
+                        name: preview.item?.icon ?? "app"
+                        color: Theme.fg
+                    }
+                }
 
                 Text {
                     width: parent.width
-                    horizontalAlignment: preview.photo ? Text.AlignLeft : Text.AlignHCenter
+                    horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
                     maximumLineCount: 2
                     elide: Text.ElideRight
                     text: preview.item?.title ?? ""
                     color: Theme.fg
                     font.family: preview.item?.kind === "calc" ? Theme.fontDot : Theme.fontUi
-                    font.pixelSize: preview.item?.kind === "calc" ? 40 : 20
+                    font.pixelSize: preview.item?.kind === "calc" ? 44 : 20
                     font.weight: Font.Medium
                     renderType: Text.NativeRendering
                 }
 
                 Text {
                     width: parent.width
-                    horizontalAlignment: preview.photo ? Text.AlignLeft : Text.AlignHCenter
-                    wrapMode: Text.WrapAnywhere
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: preview.item?.kind === "file" ? Text.WrapAnywhere : Text.Wrap
                     maximumLineCount: 3
                     elide: Text.ElideRight
                     text: preview.item?.kind === "file" ? (preview.item?.path ?? "") : (preview.item?.about || preview.item?.sub || "")
@@ -699,39 +932,81 @@ PanelWindow {
                 }
 
                 SectionLabel {
-                    anchors.horizontalCenter: preview.photo ? undefined : parent.horizontalCenter
+                    anchors.horizontalCenter: parent.horizontalCenter
                     visible: (preview.item?.uses ?? 0) > 0
                     text: `opened ${preview.item?.uses ?? 0} ${(preview.item?.uses ?? 0) === 1 ? "time" : "times"}`
                     color: Theme.fgFaint
                 }
             }
+        }
 
-            // How to use it, pinned to the bottom of the pane.
+        // Keys, always in view, so nothing has to be remembered.
+        Rectangle {
+            id: footer
+
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 40
+            color: "transparent"
+
+            Rectangle {
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 1
+                color: Theme.line
+            }
+
             Row {
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: Theme.space(2)
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.space(5)
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.space(5)
 
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 28
-                    height: 22
-                    radius: 6
-                    color: Theme.surfaceTop
+                Repeater {
+                    model: [
+                        ["↑↓", "move"],
+                        ["↵", root.chosen?.hint ?? "open"],
+                        ["ctrl ↵", "show in folder"],
+                        [">", "search one kind"]
+                    ].filter(k => k[1] !== "show in folder" || root.chosen?.kind === "file")
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "↵"
-                        color: Theme.fg
-                        font.family: Theme.fontUi
-                        font.pixelSize: 13
+                    Row {
+                        required property var modelData
+
+                        spacing: Theme.space(2)
+
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: keyText.implicitWidth + 12
+                            height: 20
+                            radius: 5
+                            color: Theme.surfaceHi
+                            border.width: 1
+                            border.color: Theme.line
+
+                            Text {
+                                id: keyText
+
+                                anchors.centerIn: parent
+                                text: modelData[0]
+                                color: Theme.fgBright
+                                font.family: Theme.fontUi
+                                font.pixelSize: 11
+                                renderType: Text.NativeRendering
+                            }
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData[1]
+                            color: Theme.fgDim
+                            font.family: Theme.fontUi
+                            font.pixelSize: 12
+                            renderType: Text.NativeRendering
+                        }
                     }
-                }
-
-                SectionLabel {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: preview.item?.hint ?? ""
-                    color: Theme.fgDim
                 }
             }
         }
