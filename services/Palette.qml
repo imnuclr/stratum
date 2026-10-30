@@ -105,7 +105,7 @@ Singleton {
         id: probe
 
         running: true
-        command: ["sh", "-c", 'PATH="$PATH:$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin"; command -v matugen']
+        command: ["sh", "-c", Bin.finder, "sh", "matugen"]
 
         stdout: StdioCollector {
             onStreamFinished: {

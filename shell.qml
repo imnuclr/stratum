@@ -16,6 +16,7 @@ import qs.modules.dashboard
 import qs.modules.hotzones
 import qs.modules.lock
 import qs.modules.notifications
+import qs.modules.osd
 import qs.modules.session
 import qs.modules.settings
 
@@ -92,6 +93,7 @@ ShellRoot {
     Notifications {}
     HotZones {}
     Toasts {}
+    OsdOverlay {}
     Session {}
     Lock {}
     Settings {}

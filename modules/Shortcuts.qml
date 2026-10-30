@@ -46,37 +46,53 @@ Item {
             if (Audio.muted)
                 Audio.setMuted(false);
             Audio.setVolume(Audio.volume + root.volumeStep);
+            Osd.volume(Audio.volume + root.volumeStep, false);
         }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "volumeDown"
-        onPressed: Audio.setVolume(Audio.volume - root.volumeStep)
+        onPressed: {
+            Audio.setVolume(Audio.volume - root.volumeStep);
+            Osd.volume(Audio.volume - root.volumeStep, Audio.muted);
+        }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "volumeMute"
-        onPressed: Audio.toggleMuted()
+        onPressed: {
+            Osd.volume(Audio.volume, !Audio.muted);
+            Audio.toggleMuted();
+        }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "micMute"
-        onPressed: Audio.toggleSourceMuted()
+        onPressed: {
+            Osd.mic(!Audio.sourceMuted);
+            Audio.toggleSourceMuted();
+        }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "brightnessUp"
-        onPressed: Brightness.step(root.brightnessStep)
+        onPressed: {
+            Brightness.step(root.brightnessStep);
+            Osd.brightness(Brightness.value + root.brightnessStep);
+        }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "brightnessDown"
-        onPressed: Brightness.step(-root.brightnessStep)
+        onPressed: {
+            Brightness.step(-root.brightnessStep);
+            Osd.brightness(Brightness.value - root.brightnessStep);
+        }
     }
 
     GlobalShortcut {
