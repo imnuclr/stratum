@@ -21,7 +21,7 @@ Item {
         }
 
         DotText {
-            text: Time.format("HH:mm")
+            text: Time.format(Time.hm)
             size: 60
         }
 

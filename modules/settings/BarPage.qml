@@ -7,26 +7,16 @@ import qs.theme
  * The bar: whether it is there, which edge it sits on, how big it is.
  * Changes apply as they are made.
  */
-Flickable {
+SettingsPage {
     id: page
+
+    icon: "sidebar"
+    title: "Bar"
+    detail: "Where the bar sits, its shape and its size."
 
     readonly property bool vertical: Config.get("bar.orientation", "vertical") === "vertical"
 
-    contentHeight: body.implicitHeight
-    clip: true
-    boundsBehavior: Flickable.StopAtBounds
-
-    Column {
-        id: body
-
-        width: page.width
-        spacing: 0
-
-        SectionLabel {
-            text: "bar"
-            bottomPadding: Theme.space(3)
-        }
-
+    SettingCard {
         SettingRow {
             width: parent.width
             title: "Show the bar"

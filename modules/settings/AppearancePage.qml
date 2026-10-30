@@ -13,8 +13,12 @@ import qs.theme
  * red; offering a palette per surface would be offering to undo that. Everything
  * that is red follows this, and nothing else is coloured.
  */
-Item {
+SettingsPage {
     id: page
+
+    icon: "contrast"
+    title: "Appearance"
+    detail: "Light or dark, colours from your wallpaper, and the accent."
 
     // The preset's own accent, which the first swatch stands for.
     readonly property string presetAccent: Theme.preset?.color?.accent ?? "#E5252B"
@@ -25,17 +29,7 @@ Item {
         "#FF6A1A", "#FFB800", "#3DDC84", "#22D3EE", "#3B82F6", "#8B5CF6", "#EC4899", "#F4F4F5"
     ]
 
-    Column {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        spacing: 0
-
-        SectionLabel {
-            text: "appearance"
-            bottomPadding: Theme.space(3)
-        }
-
+    SettingCard {
         SettingRow {
             width: parent.width
             title: "Mode"
@@ -135,6 +129,20 @@ Item {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    SettingCard {
+        title: "clock"
+
+        SettingRow {
+            title: "24-hour time"
+            detail: "Off shows 3:41 instead of 15:41 in the bar, the control centre and the dashboard."
+
+            Switch {
+                checked: !Time.twelveHour
+                onToggled: value => Config.set("clock.twelveHour", !value)
             }
         }
     }

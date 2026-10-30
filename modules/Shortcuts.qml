@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import qs.config
 import qs.services
 
 /*
@@ -16,7 +17,7 @@ import qs.services
 Item {
     id: root
 
-    readonly property real volumeStep: 0.02
+    readonly property real volumeStep: Config.get("audio.step", 2) / 100
 
     /*
      * Where the volume is going, while keys are being held. The real volume comes

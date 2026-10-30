@@ -11,6 +11,8 @@ Item {
 
     property string title: ""
     property string detail: ""
+    // The hairline under the row; a card turns it off on its last row.
+    property bool divider: true
     default property alias control: slot.data
 
     implicitHeight: Math.max(52, copy.implicitHeight + Theme.space(3) * 2)
@@ -62,5 +64,6 @@ Item {
         anchors.bottom: parent.bottom
         height: 1
         color: Theme.line
+        visible: root.divider
     }
 }
