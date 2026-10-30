@@ -34,6 +34,14 @@ Singleton {
     readonly property bool full: device?.state === UPowerDeviceState.FullyCharged
     readonly property bool onBattery: !!UPower.onBattery
     readonly property int timeToEmpty: device?.timeToEmpty ?? 0
+    readonly property int timeToFull: device?.timeToFull ?? 0
+
+    // Seconds as "2h 14m", or just minutes under an hour.
+    function formatTime(seconds) {
+        const m = Math.round(seconds / 60);
+        const h = Math.floor(m / 60);
+        return h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
+    }
 
     readonly property bool low: hasBattery && onBattery && percentage <= 0.20
     readonly property bool critical: hasBattery && onBattery && percentage <= 0.08

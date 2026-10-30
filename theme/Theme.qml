@@ -78,16 +78,16 @@ Singleton {
     readonly property string fontRounded: pick("font.rounded", "Nunito")
 
     // --- motion ---
-    readonly property int micro: pick("motion.micro", 120)
-    readonly property int standard: pick("motion.standard", 200)
-    readonly property int sheetMs: pick("motion.sheet", 420)
+    readonly property int micro: pick("motion.micro", 90)
+    readonly property int standard: pick("motion.standard", 140)
+    readonly property int sheetMs: pick("motion.sheet", 300)
 
     // How long a popout takes to appear, resize and move between triggers. Leaving
     // is shorter: something arriving is watched, something leaving is already
     // being left, and a slow exit reads as the panel refusing to go.
-    readonly property int popoutMs: pick("motion.popout", 420)
-    readonly property int popoutExitMs: pick("motion.popoutExit", 260)
-    readonly property real dotStagger: pick("motion.dotStagger", 8)
+    readonly property int popoutMs: pick("motion.popout", 300)
+    readonly property int popoutExitMs: pick("motion.popoutExit", 180)
+    readonly property real dotStagger: pick("motion.dotStagger", 6)
 
     /*
      * Bezier easing points. Qt requires these in multiples of six — two control
@@ -122,7 +122,7 @@ Singleton {
      * use `soft` for those.
      */
     readonly property var gentle: pick("motion.gentle", [0.215, 0.61, 0.355, 1, 1, 1])
-    readonly property int expressiveMs: pick("motion.expressiveMs", 420)
+    readonly property int expressiveMs: pick("motion.expressiveMs", 300)
 
     function pick(keyPath, fallback) {
         let node = tokens;
