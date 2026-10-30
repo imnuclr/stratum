@@ -1,15 +1,4 @@
-import Quickshell
-
 /*
- * One settings panel per monitor; only the one on the focused monitor is ever
- * open, since Shell tracks a single panel name.
+ * One settings window, wherever the compositor puts it.
  */
-Variants {
-    model: Quickshell.screens
-
-    SettingsSheet {
-        required property ShellScreen modelData
-
-        monitor: modelData
-    }
-}
+SettingsSheet {}

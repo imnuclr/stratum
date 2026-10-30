@@ -94,7 +94,7 @@ Singleton {
         id: probe
 
         running: true
-        command: ["sh", "-c", 'PATH="$PATH:$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin"; command -v rembg']
+        command: ["sh", "-c", Bin.finder, "sh", "rembg"]
 
         stdout: StdioCollector {
             onStreamFinished: {

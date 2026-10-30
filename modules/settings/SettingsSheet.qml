@@ -1,21 +1,41 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import qs.components
 import qs.config
 import qs.services
 import qs.theme
 
 /*
- * Settings, as a panel in the middle of the screen.
+ * Settings, as a window of its own.
  *
- * Reached by choosing it, not by pointing at a corner, so it neither grows out of
- * an edge nor closes when the pointer leaves: you are expected to be reading it
- * and clicking around inside it, and to say when you are done — the close button,
- * Escape, or the gear that opened it.
+ * A real window rather than a panel on the shell's layer, so the compositor
+ * treats it as one: Super+Q closes it, Super+drag moves it, and it takes focus
+ * and stacks like an application. It stays open until you say you are done — the
+ * close button, Escape, Super+Q, or the gear that opened it.
+ *
+ * Its minimum and maximum size are the same, which is how a window tells Hyprland
+ * it is a dialog: it floats and opens centred instead of being tiled.
  */
-Sheet {
+FloatingWindow {
     id: root
+
+    readonly property bool open: Shell.openPanel === "settings"
+    readonly property int windowWidth: Config.get("settings.width", 960)
+    readonly property int windowHeight: Config.get("settings.height", 660)
+
+    visible: root.open
+    title: "Stratum Settings"
+    color: Theme.surface
+    minimumSize: Qt.size(root.windowWidth, root.windowHeight)
+    maximumSize: Qt.size(root.windowWidth, root.windowHeight)
+
+    // Closed from outside (Super+Q): the shell's own state has to follow.
+    onVisibleChanged: {
+        if (!root.visible && root.open)
+            Shell.close();
+    }
 
     readonly property int page: Math.max(0, root.pages.findIndex(p => p.label === Shell.settingsPage))
     // What is on screen. Follows `page` a moment later, once the old page has
@@ -38,13 +58,6 @@ Sheet {
         { label: "advanced", component: advancedPage }
     ]
 
-    name: "settings"
-    centered: true
-    travel: 28
-    slideSign: 1
-    sheetWidth: Math.min(Config.get("settings.width", 960), monitor.width - barOffset - Theme.space(6))
-    sheetHeight: Math.min(availableHeight, Config.get("settings.height", 660))
-
     onOpenChanged: {
         if (open) {
             lifetime.stop();
@@ -61,6 +74,12 @@ Sheet {
 
         interval: Theme.sheetMs + 100
         onTriggered: root.alive = false
+    }
+
+    Item {
+        anchors.fill: parent
+        focus: true
+        Keys.onEscapePressed: Shell.close()
     }
 
     Item {
