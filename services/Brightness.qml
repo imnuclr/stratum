@@ -62,24 +62,34 @@ Singleton {
     }
 
     /*
-     * A laptop backlight is not linear to the eye: the bottom few percent are the
-     * whole difference between dim and dark, and the top twenty barely register,
-     * so equal steps in the raw value jump at one end and do nothing at the other.
-     * Stepped in square-root space instead, so a step is about as visible wherever
-     * it lands, and never below 1% so the screen cannot be pressed to black.
-     * External monitors are left as they are.
+     * Key steps on a laptop panel: 1, 2, 3, 4, 6, 8, 10 at the dim end, where a
+     * single percent is the difference between dark and just visible, and an even
+     * 5% from there up (15, 20, 25 ... 100). The step is always to the next stop,
+     * so the numbers land on round values whichever way you are going and whatever
+     * the slider left it at. External monitors just move by the step they are given.
      */
+    readonly property var stops: [1, 2, 3, 4, 6, 8, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+
     function stepFor(id, delta) {
         const i = root.indexOf(id);
         if (i < 0)
             return;
         const now = root.displays[i].value;
-        if (root.internal) {
-            const next = Math.pow(Math.max(0, Math.min(1, Math.sqrt(now) + delta)), 2);
-            root.setFor(id, Math.max(0.01, next));
-        } else {
+        if (!root.internal) {
             root.setFor(id, now + delta);
+            return;
         }
+        const percent = now * 100;
+        let target;
+        if (delta > 0) {
+            target = root.stops.find(s => s > percent + 0.5) ?? 100;
+        } else {
+            target = 1;
+            for (const s of root.stops)
+                if (s < percent - 0.5)
+                    target = s;
+        }
+        root.setFor(id, target / 100);
     }
 
     /*
