@@ -95,6 +95,8 @@ Canvas {
      * retried until the pixels are really there, up to about two seconds.
      */
     property int attempts: 0
+    // True once dots for the current source are on the canvas.
+    property bool drawn: false
 
     Timer {
         id: retry
@@ -104,6 +106,7 @@ Canvas {
     }
 
     onSourceChanged: {
+        root.drawn = false;
         root.attempts = 0;
         requestPaint();
     }
@@ -359,5 +362,6 @@ Canvas {
                 ctx.fill();
             }
         }
+        root.drawn = true;
     }
 }

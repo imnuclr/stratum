@@ -81,11 +81,17 @@ Variants {
         property bool topIsA: true
 
         function show(url) {
-            // A switch during a fade: let the unfinished one land, then go again.
             if (fade.running) {
+                // A switch during a fade: let the unfinished one land, then go again.
                 fade.stop();
                 if (win.pending)
                     win.pending.opacity = 1;
+                win.pending = null;
+            } else if (win.pending) {
+                // The last one has not been drawn yet, so nothing is showing it:
+                // change what it will show rather than starting another behind it.
+                win.pending.source = url;
+                return;
             }
             const incoming = win.topIsA ? layerB : layerA;
             const outgoing = win.topIsA ? layerA : layerB;

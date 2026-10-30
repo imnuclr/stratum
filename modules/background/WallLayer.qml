@@ -46,12 +46,26 @@ Item {
         cache: false
 
         onStatusChanged: {
-            if (status === Image.Ready)
+            if (status === Image.Ready && root.look === "original")
+                root.ready();
+        }
+    }
+
+    // The dots take far longer to draw than the picture takes to load, and fading
+    // a canvas that has not been drawn yet shows whatever was there before — so for
+    // the dotted look the layer is only ready once they are on it.
+    Connections {
+        target: dots
+
+        function onDrawnChanged() {
+            if (dots.drawn && root.look === "dots")
                 root.ready();
         }
     }
 
     DotImage {
+        id: dots
+
         anchors.fill: parent
         visible: root.look === "dots"
         source: root.source.toString()
