@@ -64,7 +64,7 @@ Singleton {
 
     function quietCompositor() {
         if (Hypr.lua) {
-            Hyprland.dispatch("hl.config({ animations = { enabled = false }, decoration = { blur = { enabled = false }, shadow = { enabled = false } } })");
+            Hypr.configure("{ animations = { enabled = false }, decoration = { blur = { enabled = false }, shadow = { enabled = false } } }");
         } else {
             Quickshell.execDetached(["hyprctl", "--batch",
                 "keyword animations:enabled 0 ; keyword decoration:blur:enabled 0 ; keyword decoration:shadow:enabled 0"]);
