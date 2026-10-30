@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.services
 import qs.theme
 
@@ -22,7 +23,39 @@ Rectangle {
     readonly property var extraActions: (root.notification?.actions ?? [])
         .filter(a => a.identifier !== "default")
 
-    implicitHeight: content.implicitHeight + Theme.space(3) * 2
+    /*
+     * The sending application's icon, wherever it can be found: what the
+     * notification names, a file it points at, the icon of its desktop entry,
+     * or an icon named after the app. Empty when there is none.
+     */
+    readonly property string iconSource: {
+        const n = root.notification;
+        if (!n)
+            return "";
+        const named = n.appIcon ?? "";
+        if (named.startsWith("/"))
+            return `file://${named}`;
+        if (named.startsWith("file://") || named.startsWith("image://"))
+            return named;
+        const tries = [named];
+        const entry = n.desktopEntry ? DesktopEntries.byId(n.desktopEntry) : null;
+        if (entry?.icon)
+            tries.push(entry.icon);
+        if (n.desktopEntry)
+            tries.push(n.desktopEntry);
+        if (n.appName)
+            tries.push(n.appName.toLowerCase(), n.appName.toLowerCase().replace(/\s+/g, "-"));
+        for (const t of tries) {
+            if (!t)
+                continue;
+            const p = Quickshell.iconPath(t, true);
+            if (p && p.length > 0)
+                return p;
+        }
+        return "";
+    }
+
+    implicitHeight: Math.max(content.implicitHeight, badge.height) + Theme.space(3) * 2
 
     radius: Theme.rTile
     color: hover.hovered ? Qt.lighter(Theme.deep, 3) : Theme.deep
@@ -41,10 +74,45 @@ Rectangle {
         }
     }
 
+    // The app, as its own icon dithered into dots — the same treatment album art
+    // gets, so a Discord message reads as Discord at a glance.
+    Rectangle {
+        id: badge
+
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.margins: Theme.space(3)
+        width: 40
+        height: 40
+        radius: 12
+        color: Qt.lighter(Theme.deep, 2.4)
+
+        DotImage {
+            anchors.centerIn: parent
+            width: 34
+            height: 34
+            visible: root.iconSource.length > 0
+            source: root.iconSource
+            cell: 2.4
+            dotScale: 0.46
+            halftone: true
+            colored: true
+        }
+
+        DotIcon {
+            anchors.centerIn: parent
+            width: 26
+            height: 26
+            visible: root.iconSource.length === 0
+            name: "bell"
+            color: Theme.fgBright
+        }
+    }
+
     Column {
         id: content
 
-        anchors.left: parent.left
+        anchors.left: badge.right
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: Theme.space(3)
