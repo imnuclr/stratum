@@ -5,6 +5,7 @@ import qs.components
 import qs.config
 import qs.services
 import qs.theme
+import qs.modules.bar
 import qs.modules.bar.popouts
 
 /*
