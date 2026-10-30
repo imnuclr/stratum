@@ -266,12 +266,48 @@ SettingsPage {
                 readonly property var values: ["config", "off", "light", "medium", "strong"]
 
                 model: ["as in config", "off", "light", "medium", "strong"]
-                current: Math.max(0, values.indexOf(Decor.blur))
+                // A preset is lit only when the slider sits exactly on it.
+                current: Decor.blur === "config" ? 0
+                    : Math.max(-1, ["off", "light", "medium", "strong"].findIndex(n => Decor.presets[n] === Decor.amount) + 1) || -1
                 onPicked: index => {
-                    Config.set("windows.blur", values[index]);
-                    // Back to the config's own values.
-                    if (index === 0)
+                    if (index === 0) {
+                        Config.set("windows.blur", "config");
+                        // Back to the config's own values.
                         Quickshell.execDetached(["hyprctl", "reload"]);
+                    } else {
+                        Decor.setAmount(Decor.presets[values[index]]);
+                    }
+                }
+            }
+        }
+
+        SettingRow {
+            visible: Decor.blur !== "config"
+            title: "Blur strength"
+            detail: Decor.amount === 0 ? "Off" : `${Decor.amount}%`
+
+            Row {
+                spacing: Theme.space(3)
+
+                LevelSlider {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 240
+                    count: 25
+                    step: 0.05
+                    value: Decor.amount / 100
+                    onMoved: v => Decor.setAmount(v * 100)
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 40
+                    horizontalAlignment: Text.AlignRight
+                    text: `${Decor.amount}%`
+                    color: Theme.fg
+                    font.family: Theme.fontUi
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                    renderType: Text.NativeRendering
                 }
             }
         }

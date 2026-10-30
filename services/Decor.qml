@@ -17,13 +17,31 @@ import qs.services
 Singleton {
     id: root
 
-    // "config", "off", "light", "medium" or "strong".
-    readonly property string blur: Config.get("windows.blur", "config")
-    readonly property var strengths: ({
-        light: { size: 4, passes: 2 },
-        medium: { size: 8, passes: 3 },
-        strong: { size: 12, passes: 4 }
-    })
+    /*
+     * Blur as a percentage, 0 for none, or "config" to leave Hyprland's own.
+     * The named strengths of earlier versions are read as their percentages.
+     */
+    readonly property var presets: ({ off: 0, light: 30, medium: 60, strong: 90 })
+    readonly property var raw: Config.get("windows.blur", "config")
+    readonly property string blur: root.raw === "config" ? "config" : "custom"
+    readonly property int amount: typeof root.raw === "number"
+        ? Math.max(0, Math.min(100, Math.round(root.raw)))
+        : (root.presets[root.raw] ?? 60)
+
+    function setAmount(percent) {
+        Config.set("windows.blur", Math.max(0, Math.min(100, Math.round(percent))));
+    }
+
+    onAmountChanged: blurLater.restart()
+
+    // Dragging the slider changes it many times a second; Hyprland is asked
+    // once it settles.
+    Timer {
+        id: blurLater
+
+        interval: 120
+        onTriggered: root.apply()
+    }
 
     onBlurChanged: root.apply()
     Component.onCompleted: {
@@ -92,8 +110,10 @@ Singleton {
     function apply() {
         if (root.blur === "config" || Power.noEffects || GameMode.on)
             return;
-        const on = root.blur !== "off";
-        const s = root.strengths[root.blur] ?? root.strengths.medium;
+        // 1% is a whisper of blur, 100% a heavy frosted glass: the radius
+        // grows steadily and more passes are added as it does.
+        const on = root.amount > 0;
+        const s = { size: Math.max(1, Math.round(1 + root.amount * 0.15)), passes: Math.max(1, Math.min(4, 1 + Math.floor(root.amount / 30))) };
         if (Hypr.lua) {
             Hypr.configure(on
                 ? `{ decoration = { blur = { enabled = true, size = ${s.size}, passes = ${s.passes} } } }`
