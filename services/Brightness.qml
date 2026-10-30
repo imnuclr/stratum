@@ -64,11 +64,11 @@ Singleton {
     /*
      * Key steps on a laptop panel: 1, 2, 3, 4, 6, 8, 10 at the dim end, where a
      * single percent is the difference between dark and just visible, and an even
-     * 5% from there up (15, 20, 25 ... 100). The step is always to the next stop,
+     * 2% from there up (12, 14, 16 ... 100). The step is always to the next stop,
      * so the numbers land on round values whichever way you are going and whatever
      * the slider left it at. External monitors just move by the step they are given.
      */
-    readonly property var stops: [1, 2, 3, 4, 6, 8, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+    readonly property var stops: [1, 2, 3, 4, 6, 8, 10].concat(Array.from({ length: 45 }, (_, i) => 12 + i * 2))
 
     function stepFor(id, delta) {
         const i = root.indexOf(id);
