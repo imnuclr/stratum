@@ -170,6 +170,7 @@ Singleton {
     Process {
         running: true
         command: ["sh", "-c",
+            'PATH="$PATH:$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin"; ' +
             "command -v hyprsunset >/dev/null && echo night; " +
             "command -v gpu-screen-recorder >/dev/null && echo recorder"]
 
