@@ -46,6 +46,8 @@ ShellRoot {
         Cutout.enabled;
         // Reads the binds now, which also brings an old binds file up to date.
         Binds.refresh();
+        // Puts your chosen window blur in place.
+        Decor.blur;
     }
 
     // Quickshell singletons are lazy, and a lazy singleton never registers its

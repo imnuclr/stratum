@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import qs.components
 import qs.config
 import qs.services
@@ -206,6 +207,29 @@ SettingsPage {
                         if (/^#([0-9a-fA-F]{6})$/.test(hex))
                             Theme.setUser("color.accent", hex.toUpperCase());
                     }
+                }
+            }
+        }
+    }
+
+    SettingCard {
+        title: "windows"
+        footnote: "Applied to Hyprland straight away, and kept after it reloads. \"As in config\" leaves your Hyprland config in charge."
+
+        SettingRow {
+            title: "Blur"
+            detail: "How strongly see-through windows blur what is behind them."
+
+            Segmented {
+                readonly property var values: ["config", "off", "light", "medium", "strong"]
+
+                model: ["as in config", "off", "light", "medium", "strong"]
+                current: Math.max(0, values.indexOf(Decor.blur))
+                onPicked: index => {
+                    Config.set("windows.blur", values[index]);
+                    // Back to the config's own values.
+                    if (index === 0)
+                        Quickshell.execDetached(["hyprctl", "reload"]);
                 }
             }
         }

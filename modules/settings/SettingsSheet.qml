@@ -101,6 +101,9 @@ FloatingWindow {
     }
 
     onOpenChanged: {
+        // Each visit starts with an empty search.
+        if (!open)
+            search.text = "";
         if (open) {
             lifetime.stop();
             root.alive = true;
