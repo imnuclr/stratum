@@ -58,7 +58,7 @@ Rectangle {
     implicitHeight: Math.max(content.implicitHeight, badge.height) + Theme.space(3) * 2
 
     radius: Theme.rTile
-    color: hover.hovered ? Qt.lighter(Theme.deep, 3) : Theme.deep
+    color: hover.hovered ? Theme.surfaceTop : Theme.surfaceHi
     border.width: 1
     border.color: hover.hovered ? Theme.fg : Theme.outline
 
@@ -86,7 +86,7 @@ Rectangle {
         width: 40
         height: 40
         radius: 12
-        color: Qt.lighter(Theme.deep, 2.4)
+        color: Theme.surfaceTop
 
         DotImage {
             anchors.centerIn: parent

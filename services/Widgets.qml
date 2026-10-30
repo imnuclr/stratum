@@ -43,7 +43,7 @@ Singleton {
         "date": { label: "calendar", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "square", style: "tile", options: [] },
         "gpu": { label: "gpu", icon: "scan", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "media": { label: "now playing", icon: "play", w: 31, h: 15, minW: 20, minH: 10, shape: "square", style: "tile",
-            options: [{ key: "art", label: "cover", values: ["dots", "colour", "plain"] }] },
+            options: [{ key: "art", label: "cover", values: ["dots", "colour"] }] },
         "stats": { label: "system", icon: "terminal", w: 47, h: 15, minW: 26, minH: 10, shape: "square", style: "tile", options: [] },
         "cpu": { label: "cpu", icon: "terminal", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "memory": { label: "memory", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },

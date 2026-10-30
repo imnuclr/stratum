@@ -91,6 +91,12 @@ PanelWindow {
     // Panels opened by hover keep themselves alive while hovered; Shell counts
     // the holds and closes once nothing is holding.
     property bool hoverDismiss: false
+    /*
+     * Whether a hover-dismissed sheet opened by a click closes on its own if the
+     * pointer never reaches it. Off, it waits for the pointer: closing starts only
+     * once it has been over the sheet and left.
+     */
+    property bool adoptOnOpen: true
 
     /*
      * Closes on a click anywhere outside the card, for a sheet that was opened by
@@ -153,7 +159,7 @@ PanelWindow {
     visible: true
 
     onOpenChanged: {
-        if (open && root.hoverDismiss)
+        if (open && root.hoverDismiss && root.adoptOnOpen)
             Shell.armDismiss();
         if (!open) {
             verify.stop();

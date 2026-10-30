@@ -180,7 +180,7 @@ Variants {
                     width: toast.pillWidth + (toast.width - toast.pillWidth) * toast.p
                     height: toast.pillHeight + (toast.fullHeight - toast.pillHeight) * toast.p
                     radius: Math.min(height / 2, Theme.rTile)
-                    color: linger.hovered ? Qt.lighter(Theme.deep, 3) : Theme.deep
+                    color: linger.hovered ? Theme.surfaceHi : Theme.surface
                     border.width: 1
                     border.color: linger.hovered ? Theme.fg : Theme.outline
                     opacity: toast.slot

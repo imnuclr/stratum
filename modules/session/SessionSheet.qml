@@ -23,6 +23,9 @@ Sheet {
     originX: Shell.openFrom === "bar" ? 0 : 1
     originY: 1
     clickDismiss: true
+    // Once the pointer has been on it, leaving it closes it.
+    hoverDismiss: true
+    adoptOnOpen: false
     sheetWidth: Config.get("session.width", 300)
     sheetHeight: body.implicitHeight + Theme.space(4) * 2
 
