@@ -27,6 +27,10 @@ Singleton {
     property bool ready: false
     property string error: ""
     property var tokens: ({})
+    // Colours worked out from the wallpaper (services/Palette.qml), laid over
+    // everything else when that is switched on, and empty when it is not.
+    property var generated: ({})
+    onGeneratedChanged: root.tokens = Config.merge(Config.merge(root.preset, root.user), root.generated)
 
     // The user's overrides held in memory, for the same reason Config holds its
     // own: a write that has not landed must not be overwritten by a re-read.
@@ -158,7 +162,7 @@ Singleton {
         root.preset = preset;
         if (!root.dirty)
             root.user = user;
-        root.tokens = Config.merge(preset, root.user);
+        root.tokens = Config.merge(Config.merge(preset, root.user), root.generated);
         root.ready = true;
     }
 
@@ -212,7 +216,7 @@ Singleton {
     function commitUser(next) {
         root.user = next;
         root.dirty = true;
-        root.tokens = Config.merge(root.preset, next);
+        root.tokens = Config.merge(Config.merge(root.preset, next), root.generated);
         writer.restart();
     }
 
