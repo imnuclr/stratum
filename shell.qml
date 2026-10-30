@@ -96,6 +96,7 @@ ShellRoot {
     Lock {}
     Settings {}
     WallpaperMenus {}
+    WallpaperPickers {}
     Shortcuts {}
 
     Freeze {}

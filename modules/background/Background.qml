@@ -50,7 +50,7 @@ Variants {
 
         color: Theme.bg
 
-        // Hold on the bare desktop for a moment and the wallpaper page opens.
+        // Hold on the bare desktop for a moment and the wallpaper picker opens.
         Item {
             anchors.fill: parent
             z: 100
@@ -58,8 +58,7 @@ Variants {
             TapHandler {
                 longPressThreshold: 0.6
                 onLongPressed: {
-                    Shell.settingsPage = "wallpaper";
-                    Shell.open("settings", win.modelData.name);
+                    Shell.open("picker", win.modelData.name);
                 }
             }
         }
