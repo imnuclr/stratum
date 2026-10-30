@@ -17,6 +17,7 @@ import qs.modules.hotzones
 import qs.modules.lock
 import qs.modules.notifications
 import qs.modules.osd
+import qs.modules.widgets
 import qs.modules.session
 import qs.modules.settings
 
@@ -86,6 +87,7 @@ ShellRoot {
 
     // Bottom of the stack, so everything else draws over it.
     Background {}
+    WidgetLayer {}
     Bar {}
     Dashboard {}
     Control {}
