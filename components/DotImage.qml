@@ -322,6 +322,8 @@ Canvas {
 
         ctx.fillStyle = dotColor;
         ctx.globalAlpha = Math.max(0.05, Math.min(1, dotAlpha));
+        const groups = new Map();
+        ctx.beginPath();
 
         for (let y = 0; y < rows; y++) {
             for (let x = 0; x < cols; x++) {
@@ -354,17 +356,44 @@ Canvas {
                     r = radius;
                 }
 
+                const cxp = x * cell + cell / 2;
+                const cyp = y * cell + cell / 2;
+
                 if (colored) {
                     // Dark ink on a light ground has no colour worth showing — it is
                     // black — so it takes the dot colour; coloured areas keep theirs.
+                    // Colours are rounded to a coarse step so the dots fall into a
+                    // few hundred groups rather than one each.
                     const dark = flip && Math.max(data[i], data[i + 1], data[i + 2]) < 70;
-                    ctx.fillStyle = dark ? dotColor : root.lifted(data[i], data[i + 1], data[i + 2], 0.62);
+                    const style = dark ? dotColor : root.lifted(data[i] & 0xF0, data[i + 1] & 0xF0, data[i + 2] & 0xF0, 0.62);
+                    let group = groups.get(style);
+                    if (!group) {
+                        group = [];
+                        groups.set(style, group);
+                    }
+                    group.push(cxp, cyp, r);
+                } else {
+                    ctx.moveTo(cxp + r, cyp);
+                    ctx.arc(cxp, cyp, r, 0, 2 * Math.PI);
                 }
+            }
+        }
 
+        // One fill per colour instead of one per dot. A wallpaper is tens of
+        // thousands of dots, and a fill each made repainting it — which the rings
+        // ask for continuously as they turn — take long enough to stall the shell.
+        if (colored) {
+            for (const [style, group] of groups) {
+                ctx.fillStyle = style;
                 ctx.beginPath();
-                ctx.arc(x * cell + cell / 2, y * cell + cell / 2, r, 0, 2 * Math.PI);
+                for (let k = 0; k < group.length; k += 3) {
+                    ctx.moveTo(group[k] + group[k + 2], group[k + 1]);
+                    ctx.arc(group[k], group[k + 1], group[k + 2], 0, 2 * Math.PI);
+                }
                 ctx.fill();
             }
+        } else {
+            ctx.fill();
         }
         root.drawn = true;
     }

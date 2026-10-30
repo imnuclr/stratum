@@ -23,7 +23,9 @@ Item {
     property bool atStart: true
     // How far the colour stays solid: the bar and the margin around it.
     property real solid: 66
-    property real dissolve: 56
+    // How far it dissolves outward. Wider while the workspace is changing, so
+    // what is sliding past is feathered well before it reaches the bar.
+    property real dissolve: 88
 
     readonly property real total: root.solid + root.dissolve
 
@@ -49,12 +51,18 @@ Item {
             root.moving = true;
             hold.restart();
         }
+
+        function onActiveToplevelChanged() {
+            // A window brought forward from another workspace slides in too.
+            root.moving = true;
+            hold.restart();
+        }
     }
 
     Timer {
         id: hold
 
-        interval: 650
+        interval: 900
         onTriggered: root.moving = false
     }
 
