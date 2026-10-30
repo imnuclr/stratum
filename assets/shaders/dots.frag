@@ -24,6 +24,7 @@ layout(std140, binding = 0) uniform buf {
     float mono;     // 1 for dots without colour
     float lo;       // tones the picture really spans, for mono
     float hi;
+    float ink;      // 1 on a light theme: dark dots on paper, sized by shade
 };
 
 layout(binding = 1) uniform sampler2D source;
@@ -41,7 +42,24 @@ void main() {
     float v = luma;
     float radius;
     vec3 colour;
-    if (mono > 0.5) {
+    if (ink > 0.5) {
+        // Printed rather than lit: the darker the picture, the bigger the dot,
+        // and highlights are left as clean paper instead of a grey wash of
+        // large pale dots.
+        float shade = mono > 0.5
+            ? 1.0 - clamp((luma - lo) / max(hi - lo, 0.12), 0.0, 1.0)
+            : 1.0 - luma;
+        radius = shade < 0.06 ? 0.0 : cell * dotScale * (0.25 + 0.75 * sqrt(shade));
+        if (mono > 0.5) {
+            colour = vec3(0.08);
+        } else {
+            // Same hue, brightness held under a ceiling so every dot reads
+            // against white.
+            float peak = max(max(c.r, c.g), c.b);
+            const float most = 0.42;
+            colour = peak <= most ? c : c * (most / peak);
+        }
+    } else if (mono > 0.5) {
         v = clamp((luma - lo) / max(hi - lo, 0.12), 0.0, 1.0);
         radius = cell * dotScale * sqrt(v);
         colour = vec3(1.0);

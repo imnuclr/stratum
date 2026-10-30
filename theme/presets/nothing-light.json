@@ -3,6 +3,7 @@
   "mode": "light",
   "color": {
     "bg": "#DCDCDC",
+    "wall": "#F4F4F2",
     "panel": "#E6E6E6",
     "surface": "#FAFAFA",
     "surfaceHi": "#EDEDED",

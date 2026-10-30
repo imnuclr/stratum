@@ -48,7 +48,7 @@ Variants {
         anchors.left: true
         anchors.right: true
 
-        color: Theme.bg
+        color: Theme.wall
 
         // Hold on the bare desktop for a moment and the wallpaper picker opens.
         Item {

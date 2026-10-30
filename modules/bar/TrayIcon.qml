@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.components
+import qs.services
 import qs.theme
 import qs.utils
 
@@ -15,6 +16,10 @@ Item {
     required property var item
     property int edge: Edges.Bottom
     property real size: 17
+    // Where hovering shows the item's popout; empty for no popout.
+    property string monitorName: ""
+    property bool vertical: false
+    readonly property string popoutName: `tray:${root.item?.id ?? ""}`
 
     signal held(bool down)
 
@@ -44,13 +49,38 @@ Item {
         visible: icon.status !== Image.Ready
     }
 
+    /*
+     * Hovering shows what the item is and its menu as a popout, the same as
+     * every other icon in the bar; clicking still does what the app asks.
+     */
+    HoverHandler {
+        enabled: root.monitorName.length > 0
+
+        onHoveredChanged: {
+            if (hovered) {
+                Popouts.trayItem = root.item;
+                const centre = root.mapToItem(null, root.width / 2, root.height / 2);
+                if (root.vertical)
+                    Popouts.showAtY(root.popoutName, centre.y, root.monitorName);
+                else
+                    Popouts.show(root.popoutName, centre.x, root.monitorName);
+            } else {
+                Popouts.release(root.popoutName);
+            }
+        }
+    }
+
     MouseArea {
         anchors.fill: parent
         anchors.margins: -3
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
 
-        onPressed: root.held(true)
+        onPressed: {
+            root.held(true);
+            if (root.monitorName.length > 0)
+                Popouts.hide();
+        }
         onReleased: root.held(false)
         onCanceled: root.held(false)
 
