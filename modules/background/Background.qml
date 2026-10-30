@@ -79,14 +79,15 @@ Variants {
         // ever being set.
         property var pending: null
         property bool topIsA: true
+        property string queued: ""
 
         function show(url) {
             if (fade.running) {
-                // A switch during a fade: let the unfinished one land, then go again.
-                fade.stop();
-                if (win.pending)
-                    win.pending.opacity = 1;
-                win.pending = null;
+                // A switch during a fade waits for it to finish and only the latest
+                // is kept. Cutting the fade short jumped it to full in one frame,
+                // which is a hard cut whenever wallpapers are changed quickly.
+                win.queued = url.toString();
+                return;
             } else if (win.pending) {
                 // The last one has not been drawn yet, so nothing is showing it:
                 // change what it will show rather than starting another behind it.
@@ -105,8 +106,10 @@ Variants {
 
         onWantedChanged: {
             const current = win.topIsA ? layerA : layerB;
-            if (win.wanted === current.source)
+            if (win.wanted === current.source) {
+                win.queued = "";
                 return;
+            }
             win.show(win.wanted);
         }
 
@@ -200,6 +203,13 @@ Variants {
                 const old = win.topIsA ? layerB : layerA;
                 old.source = "";
                 win.pending = null;
+                if (win.queued.length > 0) {
+                    const next = win.queued;
+                    win.queued = "";
+                    const top = win.topIsA ? layerA : layerB;
+                    if (next !== top.source.toString())
+                        win.show(next);
+                }
             }
         }
     }
