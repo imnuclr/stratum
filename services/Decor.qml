@@ -68,7 +68,16 @@ Singleton {
         const inactive = root.rgba(c.bgTop, "aa");
         const glow = root.rgba(c.accent, "55");
         if (Hypr.lua) {
-            Hyprland.dispatch(`hl.config({ general = { col = { active_border = "${active}", inactive_border = "${inactive}" } }, decoration = { shadow = { color = "${glow}" } } })`);
+            /*
+             * The glow took and the borders did not: a gradient written as one
+             * string is not what the Lua config takes. A single colour is sent
+             * first, which it does take, then the gradient as a table; if that
+             * form is refused too, the solid colour stays.
+             */
+            const solid = root.rgba(c.accent, "ff");
+            Hyprland.dispatch(`hl.config({ decoration = { shadow = { color = "${glow}" } } })`);
+            Hyprland.dispatch(`hl.config({ general = { col = { active_border = "${solid}", inactive_border = "${inactive}" } } })`);
+            Hyprland.dispatch(`hl.config({ general = { col = { active_border = { colors = { "${solid}", "${root.rgba(c.tertiary, "ff")}" }, angle = 45 } } } })`);
         } else {
             Quickshell.execDetached(["hyprctl", "--batch",
                 `keyword general:col.active_border ${active} ; keyword general:col.inactive_border ${inactive} ; keyword decoration:shadow:color ${glow}`]);
