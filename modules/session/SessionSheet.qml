@@ -18,8 +18,11 @@ Sheet {
     id: root
 
     name: "session"
-    originX: 1
+    // Beside whatever opened it: the bar's edge when asked for from the bar, the
+    // control centre's corner otherwise.
+    originX: Shell.openFrom === "bar" ? 0 : 1
     originY: 1
+    clickDismiss: true
     sheetWidth: Config.get("session.width", 300)
     sheetHeight: body.implicitHeight + Theme.space(4) * 2
 

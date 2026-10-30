@@ -300,6 +300,12 @@ Item {
 
                 onWantChanged: adopt.restart()
 
+                // The panel is centred on its trigger using its own height, and
+                // that height is the new content's only once it has loaded. It
+                // was latched at hover time, against whatever was loaded before,
+                // so a popout could open noticeably off its icon.
+                onLoaded: frame.relatch()
+
                 source: {
                     switch (loader.have) {
                     case "network":

@@ -48,7 +48,36 @@ Sheet {
      * that had just clicked — so it closed. Above the panel, the panel never
      * moves.
      */
-    satelliteHeight: Shell.expandedChip.length > 0 ? Math.round(listLoader.implicitHeight + Theme.space(4) * 2) : 0
+    /*
+     * The list stays in place while it folds away. Its height and its content
+     * used to drop to nothing the instant a chip was collapsed, which cut the
+     * card off mid-fade: it disappeared instead of closing.
+     */
+    property string lastChip: ""
+    property bool satelliteShown: false
+
+    Connections {
+        target: Shell
+
+        function onExpandedChipChanged() {
+            if (Shell.expandedChip.length > 0) {
+                root.lastChip = Shell.expandedChip;
+                fold.stop();
+                root.satelliteShown = true;
+            } else {
+                fold.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: fold
+
+        interval: Theme.sheetMs + 40
+        onTriggered: root.satelliteShown = false
+    }
+
+    satelliteHeight: root.satelliteShown ? Math.round(listLoader.implicitHeight + Theme.space(4) * 2) : 0
 
     satellite: Rectangle {
         id: listCard
@@ -89,8 +118,8 @@ Sheet {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.margins: Theme.space(4)
-            active: Shell.expandedChip.length > 0
-            sourceComponent: Shell.expandedChip === "network" ? networkList : deviceList
+            active: root.satelliteShown
+            sourceComponent: root.lastChip === "network" ? networkList : deviceList
         }
     }
 

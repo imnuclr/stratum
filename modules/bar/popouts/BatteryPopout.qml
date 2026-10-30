@@ -15,12 +15,6 @@ Item {
     implicitWidth: 286
     implicitHeight: body.implicitHeight
 
-    readonly property var blurbs: ({
-        "power-saver": "Quietest and longest-lasting. The processor is held back.",
-        "balanced": "The everyday default.",
-        "performance": "Fastest, and warmest. Uses the most power."
-    })
-
     Column {
         id: body
 
@@ -81,16 +75,6 @@ Item {
 
                 width: parent.width
             }
-        }
-
-        SectionLabel {
-            width: body.width
-            wrapMode: Text.WordWrap
-            dim: true
-            font.capitalization: Font.MixedCase
-            font.letterSpacing: 0
-            font.pixelSize: 12
-            text: root.blurbs[Power.profile] ?? ""
         }
     }
 }
