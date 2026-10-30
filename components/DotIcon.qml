@@ -14,9 +14,13 @@ Canvas {
     id: root
 
     property string name: ""
-    // The standard dot, set a little closer than elsewhere so curves still read.
-    property real dotPx: Theme.dot
-    property real pitchPx: Theme.dot * 1.6
+    /*
+     * The standard dot on an icon big enough for it, finer on a small one. An
+     * icon needs about fourteen dots across its outline to keep its shape; at the
+     * standard size a small icon got five or six and turned into a scatter.
+     */
+    property real dotPx: Math.min(Theme.dot, Math.min(root.width, root.height) / 20)
+    property real pitchPx: root.dotPx * 1.6
     property color color: Theme.fg
 
     implicitWidth: 64

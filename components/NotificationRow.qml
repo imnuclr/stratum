@@ -93,8 +93,9 @@ Rectangle {
             height: 34
             visible: root.iconSource.length > 0
             source: root.iconSource
-            cell: 2.4
-            dotScale: 0.46
+            // Finer than album art: an app icon is small and its shape is the point.
+            cell: 1.6
+            dotScale: 0.5
             halftone: true
             colored: true
         }
