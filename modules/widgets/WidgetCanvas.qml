@@ -47,7 +47,7 @@ PanelWindow {
      * when the desktop is clear. Edit mode always shows them.
      */
     readonly property bool shown: win.editing
-        || (Config.get("widgets.enabled", true) && (!win.covered || !Config.get("widgets.hideCovered", true)))
+        || (Config.get("widgets.enabled", true) && !GameMode.on && (!win.covered || !Config.get("widgets.hideCovered", true)))
 
     // Clear of the bar, with a margin.
     readonly property bool barSide: Config.forMonitor(win.monitor.name, "bar.orientation", "vertical") === "vertical"

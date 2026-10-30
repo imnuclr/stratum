@@ -361,6 +361,7 @@ Singleton {
         };
 
         const out = {};
+        const raw = {};
         const re = /hl\.bind\s*\(/g;
         let m;
         while ((m = re.exec(src)) !== null) {
@@ -403,17 +404,114 @@ Singleton {
             // and Hyprland lists its binds in the order they were made.
             const at = `${root.maskOf(mods)}:${root.norm(key)}`;
             out[at] = [...(out[at] ?? []), words];
+            raw[at] = [...(raw[at] ?? []), combo.trim()];
         }
+        root.rawCombos = raw;
         return out;
+    }
+
+    /*
+     * Your config as Hyprland runs it: hyprland.lua, with each dofile or
+     * require replaced by the file it loads, where it loads it. Reading every
+     * .lua file in the folder instead picked up files nothing loads (an old
+     * copy, an example) and put binds in the wrong order, so a key bound in
+     * two places was described by the wrong one.
+     */
+    function loadOrder(dump) {
+        const files = {};
+        const parts = dump.split(/\n@@FILE /);
+        for (const part of parts.slice(1)) {
+            const nl = part.indexOf("\n");
+            files[part.slice(0, nl).trim()] = part.slice(nl + 1);
+        }
+        if (files["hyprland.lua"] === undefined)
+            return Object.values(files).join("\n");
+
+        const home = Quickshell.env("HOME");
+        const dir = root.hyprDir;
+        const resolve = (how, arg) => {
+            // Strings joined with .., and os.getenv("HOME").
+            const path = arg.split("..").map(p => {
+                p = p.trim();
+                if (/^os\.getenv\s*\(\s*["']HOME["']\s*\)$/.test(p))
+                    return home;
+                const q = /^["']([^"']*)["']$/.exec(p);
+                return q ? q[1] : "";
+            }).join("").replace(/^~/, home);
+            const rel = path.startsWith(dir + "/") ? path.slice(dir.length + 1) : path;
+            if (how === "dofile")
+                return files[rel] !== undefined ? rel : null;
+            const mod = rel.replace(/\./g, "/");
+            for (const c of [`${mod}.lua`, `${mod}/init.lua`, `lua/${mod}.lua`, `lua/${mod}/init.lua`])
+                if (files[c] !== undefined)
+                    return c;
+            return null;
+        };
+        const seen = {};
+        const expand = (name, depth) => {
+            if (seen[name] || depth > 12)
+                return "";
+            seen[name] = true;
+            const src = files[name];
+            const call = /\b(dofile|require)\s*(\(|["'])/g;
+            let out = "", last = 0, m;
+            while ((m = call.exec(src)) !== null) {
+                let arg, end;
+                if (m[2] === "(") {
+                    end = root.closing(src, call.lastIndex);
+                    arg = src.slice(call.lastIndex, end);
+                    end += 1;
+                } else {
+                    // require "name", without brackets.
+                    const close = src.indexOf(m[2], call.lastIndex);
+                    if (close < 0)
+                        break;
+                    arg = src.slice(call.lastIndex - 1, close + 1);
+                    end = close + 1;
+                }
+                const target = resolve(m[1], arg);
+                if (target) {
+                    out += src.slice(last, m.index) + `\n${expand(target, depth + 1)}\n`;
+                    last = end;
+                }
+                call.lastIndex = end;
+            }
+            return out + src.slice(last);
+        };
+        return expand("hyprland.lua", 0);
+    }
+
+    // Each combination exactly as your config spells it, keyed like luaWords.
+    property var rawCombos: ({})
+
+    /*
+     * Every spelling a combination might have been bound with. hl.unbind
+     * matches the key's case exactly, so "SUPER + M" does not remove a bind
+     * made as "SUPER + m" — which left a config's own bind firing alongside
+     * ours. Your config's own spelling first, then the usual variants.
+     */
+    function unbindSpellings(mods, key) {
+        const at = `${root.maskOf(mods)}:${root.norm(key)}`;
+        const k = String(key);
+        const keys = [k, k.toUpperCase(), k.toLowerCase(), k.charAt(0).toUpperCase() + k.slice(1).toLowerCase()];
+        const all = [...(root.rawCombos[at] ?? []), ...keys.map(x => root.combo(mods, x))];
+        return all.filter((v, i) => all.indexOf(v) === i);
     }
 
     Process {
         id: luaSource
 
-        command: ["sh", "-c", `find -L "${root.hyprDir}" -maxdepth 3 -name '*.lua' -not -name 'stratum-binds.lua' -exec cat {} + 2>/dev/null`]
+        // Every Lua file, each under a marker with its path, for loadOrder().
+        command: ["sh", "-c", `cd "$1" 2>/dev/null || exit 0
+            find -L . -maxdepth 4 -name '*.lua' -not -name 'stratum-binds.lua' | while read -r f; do
+                printf '\n@@FILE %s\n' "\${f#./}"; cat "$f"
+            done`, "sh", root.hyprDir]
 
         stdout: StdioCollector {
-            onStreamFinished: root.luaWords = root.parseLua(text)
+            onStreamFinished: {
+                root.luaWords = root.parseLua(root.loadOrder(text));
+                root.heal();
+            }
         }
     }
 
@@ -605,7 +703,8 @@ Singleton {
             "if type(hl.unbind) == \"function\" then"
         ];
         for (const b of list)
-            out.push(`    pcall(hl.unbind, "${root.combo(b.mods, b.key)}")`);
+            for (const spelling of root.unbindSpellings(b.mods, b.key))
+                out.push(`    pcall(hl.unbind, "${spelling.replace(/"/g, "")}")`);
         out.push("end", "");
         for (const b of list) {
             if (b.action === "app") {
@@ -652,6 +751,31 @@ Singleton {
             reader.running = true;
         if (!luaSource.running)
             luaSource.running = true;
+    }
+
+    /*
+     * Rewrites the binds file when it is not what the shell would write now —
+     * an older version's file, or one written before your config's spellings
+     * were known. Compared first, so an up-to-date file is never touched and
+     * Hyprland is not reloaded for nothing.
+     */
+    property bool healed: false
+
+    function heal() {
+        if (root.healed || !root.lua)
+            return;
+        root.healed = true;
+        disk.path = `${root.hyprDir}/stratum-binds.lua`;
+    }
+
+    FileView {
+        id: disk
+
+        preload: true
+        onLoaded: {
+            if (disk.text() !== root.luaText(root.own))
+                root.write(root.own);
+        }
     }
 
     FileView {

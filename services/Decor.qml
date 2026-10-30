@@ -29,7 +29,7 @@ Singleton {
     Component.onCompleted: root.apply()
 
     function apply() {
-        if (root.blur === "config" || Power.noEffects)
+        if (root.blur === "config" || Power.noEffects || GameMode.on)
             return;
         const on = root.blur !== "off";
         const s = root.strengths[root.blur] ?? root.strengths.medium;

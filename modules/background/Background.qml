@@ -127,7 +127,7 @@ Variants {
         // Leans a little as the workspace changes, less than the subject does, so
         // the two read as being at different distances. Scaled up enough that its
         // edges never come into view, and back at the centre once it settles.
-        readonly property bool drift: Config.get("wallpaper.parallax", true) && !Power.saving("drift")
+        readonly property bool drift: Config.get("wallpaper.parallax", true) && !Power.saving("drift") && !GameMode.on
 
         WorkspaceDrift {
             id: lean
