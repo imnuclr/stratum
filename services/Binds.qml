@@ -213,12 +213,15 @@ Singleton {
 
     // What a bind does, for the keybinds page.
     function describe(b) {
+        const mine = root.own.find(o => root.maskOf(o.mods) === b.mask && root.norm(o.key) === b.k);
+        if (mine?.action === "app")
+            return root.appLabel(mine.app);
         if (b.stratum)
             return root.actionLabel(b.arg.slice("stratum:".length));
         if (b.description.length > 0)
             return b.description;
         if (b.dispatcher === "__lua")
-            return root.luaWords[`${b.mask}:${b.k}`] ?? "a Lua function in your config";
+            return root.luaWords[`${b.mask}:${b.k}`] ?? "a Lua function (its code could not be found in ~/.config/hypr)";
         return root.explain(b.dispatcher, b.arg);
     }
 
@@ -380,12 +383,13 @@ Singleton {
             if (words.length === 0) {
                 // Nothing recognisable: the code itself, briefly, beats a shrug.
                 const code = body.replace(/\s+/g, " ").replace(/^function\s*\(\)\s*/, "").replace(/\s*end$/, "").trim();
-                words = code.length > 0 ? (code.length > 48 ? `runs ${code.slice(0, 46)}…` : `runs ${code}`) : "";
+                words = code.length > 0 ? `lua: ${code.length > 70 ? code.slice(0, 68) + "…" : code}` : "";
             }
             if (words.length === 0)
                 continue;
 
-            const keys = combo.split("+").map(p => p.trim()).filter(p => p.length > 0);
+            // "SUPER + SHIFT + Q", and the looser "SUPER SHIFT, Q" some configs use.
+            const keys = combo.split(/[+\s,]+/).map(p => p.trim()).filter(p => p.length > 0);
             const key = keys.pop() ?? "";
             const mods = keys.map(p => {
                 const u = p.toUpperCase().replace(/^\$/, "");
@@ -559,6 +563,26 @@ Singleton {
         return "";
     }
 
+    // What an app bind runs. The name is kept to what a desktop id can hold,
+    // so nothing in it can break out of the quotes it is written into.
+    function appCommand(app) {
+        const safe = String(app ?? "").replace(/[^A-Za-z0-9._-]/g, "");
+        return `qs -c stratum ipc call apps open ${safe}`;
+    }
+
+    // Binds a key to opening an app (its desktop id), replacing whatever was on it.
+    function addApp(mods, key, app) {
+        const m = root.maskOf(mods);
+        const list = root.own.filter(b => !(root.maskOf(b.mods) === m && root.norm(b.key) === root.norm(key)));
+        list.push({ mods: root.modBits.map(([n]) => n).filter(n => mods.includes(n)), key: key, action: "app", app: app });
+        root.save(list);
+    }
+
+    function appLabel(app) {
+        const e = DesktopEntries.byId(app) ?? (DesktopEntries.applications?.values ?? []).find(x => x.id === app);
+        return `open ${e?.name ?? app}`;
+    }
+
     function luaText(list) {
         const out = [
             "-- Stratum keybinds, written by Stratum's settings (the Keybinds page).",
@@ -577,6 +601,10 @@ Singleton {
             out.push(`    pcall(hl.unbind, "${root.combo(b.mods, b.key)}")`);
         out.push("end", "");
         for (const b of list) {
+            if (b.action === "app") {
+                out.push(`hl.bind("${root.combo(b.mods, b.key)}", hl.dsp.exec_cmd("${root.appCommand(b.app)}"))`);
+                continue;
+            }
             const f = root.flags(b.action);
             out.push(`hl.bind("${root.combo(b.mods, b.key)}", hl.dsp.global("stratum:${b.action}")${f ? ", " + f : ""})`);
         }
@@ -596,6 +624,10 @@ Singleton {
             out.push(`unbind = ${b.mods.join(" ")}, ${b.key}`);
         out.push("");
         for (const b of list) {
+            if (b.action === "app") {
+                out.push(`bind = ${b.mods.join(" ")}, ${b.key}, exec, ${root.appCommand(b.app)}`);
+                continue;
+            }
             const f = root.flags(b.action);
             const kind = f === "repeating" ? "bindle" : (f === "locked" ? "bindl" : "bind");
             out.push(`${kind} = ${b.mods.join(" ")}, ${b.key}, global, stratum:${b.action}`);

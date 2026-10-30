@@ -148,13 +148,43 @@ FloatingWindow {
                     Shell.settingsPage = hit.label;
             }
 
-            Glyph {
+            // A glass while empty; a clear button once something is typed.
+            Item {
                 anchors.right: parent.right
-                anchors.rightMargin: Theme.space(3)
+                anchors.rightMargin: Theme.space(2)
                 anchors.verticalCenter: parent.verticalCenter
-                name: "search"
-                size: 14
-                color: Theme.fgDim
+                width: 22
+                height: 22
+                z: 2
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 11
+                    color: clearHover.hovered ? Theme.surfaceTop : "transparent"
+                    visible: search.text.length > 0
+                }
+
+                Glyph {
+                    anchors.centerIn: parent
+                    name: search.text.length > 0 ? "close" : "search"
+                    size: search.text.length > 0 ? 12 : 14
+                    color: search.text.length > 0 && clearHover.hovered ? Theme.fg : Theme.fgDim
+                }
+
+                HoverHandler {
+                    id: clearHover
+
+                    enabled: search.text.length > 0
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    enabled: search.text.length > 0
+                    onTapped: {
+                        search.text = "";
+                        search.take();
+                    }
+                }
             }
         }
 

@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Services.UPower
 import qs.config
 import qs.theme
+import qs.services
 
 /*
  * Battery and power profile.

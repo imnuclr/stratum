@@ -169,6 +169,16 @@ ShellRoot {
         }
     }
 
+    // An app's window brought to this workspace, or the app started: what an
+    // "open app" key runs.
+    IpcHandler {
+        target: "apps"
+
+        function open(name: string): void {
+            Apps.open(name);
+        }
+    }
+
     IpcHandler {
         target: "theme"
 

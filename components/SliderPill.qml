@@ -18,6 +18,9 @@ Item {
     property string label: ""
     property bool enabled: true
 
+    // How far one notch of the scroll wheel moves it.
+    property real wheelStep: 0.02
+
     signal moved(real value)
 
     readonly property real fillWidth: Math.max(height, height + (width - height) * Math.max(0, Math.min(1, value)))
@@ -123,5 +126,13 @@ Item {
                 root.moved(Math.max(0, Math.min(1, (event.x - root.height / 2) / (root.width - root.height))));
         }
         onPressed: event => root.moved(Math.max(0, Math.min(1, (event.x - root.height / 2) / (root.width - root.height))))
+
+        // A notch of the wheel is a step; a touchpad's smooth scroll adds up
+        // to the same, so a flick across it does not jump the whole way.
+        onWheel: event => {
+            const notches = event.angleDelta.y !== 0 ? event.angleDelta.y / 120 : event.pixelDelta.y / 40;
+            if (notches !== 0)
+                root.moved(Math.max(0, Math.min(1, root.value + notches * root.wheelStep)));
+        }
     }
 }

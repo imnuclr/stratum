@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Bluetooth
+import qs.services
 
 /*
  * Native BlueZ via Quickshell.Bluetooth. Named Bt rather than Bluetooth so the

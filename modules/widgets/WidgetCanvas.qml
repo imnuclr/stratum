@@ -31,8 +31,9 @@ PanelWindow {
 
     required property ShellScreen monitor
 
-    readonly property bool editing: Widgets.editing
     readonly property bool focused: Hypr.focusedWorkspace?.monitor?.name === win.monitor.name
+    // Arranging happens on the display you are using; the others stay as they are.
+    readonly property bool editing: Widgets.editing && win.focused
     readonly property real cell: Widgets.cell
 
     // Any window on this monitor's workspace counts as covering the desktop.
@@ -540,6 +541,8 @@ PanelWindow {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: 24
+            anchors.rightMargin: 24 + (win.barEdge === "right" ? win.barRoom : 0)
+            anchors.bottomMargin: 24 + (win.barEdge === "bottom" ? win.barRoom : 0)
             width: pillRow.implicitWidth + Theme.space(5) * 2
             height: 40
             radius: 20
@@ -604,11 +607,16 @@ PanelWindow {
 
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.topMargin: 24
-            anchors.bottomMargin: 24
+            anchors.topMargin: 24 + (win.barEdge === "top" ? win.barRoom : 0)
+            anchors.bottomMargin: 24 + (win.barEdge === "bottom" ? win.barRoom : 0)
             width: panelWidth
-            x: !(win.editing && win.focused) || gallery.folded ? win.width + 40 : win.width - panelWidth - 16
-            visible: x < win.width + 30
+            // Down the side away from a bar on the right, so neither covers the other.
+            readonly property bool onLeft: win.barEdge === "right"
+            readonly property real shown: gallery.onLeft ? 16 : win.width - panelWidth - 16
+            readonly property real hidden: gallery.onLeft ? -panelWidth - 40 : win.width + 40
+
+            x: !(win.editing && win.focused) || gallery.folded ? hidden : shown
+            visible: x < win.width + 30 && x > -panelWidth - 30
 
             Behavior on x {
                 NumberAnimation {
