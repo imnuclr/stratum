@@ -52,3 +52,6 @@ hl.bind("SUPER + L", hl.dsp.global("stratum:lock"))
 -- records the whole screen.
 hl.bind("ALT + Print", hl.dsp.global("stratum:recordRegion"), locked)
 hl.bind("SUPER + ALT + Print", hl.dsp.global("stratum:record"), locked)
+
+-- Arrange the desktop widgets (press again, or Esc, to finish).
+hl.bind("SUPER + SHIFT + W", hl.dsp.global("stratum:widgetsEdit"))

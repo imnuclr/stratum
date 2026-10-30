@@ -50,12 +50,13 @@ Item {
         "eco": { icon: "bolt", label: "eco", active: Power.eco, available: Power.hasBattery, act: () => Power.setProfile(Power.eco ? "balanced" : "power-saver") },
         "lock": { icon: "lock", label: "lock", active: false, available: true, act: () => { Shell.close(); Quickshell.execDetached(["loginctl", "lock-session"]); } },
         "shot": { icon: "scan", label: "capture", active: false, available: true, act: () => Screenshot.regionSoon() },
+        "widgets": { icon: "app", label: "widgets", active: Widgets.editing, available: true, act: () => { Shell.close(); Widgets.editing = !Widgets.editing; } },
         "settings": { icon: "settings", label: "settings", active: false, available: true, act: () => Shell.toggle("settings", Shell.openScreen, "control") }
     })
 
     // The order here is the order the add-chips are offered in.
     readonly property var allIds: ["dnd", "night", "airplane", "caffeine", "mic", "record", "vpn", "theme",
-        "wifi", "bluetooth", "mute", "eco", "lock", "shot", "recarea", "settings"]
+        "wifi", "bluetooth", "mute", "eco", "lock", "shot", "recarea", "widgets", "settings"]
 
     // Unknown names in the file are ignored rather than drawn as holes.
     readonly property var order: (Config.get("controlCentre.toggles", root.allIds) ?? []).filter(id => root.allIds.includes(id))
