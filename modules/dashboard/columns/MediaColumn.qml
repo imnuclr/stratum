@@ -31,6 +31,7 @@ Item {
                 cell: 3
                 dotScale: 0.5
                 halftone: true
+                colored: true
                 circular: true
                 source: Media.artUrl
                 visible: Media.artUrl.length > 0

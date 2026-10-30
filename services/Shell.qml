@@ -49,6 +49,10 @@ Singleton {
      */
     property string expandedChip: ""
 
+    // Which settings page is showing. Here rather than on the sheet because there
+    // is one sheet per monitor and the choice should follow you between them.
+    property string settingsPage: "wallpaper"
+
     function expand(which) {
         root.expandedChip = root.expandedChip === which ? "" : which;
     }

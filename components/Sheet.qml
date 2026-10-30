@@ -57,11 +57,22 @@ PanelWindow {
     readonly property real edgeGapBottom: Config.get("bar.margin", 10) + Theme.space(1)
     readonly property real availableHeight: monitor.height - edgeGapTop - edgeGapBottom
     // How far the sheet reaches sideways past its card, toward the screen edge.
-    readonly property real bridge: Theme.space(1)
+    readonly property real bridge: root.centered ? 0 : Theme.space(1)
 
     // Most of the way off its own edge, capped so a tall sheet does not take an
     // age to arrive.
-    readonly property real travel: Math.min(root.sheetHeight, 260)
+    property real travel: Math.min(root.sheetHeight, 260)
+    // Which way it travels in from: +1 rises from below, -1 comes down from above.
+    property real slideSign: root.originY >= 0.5 ? 1 : -1
+
+    /*
+     * Sits in the middle of the free space instead of growing out of an edge, for
+     * a panel that is reached by choosing it rather than by pointing at a corner.
+     * Nothing bridges it to a screen edge — there is no hot zone to travel from —
+     * and so no band of the screen around it swallows clicks meant for what is
+     * underneath.
+     */
+    property bool centered: false
     property int sheetWidth: 400
     property int sheetHeight: 500
 
@@ -184,16 +195,18 @@ PanelWindow {
      * the "opens from the top" that only ever happened on the shorter monitor,
      * where the control centre does not fit while its content settles.
      */
-    readonly property real cardY: root.originY >= 0.5
+    readonly property real cardY: root.centered
+        ? Math.round(root.edgeGapTop + Math.max(0, root.availableHeight - root.sheetHeight) / 2)
+        : root.originY >= 0.5
         ? Math.round(monitor.height - root.edgeGapBottom - root.sheetHeight)
         : Math.round(root.edgeGapTop + Math.max(0, root.availableHeight - root.sheetHeight) * root.originY)
 
     readonly property real reachX: Math.round(root.cardX - (root.originX < 0.5 ? root.bridge : 0))
     readonly property real reachY: Math.round(root.cardY
-        - (root.originY < 0.5 ? root.edgeGapTop : 0) - root.satelliteRoom)
+        - (!root.centered && root.originY < 0.5 ? root.edgeGapTop : 0) - root.satelliteRoom)
     readonly property real reachW: Math.round(root.sheetWidth + root.bridge)
     readonly property real reachH: Math.round(root.sheetHeight + root.satelliteRoom
-        + (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom))
+        + (root.centered ? 0 : (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom)))
 
     mask: Region {
         x: root.open ? root.reachX : 0
@@ -386,6 +399,8 @@ PanelWindow {
                     border.color: Theme.lineHi
 
                     transformOrigin: {
+                        if (root.centered)
+                            return Item.Center;
                         if (root.originY >= 0.5)
                             return root.originX >= 0.75 ? Item.BottomRight : (root.originX <= 0.25 ? Item.BottomLeft : Item.Bottom);
                         return root.originX >= 0.75 ? Item.TopRight : (root.originX <= 0.25 ? Item.TopLeft : Item.Top);
@@ -413,7 +428,7 @@ PanelWindow {
                         when: !root.open
 
                         PropertyChanges {
-                            card.slide: root.originY >= 0.5 ? root.travel : -root.travel
+                            card.slide: root.slideSign * root.travel
                             card.opacity: 0
                             card.scale: 0.98
                         }

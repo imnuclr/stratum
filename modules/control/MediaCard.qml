@@ -39,6 +39,7 @@ Rectangle {
             cell: 3
             dotScale: 0.5
             halftone: true
+            colored: true
             circular: true
             source: Media.artUrl
         }

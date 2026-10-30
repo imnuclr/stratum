@@ -31,6 +31,7 @@ fetch() {
 }
 fetch Doto  "https://github.com/google/fonts/raw/main/ofl/doto/Doto%5BROND,wght%5D.ttf" display
 fetch Geist "https://github.com/google/fonts/raw/main/ofl/geist/Geist%5Bwght%5D.ttf"    ui
+fetch Nunito "https://github.com/google/fonts/raw/main/ofl/nunito/Nunito%5Bwght%5D.ttf" rounded
 
 # Hyprland binds. Written next to the user's config but never into it: the
 # config may be Lua-generated, and a shell that rewrites the compositor's config

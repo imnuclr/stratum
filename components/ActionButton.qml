@@ -40,6 +40,9 @@ Rectangle {
 
         Glyph {
             anchors.verticalCenter: parent.verticalCenter
+            // A button with only a label would otherwise keep an empty icon's
+            // worth of space on its left and sit off-centre.
+            visible: root.icon.length > 0
             name: root.icon
             size: 14
             color: Theme.fg

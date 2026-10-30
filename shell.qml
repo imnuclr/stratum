@@ -14,8 +14,10 @@ import qs.modules.bar
 import qs.modules.control
 import qs.modules.dashboard
 import qs.modules.hotzones
+import qs.modules.lock
 import qs.modules.notifications
 import qs.modules.session
+import qs.modules.settings
 
 ShellRoot {
     id: root
@@ -26,6 +28,9 @@ ShellRoot {
     }
     FontLoader {
         source: Quickshell.shellPath("assets/fonts/Geist.ttf")
+    }
+    FontLoader {
+        source: Quickshell.shellPath("assets/fonts/Nunito.ttf")
     }
 
     Component.onCompleted: {
@@ -48,6 +53,13 @@ ShellRoot {
 
         function open(name: string): void {
             Shell.open(name);
+        }
+
+        // Open settings on a named page: wallpaper, appearance, notifications, advanced.
+        function settings(page: string): void {
+            if (page.length > 0)
+                Shell.settingsPage = page;
+            Shell.open("settings");
         }
 
         function close(): void {
@@ -78,7 +90,33 @@ ShellRoot {
     HotZones {}
     Toasts {}
     Session {}
+    Lock {}
+    Settings {}
     Shortcuts {}
+
+    /*
+     * Settings, scriptably. Values are JSON, so `config set notifications.toastMs 8000`
+     * and `config set debug.trace true` both mean what they look like.
+     */
+    IpcHandler {
+        target: "config"
+
+        function get(key: string): string {
+            return JSON.stringify(Config.get(key, null));
+        }
+
+        function set(key: string, json: string): string {
+            try {
+                return Config.set(key, JSON.parse(json)) ? "ok" : `refused: ${Config.error}`;
+            } catch (e) {
+                return `not valid JSON: ${json}`;
+            }
+        }
+
+        function unset(key: string): string {
+            return Config.unset(key) ? "ok" : `refused: ${Config.error}`;
+        }
+    }
 
     /*
      * Wallpapers. A monitor name picks one display; empty means the desktop.

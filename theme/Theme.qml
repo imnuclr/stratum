@@ -28,6 +28,12 @@ Singleton {
     property string error: ""
     property var tokens: ({})
 
+    // The user's overrides held in memory, for the same reason Config holds its
+    // own: a write that has not landed must not be overwritten by a re-read.
+    property var user: ({})
+    property var preset: ({})
+    property bool dirty: false
+
     // --- colour ---
     readonly property color bg: pick("color.bg", "#09090A")
     readonly property color panel: pick("color.panel", "#0B0B0C")
@@ -43,6 +49,9 @@ Singleton {
     readonly property color dotOn: pick("color.dotOn", "#FFFFFF")
     readonly property color dotOff: pick("color.dotOff", "#21FFFFFF")
     readonly property color accent: pick("color.accent", "#E5252B")
+    // Something has gone wrong. Not the accent, which is a decoration you may have
+    // changed to white: an error must still read as one.
+    readonly property color danger: pick("color.danger", "#E5252B")
 
     // Semantic colours stay unused until something is genuinely wrong — a low
     // battery, an unroutable connection. They are not a second accent.
@@ -65,6 +74,8 @@ Singleton {
     readonly property string fontDot: pick("font.display", "Doto")
     readonly property string fontUi: pick("font.ui", "Geist")
     readonly property string fontMono: pick("font.mono", "JetBrainsMono Nerd Font")
+    // The lock screen's clock and greeting. Soft and round, where Doto is dots.
+    readonly property string fontRounded: pick("font.rounded", "Nunito")
 
     // --- motion ---
     readonly property int micro: pick("motion.micro", 120)
@@ -144,8 +155,72 @@ Singleton {
             return;
         }
 
-        root.tokens = Config.merge(preset, user);
+        root.preset = preset;
+        if (!root.dirty)
+            root.user = user;
+        root.tokens = Config.merge(preset, root.user);
         root.ready = true;
+    }
+
+    /*
+     * Persists one override on top of the preset, e.g. setUser("color.accent",
+     * "#3B82F6"). Refuses when theme.json could not be read, so a typo mid-edit
+     * is never overwritten.
+     */
+    function setUser(keyPath, value) {
+        if (root.error.length > 0)
+            return false;
+
+        const keys = keyPath.split(".");
+        const next = JSON.parse(JSON.stringify(root.user));
+        let node = next;
+        for (const key of keys.slice(0, -1)) {
+            if (!node[key] || typeof node[key] !== "object" || Array.isArray(node[key]))
+                node[key] = {};
+            node = node[key];
+        }
+        node[keys[keys.length - 1]] = value;
+        root.commitUser(next);
+        return true;
+    }
+
+    // Drops an override so the preset's own value shows through again.
+    function clearUser(keyPath) {
+        if (root.error.length > 0)
+            return false;
+
+        const keys = keyPath.split(".");
+        const next = JSON.parse(JSON.stringify(root.user));
+        const trail = [next];
+        let node = next;
+        for (const key of keys.slice(0, -1)) {
+            if (!node[key] || typeof node[key] !== "object")
+                return true;
+            node = node[key];
+            trail.push(node);
+        }
+        delete node[keys[keys.length - 1]];
+        for (let i = trail.length - 1; i > 0; i--) {
+            if (Object.keys(trail[i]).length > 0)
+                break;
+            delete trail[i - 1][keys[i - 1]];
+        }
+        root.commitUser(next);
+        return true;
+    }
+
+    function commitUser(next) {
+        root.user = next;
+        root.dirty = true;
+        root.tokens = Config.merge(root.preset, next);
+        writer.restart();
+    }
+
+    Timer {
+        id: writer
+
+        interval: 300
+        onTriggered: userFile.setText(JSON.stringify(root.user, null, 2) + "\n")
     }
 
     /*
@@ -188,5 +263,6 @@ Singleton {
         onLoaded: root.reload()
         onFileChanged: reload()
         onLoadFailed: root.reload()
+        onSaved: root.dirty = false
     }
 }

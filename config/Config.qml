@@ -22,6 +22,20 @@ Singleton {
     // Merged defaults <- user. Modules read through this, never through `file`.
     property var values: ({})
 
+    /*
+     * The user's file as an object, held in memory.
+     *
+     * set() edits this and the write to disk follows, rather than reading the
+     * file back each time. A slider calls set() on every frame of a drag, and a
+     * read-modify-write against a file that has not caught up loses all but the
+     * last change — or, worse, restores an older one when the watcher fires for
+     * a write that has already been superseded.
+     */
+    property var user: ({})
+    property var defaults: ({})
+    // A change is waiting to be written; the file on disk is behind `user`.
+    property bool dirty: false
+
     function get(keyPath, fallback) {
         let node = values;
         for (const key of keyPath.split(".")) {
@@ -69,8 +83,77 @@ Singleton {
             }
         }
 
-        root.values = merge(defaults, user);
+        root.defaults = defaults;
+        // While a write is pending the file is the stale side: re-reading it now
+        // would throw away what the person just changed.
+        if (!root.dirty)
+            root.user = user;
+        root.values = merge(defaults, root.user);
         root.ready = true;
+    }
+
+    /*
+     * Writes one value into the user's file, creating the path to it.
+     *
+     * Refuses outright when the file could not be read. An unparseable file is
+     * usually a typo mid-edit, and writing now would replace everything else in
+     * it with this one key.
+     */
+    function set(keyPath, value) {
+        if (root.error.length > 0)
+            return false;
+
+        const keys = keyPath.split(".");
+        const next = JSON.parse(JSON.stringify(root.user));
+        let node = next;
+        for (const key of keys.slice(0, -1)) {
+            if (!node[key] || typeof node[key] !== "object" || Array.isArray(node[key]))
+                node[key] = {};
+            node = node[key];
+        }
+        node[keys[keys.length - 1]] = value;
+        root.commit(next);
+        return true;
+    }
+
+    // Removes a key so the default shows through again, pruning parents it empties.
+    function unset(keyPath) {
+        if (root.error.length > 0)
+            return false;
+
+        const keys = keyPath.split(".");
+        const next = JSON.parse(JSON.stringify(root.user));
+        const trail = [next];
+        let node = next;
+        for (const key of keys.slice(0, -1)) {
+            if (!node[key] || typeof node[key] !== "object")
+                return true;
+            node = node[key];
+            trail.push(node);
+        }
+        delete node[keys[keys.length - 1]];
+        for (let i = trail.length - 1; i > 0; i--) {
+            if (Object.keys(trail[i]).length > 0)
+                break;
+            delete trail[i - 1][keys[i - 1]];
+        }
+        root.commit(next);
+        return true;
+    }
+
+    function commit(next) {
+        root.user = next;
+        root.dirty = true;
+        // Live at once; the disk catches up behind it.
+        root.values = merge(root.defaults, next);
+        writer.restart();
+    }
+
+    Timer {
+        id: writer
+
+        interval: 300
+        onTriggered: userFile.setText(JSON.stringify(root.user, null, 2) + "\n")
     }
 
     FileView {
@@ -91,5 +174,7 @@ Singleton {
         onFileChanged: reload()
         // A missing user file is the normal first-run case, not an error.
         onLoadFailed: root.reload()
+        // The disk has caught up, so a re-read is trustworthy again.
+        onSaved: root.dirty = false
     }
 }
