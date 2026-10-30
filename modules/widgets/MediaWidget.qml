@@ -1,16 +1,16 @@
 import QtQuick
-import Quickshell.Widgets
 import qs.components
 import qs.services
 import qs.theme
 
 /*
- * What is playing: the disc, the track, how far through it is, and the buttons.
+ * What is playing, laid out like a record sleeve: the cover as a large dithered
+ * disc on the left, and on the right the source in dot-matrix capitals, the
+ * title, the artist, a dotted line of how far through, and the controls.
  *
- * The buttons work: the canvas takes the pointer over its widgets (and nowhere
- * else), so these are real controls. When the player gives no cover — a browser
- * tab often does not — a dotted ring stands in its place so the card keeps its
- * shape.
+ * The controls are real: the canvas takes the pointer over its widgets. When the
+ * player sends no cover — a browser tab often does not — a dotted ring holds the
+ * disc's place so the card keeps its shape.
  */
 Item {
     id: root
@@ -19,7 +19,8 @@ Item {
     property bool live: true
 
     readonly property string cover: Widgets.option(root.item, "art")
-    readonly property real disc: root.height - Theme.space(4) * 2
+    readonly property real pad: root.height * 0.12
+    readonly property real disc: root.height - root.pad * 2
     readonly property bool hasArt: Media.artUrl.length > 0
 
     Watch {
@@ -27,70 +28,69 @@ Item {
         live: root.live
     }
 
-    Row {
-        anchors.fill: parent
-        anchors.margins: Theme.space(4)
-        spacing: Theme.space(5)
+    Item {
+        id: art
 
-        Item {
-            anchors.verticalCenter: parent.verticalCenter
-            width: root.disc
-            height: root.disc
+        x: root.pad
+        anchors.verticalCenter: parent.verticalCenter
+        width: root.disc
+        height: root.disc
 
-            SpinningArt {
-                anchors.fill: parent
-                size: root.disc
-                cell: Math.max(2.5, root.disc / 56)
-                source: Media.artUrl
-                colored: root.cover === "colour"
-                visible: root.hasArt && root.cover !== "plain"
+        DotImage {
+            anchors.fill: parent
+            visible: root.hasArt
+            source: Media.artUrl
+            cell: Math.max(3, root.disc / 38)
+            dotScale: 0.46
+            halftone: true
+            circular: true
+            colored: root.cover === "colour"
+        }
+
+        DotRing {
+            anchors.fill: parent
+            visible: !root.hasArt
+            count: 40
+            dotSize: Math.max(2, root.disc / 40)
+            value: 1
+            onColor: Theme.dotOff
+            animated: false
+
+            Glyph {
+                anchors.centerIn: parent
+                name: "headphones"
+                size: root.disc * 0.24
+                color: Theme.fgDim
             }
+        }
+    }
 
-            ClippingRectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: Theme.surfaceHi
-                visible: root.hasArt && root.cover === "plain"
+    Column {
+        anchors.left: art.right
+        anchors.leftMargin: root.pad * 1.1
+        anchors.right: parent.right
+        anchors.rightMargin: root.pad
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: root.height * 0.035
 
-                Image {
-                    anchors.fill: parent
-                    source: root.hasArt && root.cover === "plain" ? Media.artUrl : ""
-                    fillMode: Image.PreserveAspectCrop
-                    sourceSize.width: 400
-                    asynchronous: true
-                }
-            }
-
-            // No cover: a ring and a pair of headphones, so the card keeps its shape.
-            DotRing {
-                anchors.fill: parent
-                visible: !root.hasArt
-                count: 40
-                dotSize: Math.max(2, root.disc / 40)
-                value: 1
-                onColor: Theme.dotOff
-                animated: false
-
-                Glyph {
-                    anchors.centerIn: parent
-                    name: "headphones"
-                    size: root.disc * 0.26
-                    color: Theme.fgDim
-                }
-            }
+        // Where it is coming from, in the dot-matrix face.
+        Text {
+            width: parent.width
+            elide: Text.ElideRight
+            text: (Media.available ? `now playing · ${Media.identity}` : "now playing").toUpperCase()
+            color: Theme.fgDim
+            font.family: Theme.fontDot
+            font.pixelSize: Math.max(11, root.height * 0.058)
+            font.weight: Font.Bold
+            font.letterSpacing: Math.max(1.5, root.height * 0.008)
+            font.variableAxes: ({ "ROND": 100 })
+            renderType: Text.NativeRendering
         }
 
         Column {
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - root.disc - Theme.space(5)
-            spacing: Theme.space(1)
-
-            SectionLabel {
-                width: parent.width
-                elide: Text.ElideRight
-                text: Media.available ? `now playing · ${Media.identity}` : "now playing"
-                color: Theme.fgDim
-            }
+            width: parent.width
+            topPadding: root.height * 0.02
+            spacing: root.height * 0.012
 
             Text {
                 width: parent.width
@@ -98,7 +98,7 @@ Item {
                 text: Media.available ? Media.title : "Nothing playing"
                 color: Theme.fg
                 font.family: Theme.fontUi
-                font.pixelSize: Math.max(18, root.height * 0.12)
+                font.pixelSize: Math.max(18, root.height * 0.11)
                 font.weight: Font.Medium
                 renderType: Text.NativeRendering
             }
@@ -110,71 +110,73 @@ Item {
                 visible: text.length > 0
                 color: Theme.fgDim
                 font.family: Theme.fontUi
-                font.pixelSize: Math.max(12, root.height * 0.07)
+                font.pixelSize: Math.max(12, root.height * 0.064)
                 renderType: Text.NativeRendering
             }
+        }
 
-            DotBar {
-                topPadding: Theme.space(2)
-                count: Math.max(8, Math.floor((parent.width + dotSize) / (dotSize * 2)))
-                dotSize: 2.6
-                value: Media.progress
-                visible: Media.length > 0
+        DotBar {
+            topPadding: root.height * 0.03
+            count: Math.max(8, Math.floor((parent.width + dotSize) / (dotSize * 2.4)))
+            dotSize: Math.max(2.2, root.height * 0.014)
+            spacing: dotSize * 1.4
+            litScale: 1.3
+            value: Media.progress
+        }
+
+        Row {
+            topPadding: root.height * 0.03
+            spacing: root.height * 0.07
+
+            MediaButton {
+                icon: "skip-back"
+                available: Media.canPrevious
+                onClicked: Media.previous()
             }
 
-            Row {
-                topPadding: Theme.space(2)
-                spacing: Theme.space(4)
+            // The one coloured control.
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(36, root.height * 0.17)
+                height: width
+                radius: width / 2
+                color: Theme.accent
+                scale: playTap.pressed ? 0.9 : (playHover.hovered ? 1.06 : 1)
 
-                MediaButton {
-                    icon: "skip-back"
-                    available: Media.canPrevious
-                    onClicked: Media.previous()
-                }
-
-                // The one coloured control, as on the other media cards.
-                Rectangle {
-                    width: Math.max(36, root.height * 0.22)
-                    height: width
-                    radius: width / 2
-                    color: Theme.accent
-                    scale: playTap.pressed ? 0.9 : (playHover.hovered ? 1.06 : 1)
-
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: Theme.standard
-                            easing.type: Easing.Bezier
-                            easing.bezierCurve: Theme.gentle
-                        }
-                    }
-
-                    Glyph {
-                        anchors.centerIn: parent
-                        name: Media.playing ? "pause" : "play"
-                        size: parent.width * 0.38
-                        filled: true
-                        color: Theme.bg
-                    }
-
-                    HoverHandler {
-                        id: playHover
-
-                        cursorShape: Qt.PointingHandCursor
-                    }
-
-                    TapHandler {
-                        id: playTap
-
-                        enabled: !Widgets.editing
-                        onTapped: Media.playPause()
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Theme.standard
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.gentle
                     }
                 }
 
-                MediaButton {
-                    icon: "skip-forward"
-                    available: Media.canNext
-                    onClicked: Media.next()
+                Glyph {
+                    anchors.centerIn: parent
+                    name: Media.playing ? "pause" : "play"
+                    size: parent.width * 0.36
+                    filled: true
+                    color: "#FFFFFF"
                 }
+
+                HoverHandler {
+                    id: playHover
+
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    id: playTap
+
+                    enabled: !Widgets.editing
+                    onTapped: Media.playPause()
+                }
+            }
+
+            MediaButton {
+                icon: "skip-forward"
+                available: Media.canNext
+                onClicked: Media.next()
             }
         }
     }
@@ -188,13 +190,13 @@ Item {
         signal clicked
 
         anchors.verticalCenter: parent.verticalCenter
-        width: 28
-        height: 28
+        width: Math.max(26, root.height * 0.1)
+        height: width
 
         Glyph {
             anchors.centerIn: parent
             name: button.icon
-            size: 15
+            size: Math.max(14, root.height * 0.06)
             filled: true
             color: !button.available ? Theme.fgFaint : (hover.hovered ? Theme.fg : Theme.fgBright)
         }

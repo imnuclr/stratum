@@ -18,8 +18,8 @@ import qs.theme
  * always did. Holding on any widget, right-clicking the desktop, Super+Shift+W or
  * the control centre all enter edit mode: a grid shows, and each widget gets an
  * outline, a corner to resize by, a button to remove it and one for its options.
- * Dragging moves a widget, snapping to the grid where it is let go. A bar at the
- * foot adds more.
+ * Dragging moves a widget, snapping to the grid where it is let go. A gallery
+ * down the right shows every widget there is, to add.
  *
  * While windows cover the desktop the widgets are not seen, so they stop asking
  * their services for readings (`live`), and pick up again when it is uncovered.
@@ -64,6 +64,8 @@ PanelWindow {
             "gpu": gpuWidget,
             "media": mediaWidget,
             "stats": statsWidget,
+            "cpu": cpuWidget,
+            "memory": memoryWidget,
             "battery": batteryWidget,
             "disk": diskWidget,
             "network": networkWidget,
@@ -199,7 +201,7 @@ PanelWindow {
                     readonly property var def: Widgets.types[frame.modelData.type] ?? Widgets.types.clock
                     readonly property bool round: frame.def.shape === "round"
                     readonly property string look: Widgets.option(frame.modelData, "style")
-                    readonly property real corner: frame.round ? Math.min(width, height) / 2 : Theme.rTile
+                    readonly property real corner: frame.round ? Math.min(width, height) / 2 : Math.max(Theme.rTile, Math.min(44, Math.min(width, height) * 0.17))
                     // While resizing, the size follows the pointer; otherwise it is
                     // the layout's.
                     property real liveW: -1
@@ -483,135 +485,247 @@ PanelWindow {
             }
         }
 
-        // How to use it, and the way to add and finish.
-        Rectangle {
-            id: bar
+        /*
+         * The gallery: every widget there is, shown as itself, down the right-hand
+         * side. Clicking one adds it to the desktop. See-through and narrow, so the
+         * desktop being arranged stays in view behind it, and it folds away to a
+         * tab when it is in the way.
+         */
+        Item {
+            id: gallery
 
-            anchors.horizontalCenter: parent.horizontalCenter
+            property bool folded: false
+
+            readonly property real panelWidth: 300
+
+            anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 36
-            width: Math.min(barBody.implicitWidth, win.width - 160) + Theme.space(5) * 2
-            height: barBody.implicitHeight + Theme.space(4) * 2
-            radius: Theme.rSheet
-            color: Theme.deep
-            border.width: 1
-            border.color: Theme.outline
-            opacity: win.editing && win.focused ? 1 : 0
-            visible: opacity > 0.01
+            anchors.topMargin: 24
+            anchors.bottomMargin: 24
+            width: panelWidth
+            x: !(win.editing && win.focused) ? win.width + 40 : (gallery.folded ? win.width - 18 : win.width - panelWidth - 16)
+            visible: x < win.width + 30
 
-            Behavior on opacity {
+            Behavior on x {
                 NumberAnimation {
-                    duration: Theme.standard
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
                 }
             }
 
-            Column {
-                id: barBody
+            // The tab it folds to.
+            Rectangle {
+                anchors.right: panel.left
+                anchors.rightMargin: -1
+                anchors.verticalCenter: parent.verticalCenter
+                width: 22
+                height: 64
+                radius: 11
+                color: Qt.alpha(Theme.deep, 0.85)
+                border.width: 1
+                border.color: Theme.outline
 
-                anchors.centerIn: parent
-                spacing: Theme.space(3)
+                Glyph {
+                    anchors.centerIn: parent
+                    name: "chevron-left"
+                    size: 14
+                    rotation: gallery.folded ? 0 : 180
+                    color: Theme.fg
+                }
 
-                Flow {
-                    width: Math.min(implicitWidth, win.width - 160)
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    onTapped: gallery.folded = !gallery.folded
+                }
+            }
+
+            Rectangle {
+                id: panel
+
+                anchors.fill: parent
+                radius: Theme.rSheet
+                color: Qt.alpha(Theme.deep, 0.78)
+                border.width: 1
+                border.color: Theme.outline
+
+                Column {
+                    id: head
+
+                    anchors.top: parent.top
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.margins: Theme.space(4)
                     spacing: Theme.space(2)
 
-                    Repeater {
-                        model: Widgets.typeNames
+                    Row {
+                        width: parent.width
+                        spacing: Theme.space(2)
+
+                        SectionLabel {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - resetChip.width - doneChip.width - Theme.space(2) * 2
+                            text: "widgets"
+                            color: Theme.fgBright
+                        }
 
                         Rectangle {
-                            id: chip
+                            id: resetChip
 
-                            required property string modelData
+                            width: resetLabel.implicitWidth + Theme.space(4)
+                            height: 30
+                            radius: 15
+                            color: resetHover.hovered ? Theme.surfaceTop : "transparent"
 
-                            width: chipRow.implicitWidth + Theme.space(4)
-                            height: 34
-                            radius: height / 2
-                            color: chipHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
-
-                            Row {
-                                id: chipRow
+                            SectionLabel {
+                                id: resetLabel
 
                                 anchors.centerIn: parent
-                                spacing: Theme.space(2)
-
-                                Glyph {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    name: Widgets.types[chip.modelData].icon
-                                    size: 14
-                                    color: Theme.fg
-                                }
-
-                                SectionLabel {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: `+ ${Widgets.types[chip.modelData].label}`
-                                    color: Theme.fg
-                                }
+                                text: "reset"
+                                color: Theme.fgBright
                             }
 
                             HoverHandler {
-                                id: chipHover
+                                id: resetHover
 
                                 cursorShape: Qt.PointingHandCursor
                             }
 
                             TapHandler {
-                                onTapped: Widgets.add(win.monitor.name, win.cols, chip.modelData)
+                                onTapped: Widgets.reset(win.monitor.name)
+                            }
+                        }
+
+                        Rectangle {
+                            id: doneChip
+
+                            width: doneLabel.implicitWidth + Theme.space(5)
+                            height: 30
+                            radius: 15
+                            color: Theme.fg
+
+                            SectionLabel {
+                                id: doneLabel
+
+                                anchors.centerIn: parent
+                                text: "done"
+                                color: Theme.bg
+                            }
+
+                            TapHandler {
+                                onTapped: Widgets.editing = false
                             }
                         }
                     }
-                }
-
-                Row {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: Theme.space(3)
 
                     SectionLabel {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "drag to move · corner to resize · esc when done"
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        text: "click to add · drag to move · corner to resize"
                         color: Theme.fgDim
                     }
+                }
 
-                    Rectangle {
-                        width: resetLabel.implicitWidth + Theme.space(4)
-                        height: 34
-                        radius: 17
-                        color: resetHover.hovered ? Theme.surfaceTop : "transparent"
+                Flickable {
+                    anchors.top: head.bottom
+                    anchors.topMargin: Theme.space(3)
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: Theme.space(3)
+                    clip: true
+                    contentHeight: entries.implicitHeight
+                    boundsBehavior: Flickable.StopAtBounds
 
-                        SectionLabel {
-                            id: resetLabel
+                    Column {
+                        id: entries
 
-                            anchors.centerIn: parent
-                            text: "reset"
-                            color: Theme.fgBright
-                        }
+                        x: Theme.space(4)
+                        width: parent.width - Theme.space(4) * 2
+                        spacing: Theme.space(4)
 
-                        HoverHandler {
-                            id: resetHover
+                        Repeater {
+                            model: win.editing ? Widgets.typeNames : []
 
-                            cursorShape: Qt.PointingHandCursor
-                        }
+                            Column {
+                                id: entry
 
-                        TapHandler {
-                            onTapped: Widgets.reset(win.monitor.name)
-                        }
-                    }
+                                required property string modelData
 
-                    Rectangle {
-                        width: doneLabel.implicitWidth + Theme.space(5)
-                        height: 34
-                        radius: 17
-                        color: Theme.fg
+                                readonly property var def: Widgets.types[entry.modelData]
+                                readonly property real fullW: entry.def.w * win.cell
+                                readonly property real fullH: entry.def.h * win.cell
+                                readonly property real shrink: Math.min(1, entries.width / entry.fullW, 150 / entry.fullH)
 
-                        SectionLabel {
-                            id: doneLabel
+                                width: entries.width
+                                spacing: Theme.space(2)
 
-                            anchors.centerIn: parent
-                            text: "done"
-                            color: Theme.bg
-                        }
+                                // The widget itself, scaled down to fit.
+                                Item {
+                                    width: entries.width
+                                    height: entry.fullH * entry.shrink
+                                    scale: entryTap.pressed ? 0.97 : (entryHover.hovered ? 1.02 : 1)
 
-                        TapHandler {
-                            onTapped: Widgets.editing = false
+                                    Behavior on scale {
+                                        NumberAnimation {
+                                            duration: Theme.standard
+                                            easing.type: Easing.Bezier
+                                            easing.bezierCurve: Theme.gentle
+                                        }
+                                    }
+
+                                    Item {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: entry.fullW * entry.shrink
+                                        height: entry.fullH * entry.shrink
+
+                                        Item {
+                                            width: entry.fullW
+                                            height: entry.fullH
+                                            scale: entry.shrink
+                                            transformOrigin: Item.TopLeft
+
+                                            Rectangle {
+                                                anchors.fill: parent
+                                                radius: entry.def.shape === "round" ? width / 2 : 40
+                                                color: Theme.surface
+                                                border.width: 1
+                                                border.color: entryHover.hovered ? Theme.outline : Theme.line
+                                            }
+
+                                            Loader {
+                                                anchors.fill: parent
+                                                sourceComponent: win.componentFor(entry.modelData)
+                                                onLoaded: {
+                                                    item.item = { type: entry.modelData, opts: {} };
+                                                    item.live = true;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    HoverHandler {
+                                        id: entryHover
+
+                                        cursorShape: Qt.PointingHandCursor
+                                    }
+
+                                    TapHandler {
+                                        id: entryTap
+
+                                        onTapped: Widgets.add(win.monitor.name, win.cols, entry.modelData)
+                                    }
+                                }
+
+                                SectionLabel {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: entry.def.label
+                                    color: Theme.fgBright
+                                }
+                            }
                         }
                     }
                 }
@@ -690,6 +804,18 @@ PanelWindow {
         id: statsWidget
 
         StatsWidget {}
+    }
+
+    Component {
+        id: cpuWidget
+
+        CpuWidget {}
+    }
+
+    Component {
+        id: memoryWidget
+
+        MemoryWidget {}
     }
 
     Component {

@@ -45,13 +45,15 @@ Singleton {
         "media": { label: "now playing", icon: "play", w: 31, h: 15, minW: 20, minH: 10, shape: "square", style: "tile",
             options: [{ key: "art", label: "cover", values: ["dots", "colour", "plain"] }] },
         "stats": { label: "system", icon: "terminal", w: 47, h: 15, minW: 26, minH: 10, shape: "square", style: "tile", options: [] },
+        "cpu": { label: "cpu", icon: "terminal", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
+        "memory": { label: "memory", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "battery": { label: "battery", icon: "battery-vertical", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "disk": { label: "disk", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "network": { label: "network", icon: "wifi", w: 24, h: 11, minW: 16, minH: 8, shape: "square", style: "tile", options: [] },
         "photo": { label: "photo", icon: "scan", w: 20, h: 15, minW: 8, minH: 8, shape: "square", style: "tile",
             options: [{ key: "look", label: "look", values: ["dots", "plain"] }, { key: "every", label: "change", values: ["hour", "day", "never"] }] }
     })
-    readonly property var typeNames: ["clock", "greeting", "weather", "date", "gpu", "media", "stats", "battery", "disk", "network", "photo"]
+    readonly property var typeNames: ["clock", "greeting", "weather", "date", "media", "stats", "cpu", "gpu", "memory", "disk", "battery", "network", "photo"]
 
     // Every widget can choose how it sits on the wallpaper.
     readonly property var styleOption: ({ key: "style", label: "style", values: ["tile", "shadow", "plain"] })

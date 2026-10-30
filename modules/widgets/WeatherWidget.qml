@@ -20,11 +20,12 @@ Item {
         anchors.centerIn: parent
         spacing: root.unit * 0.03
 
-        DotMatrix {
+        DotIcon {
             anchors.horizontalCenter: parent.horizontalCenter
-            pattern: WeatherGlyphs.forCode(Weather.code, Weather.day)
-            cell: Math.max(3, root.unit * 0.05)
-            dotSize: cell * 0.72
+            width: root.unit * 0.34
+            height: width
+            name: Icons.weather(Weather.code, Weather.day)
+            grid: 30
         }
 
         Row {

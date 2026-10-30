@@ -35,7 +35,7 @@ Item {
     Column {
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        spacing: Math.round(root.numeral * 0.2)
+        spacing: Math.round(root.numeral * 0.08)
 
         DotText {
             text: Time.format(root.pattern)
@@ -43,11 +43,19 @@ Item {
             plain: true
         }
 
-        SectionLabel {
+        // Sized to the numerals and set in from their left edge by the same
+        // margin the first digit has, so it reads as the clock's own caption
+        // rather than a label left lying underneath it.
+        Text {
             visible: root.showDate
-            leftPadding: 4
-            text: `${Time.format("dddd · d MMMM")} · week ${Time.weekNumber()}`
+            leftPadding: root.numeral * 0.06
+            text: `${Time.format("dddd · d MMMM")} · week ${Time.weekNumber()}`.toUpperCase()
             color: Theme.fgBright
+            font.family: Theme.fontUi
+            font.pixelSize: Math.max(11, root.numeral * 0.06)
+            font.weight: Font.Medium
+            font.letterSpacing: Math.max(1.4, root.numeral * 0.012)
+            renderType: Text.NativeRendering
         }
     }
 }

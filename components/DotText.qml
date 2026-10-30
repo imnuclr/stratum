@@ -38,6 +38,10 @@ Row {
                 font.pixelSize: Math.round(root.size)
                 font.weight: root.weight
                 font.features: ({ tnum: 1 })
+                // Doto is a variable font whose dots are square at its default
+                // roundness. Small, that still reads as dots; at clock size every
+                // dot is visibly a square block. Fully round, as the design means.
+                font.variableAxes: ({ "ROND": 100 })
                 renderType: Text.NativeRendering
             }
 
