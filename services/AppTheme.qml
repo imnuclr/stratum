@@ -33,6 +33,12 @@ Singleton {
         return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
     }
 
+    // "#rrggbb" as a colour.
+    function parse(hex) {
+        const n = parseInt(String(hex).slice(1, 7), 16);
+        return Qt.rgba(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255, 1);
+    }
+
     function mix(a, b, t) {
         return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, 1);
     }
@@ -75,10 +81,14 @@ Singleton {
         };
         // Terminal hues, pulled a little toward the accent so they sit with it,
         // at one lightness and saturation so none shouts.
+        // How far toward the accent (Config apps.terminalTint, 0 to 1): half
+        // way by default, so a diff's greens and reds still read as such but
+        // belong with the rest instead of being the stock green.
+        const tint = Config.get("apps.terminalTint", 0.5);
         const pull = hue => {
             let d = h * 360 - hue;
             d = ((d + 540) % 360) - 180;
-            return ((hue + d * 0.18) + 360) % 360 / 360;
+            return ((hue + d * tint) + 360) % 360 / 360;
         };
         const ansi = hue => root.hex(Qt.hsla(pull(hue), dark ? 0.62 : 0.55, dark ? 0.72 : 0.38, 1));
         const bright = hue => root.hex(Qt.hsla(pull(hue), dark ? 0.7 : 0.6, dark ? 0.8 : 0.3, 1));
@@ -389,10 +399,12 @@ Singleton {
             `  --border-light: rgba(${rgb(p.outline)}, 0);`,
             `  --border: rgba(${rgb(p.outline)}, 0.25);`,
             `  --button-border: rgba(${rgb(p.outline)}, 0);`,
+            // Midnight's "colours" are its scheme's, not literal hues, as in
+            // Caelestia's: online, idle and the rest come out of the palette.
             ...steps("red", p.error),
-            ...steps("green", p.hues[1]),
+            ...steps("green", p.secondary),
             ...steps("blue", p.accent),
-            ...steps("yellow", p.hues[2]),
+            ...steps("yellow", root.hex(root.mix(root.parse(p.accent), Qt.rgba(1, 1, 1, 1), 0.6))),
             ...steps("purple", p.tertiary),
             "}"].join("\n") + "\n";
     }
