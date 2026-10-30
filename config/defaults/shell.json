@@ -130,6 +130,6 @@
     },
     "wallpaper": {
         "dir": "~/Pictures/Wallpapers",
-        "fadeMs": 600
+        "fadeMs": 150
     }
 }

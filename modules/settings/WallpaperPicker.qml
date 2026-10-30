@@ -83,7 +83,7 @@ PanelWindow {
     Timer {
         id: preview
 
-        interval: 90
+        interval: 30
         onTriggered: Wallpaper.set(root.entries[root.index])
     }
 
@@ -134,6 +134,28 @@ PanelWindow {
             else
                 return;
             event.accepted = true;
+        }
+
+        // The pictures either side of the one being looked at, decoded ahead at the
+        // size the desktop will ask for so that stepping to them is instant. Kept
+        // referenced here, which is what keeps them in the image cache.
+        Repeater {
+            model: root.open ? 7 : 0
+
+            Image {
+                required property int index
+
+                readonly property int at: root.index + index - 3
+
+                visible: false
+                asynchronous: true
+                cache: true
+                fillMode: Image.PreserveAspectCrop
+                sourceSize.width: root.monitor.width
+                sourceSize.height: root.monitor.height
+                mipmap: Config.get("wallpaper.look", "original") === "dots"
+                source: at >= 0 && at < root.entries.length ? `file://${root.entries[at]}` : ""
+            }
         }
 
         // Shade at the top and foot, so the words and the strip read over any
