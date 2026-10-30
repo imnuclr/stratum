@@ -107,6 +107,21 @@ Singleton {
             : `focuswindow class:${pattern}`);
     }
 
+    /*
+     * Moves a window (by a Hyprland window selector, e.g.
+     * "title:^(Stratum Settings)$") to the workspace in front of you and
+     * focuses it.
+     */
+    function bringWindow(selector) {
+        const here = root.focusedWorkspace?.id ?? 1;
+        Hyprland.dispatch(lua
+            ? `hl.dsp.window.move({ window = "${selector}", workspace = "${here}", follow = false })`
+            : `movetoworkspacesilent ${here},${selector}`);
+        Hyprland.dispatch(lua
+            ? `hl.dsp.focus({ window = "${selector}" })`
+            : `focuswindow ${selector}`);
+    }
+
     function focusWindow(address) {
         if (!address)
             return;
