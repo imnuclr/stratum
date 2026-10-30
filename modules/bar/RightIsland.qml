@@ -29,7 +29,7 @@ Pill {
 
             monitorName: root.monitorName
             anchors.verticalCenter: parent.verticalCenter
-            visible: root.modules.includes("tray") && hasItems
+            visible: root.modules.includes("tray") && hasItems && Config.get("bar.tray", "hover") !== "hide"
         }
 
         Rectangle {

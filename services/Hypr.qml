@@ -46,6 +46,21 @@ Singleton {
         id: modeProc
     }
 
+    /*
+     * Window blur and shadows, off to save power or back on. Off is set
+     * directly; on is a config reload, which puts back whatever your own
+     * config says rather than guessing what it was.
+     */
+    function setEffects(on) {
+        if (on) {
+            Quickshell.execDetached(["hyprctl", "reload"]);
+        } else if (lua) {
+            Hyprland.dispatch(`hl.config({ decoration = { blur = { enabled = false }, shadow = { enabled = false } } })`);
+        } else {
+            Quickshell.execDetached(["hyprctl", "--batch", "keyword decoration:blur:enabled 0 ; keyword decoration:shadow:enabled 0"]);
+        }
+    }
+
     function focusWorkspace(id) {
         Hyprland.dispatch(lua ? `hl.dsp.focus({ workspace = "${id}" })` : `workspace ${id}`);
     }

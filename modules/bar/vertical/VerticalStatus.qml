@@ -26,24 +26,100 @@ Column {
      * The tray, as a column of its icons above the status group. Their menus open
      * away from the screen's edge, into the room beside the bar.
      */
+    /*
+     * Settings → Bar → Tray: "show" keeps every icon out, "hover" folds them
+     * behind a chevron until the pointer comes near, "hide" leaves the tray off.
+     */
+    readonly property string trayMode: Config.get("bar.tray", "show")
+
     Column {
+        id: trayColumn
+
+        readonly property bool open: root.trayMode === "show" || trayHover.hovered || trayGrace.running
+            || (Popouts.open && Popouts.current.startsWith("tray:") && Popouts.monitorName === root.monitorName)
+
         anchors.horizontalCenter: parent.horizontalCenter
-        spacing: Theme.space(3)
-        visible: (SystemTray.items?.values?.length ?? 0) > 0
+        spacing: Theme.space(2)
+        visible: root.trayMode !== "hide" && (SystemTray.items?.values?.length ?? 0) > 0
         bottomPadding: Theme.space(1)
 
-        Repeater {
-            model: SystemTray.items?.values ?? []
+        HoverHandler {
+            id: trayHover
 
-            TrayIcon {
-                required property var modelData
+            margin: Theme.space(2)
+            onHoveredChanged: {
+                if (!hovered)
+                    trayGrace.restart();
+            }
+        }
+
+        Timer {
+            id: trayGrace
+
+            interval: 260
+        }
+
+        Glyph {
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: root.trayMode === "hover"
+            name: "chevron-down"
+            size: 14
+            color: trayColumn.open ? Theme.fg : Theme.fgDim
+            rotation: trayColumn.open ? 180 : 0
+
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: Theme.standard * 1.6
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+        }
+
+        Item {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: icons.implicitWidth
+            height: trayColumn.open ? icons.implicitHeight : 0
+            clip: true
+            opacity: trayColumn.open ? 1 : 0
+
+            Behavior on height {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+
+            Column {
+                id: icons
 
                 anchors.horizontalCenter: parent.horizontalCenter
-                item: modelData
-                size: 17
-                monitorName: root.monitorName
-                vertical: true
-                edge: Config.forMonitor(root.monitorName, "bar.edge", "left") === "right" ? Edges.Left : Edges.Right
+                spacing: Theme.space(3)
+                topPadding: root.trayMode === "hover" ? Theme.space(1) : 0
+
+                Repeater {
+                    model: SystemTray.items?.values ?? []
+
+                    TrayIcon {
+                        required property var modelData
+
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        item: modelData
+                        size: 17
+                        monitorName: root.monitorName
+                        vertical: true
+                        edge: Config.forMonitor(root.monitorName, "bar.edge", "left") === "right" ? Edges.Left : Edges.Right
+                    }
+                }
             }
         }
 

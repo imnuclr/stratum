@@ -99,7 +99,9 @@ Singleton {
      * How long everything takes, as a multiple: 1 is as designed, under 1 is
      * brisker, 0 turns animation off. Settings → Motion sets it.
      */
-    readonly property real speed: Math.max(0, Config.get("motion.speed", 1))
+    readonly property real speed: root.calm ? 0 : Math.max(0, Config.get("motion.speed", 1))
+    // Set by the power profile when it is saving on animation.
+    property bool calm: false
     readonly property int micro: Math.round(pick("motion.micro", 70) * root.speed)
     readonly property int standard: Math.round(pick("motion.standard", 100) * root.speed)
     readonly property int sheetMs: Math.round(pick("motion.sheet", 220) * root.speed)
