@@ -121,8 +121,8 @@ Singleton {
     // use `soft`. The previous pair — ease-out-cubic in, ease-in out — measured
     // 40% of the travel inside the first 15% of the time on the way in, and the
     // way out accelerated into a dead stop. Both read as aggressive.
-    readonly property var enterEasing: pick("motion.enterEasing", [0.37, 0, 0.63, 1, 1, 1])
-    readonly property var exitEasing: pick("motion.exitEasing", [0.37, 0, 0.63, 1, 1, 1])
+    readonly property var enterEasing: pick("motion.enterEasing", [0.45, 0, 0.15, 1, 1, 1])
+    readonly property var exitEasing: pick("motion.exitEasing", [0.45, 0, 0.15, 1, 1, 1])
     // Overshoots slightly. For things that appear rather than merely move.
     readonly property var expressive: pick("motion.expressive", [0.34, 1.26, 0.38, 1, 1, 1])
     // Eased at both ends. For something changing size, where enterEasing's hard
@@ -135,7 +135,10 @@ Singleton {
      * covered 40% of its distance after 15% of its time. Use for anything large
      * enough that its motion is watched.
      */
-    readonly property var soft: pick("motion.soft", [0.37, 0, 0.63, 1, 1, 1])
+    // Revised to land more softly: sine in-out reaches its stop in the same
+    // time it took to get going, which on a short sheet read as arriving with a
+    // thud. This one starts as gently but spends longer settling.
+    readonly property var soft: pick("motion.soft", [0.45, 0, 0.15, 1, 1, 1])
 
     /*
      * Eased out, for small feedback only: a press, a hover lift, a colour. At

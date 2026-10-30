@@ -20,6 +20,17 @@ Singleton {
     property string openPanel: ""
 
     /*
+     * Settings is a window, not a panel, so it has its own state: opening the
+     * control centre or a menu over it must not close it, the way one panel
+     * replaces another. Asking for "settings" through open or toggle lands here.
+     */
+    property bool settingsOpen: false
+
+    function closeSettings() {
+        root.settingsOpen = false;
+    }
+
+    /*
      * Which screen the open panel belongs to. Panels are built per screen, so
      * without this every screen's copy shows at once and the panel appears on
      * both monitors. Empty means "wherever", for a panel opened over IPC with no
@@ -82,6 +93,12 @@ Singleton {
     property int holds: 0
 
     function toggle(name, screen, from) {
+        if (name === "settings") {
+            root.settingsOpen = !root.settingsOpen;
+            if (root.settingsOpen)
+                root.close();
+            return;
+        }
         // A click on the trigger that opened a click-dismissed panel first lands
         // outside it, closing it, and then arrives here as a toggle. Without this
         // the panel closed and immediately opened again.
@@ -96,6 +113,11 @@ Singleton {
     }
 
     function open(name, screen) {
+        if (name === "settings") {
+            root.settingsOpen = true;
+            root.close();
+            return;
+        }
         root.hoverOpened = false;
         root.expandedChip = "";
         adopt.stop();

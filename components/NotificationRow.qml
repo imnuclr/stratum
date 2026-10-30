@@ -58,6 +58,7 @@ Rectangle {
     implicitHeight: Math.max(content.implicitHeight, badge.height) + Theme.space(3) * 2
 
     radius: Theme.rTile
+    opacity: 1 - Math.min(0.9, Math.abs(root.slide) / Math.max(1, root.width))
     color: hover.hovered ? Theme.surfaceTop : Theme.surfaceHi
     border.width: 1
     border.color: hover.hovered ? Theme.fg : Theme.outline
@@ -242,5 +243,64 @@ Rectangle {
     // Below the dismiss target and the action labels in the stack, so those win.
     TapHandler {
         onTapped: Notifs.activate(root.notification)
+    }
+
+    // A middle click dismisses, as it closes a tab.
+    TapHandler {
+        acceptedButtons: Qt.MiddleButton
+        onTapped: Notifs.dismiss(root.notification)
+    }
+
+    /*
+     * Flicked sideways, it follows the pointer and fades; let go past a third
+     * of its width, or with a quick flick, and it is dismissed. Short of that
+     * it settles back.
+     */
+    property real slide: 0
+
+    transform: Translate {
+        x: root.slide
+    }
+
+    Behavior on slide {
+        enabled: !swipe.active
+
+        NumberAnimation {
+            duration: Theme.sheetMs
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.smooth
+        }
+    }
+
+    DragHandler {
+        id: swipe
+
+        target: null
+        yAxis.enabled: false
+        cursorShape: active ? Qt.ClosedHandCursor : undefined
+
+        onTranslationChanged: {
+            if (active)
+                root.slide = translation.x;
+        }
+
+        onActiveChanged: {
+            if (active)
+                return;
+            const fast = Math.abs(centroid.velocity.x) > 900;
+            if (Math.abs(root.slide) > root.width / 3 || fast) {
+                root.slide = (root.slide >= 0 ? 1 : -1) * (root.width + 40);
+                gone.restart();
+            } else {
+                root.slide = 0;
+            }
+        }
+    }
+
+    Timer {
+        id: gone
+
+        interval: Theme.sheetMs
+        onTriggered: Notifs.dismiss(root.notification)
     }
 }

@@ -48,7 +48,7 @@ SettingsPage {
                 text: "arrange"
                 width: 110
                 onClicked: {
-                    Shell.close();
+                    Shell.closeSettings();
                     Widgets.editing = true;
                 }
             }

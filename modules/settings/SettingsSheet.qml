@@ -21,7 +21,7 @@ import qs.theme
 FloatingWindow {
     id: root
 
-    readonly property bool open: Shell.openPanel === "settings"
+    readonly property bool open: Shell.settingsOpen
     readonly property int windowWidth: Config.get("settings.width", 1180)
     readonly property int windowHeight: Config.get("settings.height", 780)
 
@@ -34,7 +34,7 @@ FloatingWindow {
     // Closed from outside (Super+Q): the shell's own state has to follow.
     onVisibleChanged: {
         if (!root.visible && root.open)
-            Shell.close();
+            Shell.closeSettings();
     }
 
     // Older names for pages that have since been merged, so links still land.
@@ -109,7 +109,7 @@ FloatingWindow {
     Item {
         anchors.fill: parent
         focus: true
-        Keys.onEscapePressed: Shell.close()
+        Keys.onEscapePressed: Shell.closeSettings()
     }
 
     Item {
@@ -306,7 +306,7 @@ FloatingWindow {
             }
 
             TapHandler {
-                onTapped: Shell.close()
+                onTapped: Shell.closeSettings()
             }
         }
 

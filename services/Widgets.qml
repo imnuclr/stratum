@@ -36,7 +36,7 @@ Singleton {
      */
     readonly property var types: ({
         "clock": { label: "clock", icon: "moon", w: 54, h: 26, minW: 24, minH: 10, shape: "square", style: "shadow",
-            options: [{ key: "hours", label: "hours", values: ["24h", "12h"] }, { key: "date", label: "date", values: ["show", "hide"] }] },
+            options: [{ key: "hours", label: "hours", values: ["auto", "24h", "12h"] }, { key: "date", label: "date", values: ["show", "hide"] }] },
         "greeting": { label: "greeting", icon: "sun", w: 44, h: 14, minW: 22, minH: 6, shape: "square", style: "shadow",
             options: [{ key: "facts", label: "details", values: ["show", "hide"] }] },
         "weather": { label: "weather", icon: "cloud-sun", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },

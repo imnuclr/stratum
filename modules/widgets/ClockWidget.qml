@@ -15,7 +15,9 @@ Item {
     property var item: ({})
     property bool live: true
 
-    readonly property bool twelve: Widgets.option(root.item, "hours") === "12h"
+    // "auto" follows Settings → Appearance → Clock.
+    readonly property string hours: Widgets.option(root.item, "hours")
+    readonly property bool twelve: root.hours === "12h" || (root.hours !== "24h" && Time.twelveHour)
     readonly property bool showDate: Widgets.option(root.item, "date") !== "hide"
     readonly property string pattern: root.twelve ? "h:mm" : "HH:mm"
 
