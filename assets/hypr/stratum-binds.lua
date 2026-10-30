@@ -38,6 +38,10 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.global("stratum:brightnessDown"), repeat
 
 -- Shift + Print emits SysRq rather than Print, so the third one uses Ctrl.
 hl.bind("Print", hl.dsp.global("stratum:screenshotRegion"), locked)
+-- The key most people reach for. If another config already owns it Hyprland
+-- discards this duplicate, in which case Print above still works.
+pcall(hl.unbind, "SUPER + SHIFT + S")
+hl.bind("SUPER + SHIFT + S", hl.dsp.global("stratum:screenshotRegion"))
 hl.bind("SUPER + Print", hl.dsp.global("stratum:screenshot"), locked)
 hl.bind("CTRL + Print", hl.dsp.global("stratum:screenshotEdit"), locked)
 
