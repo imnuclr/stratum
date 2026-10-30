@@ -234,16 +234,20 @@ Canvas {
         }
 
         if (fit === "crop" && !frameSubject && sampler.implicitWidth > 0 && sampler.implicitHeight > 0) {
-            const nw = sampler.implicitWidth;
-            const nh = sampler.implicitHeight;
-            const want = cols / rows;
-            let sw = nw;
-            let sh = nh;
-            if (nw / nh > want)
-                sw = nh * want;
-            else
-                sh = nw / want;
-            ctx.drawImage(sampler, (nw - sw) / 2, (nh - sh) / 2, sw, sh, 0, 0, cols, rows);
+            // Only the picture's proportions are used, never its size in pixels:
+            // that is reported in logical units and the bitmap is decoded in device
+            // ones, so a source rectangle built from it covers the wrong part of
+            // the picture on a scaled display — which showed as a wallpaper zoomed
+            // in by the display scale. Drawn instead to a rectangle that covers the
+            // grid, centred, with the overflow falling outside it.
+            const aspect = sampler.implicitWidth / sampler.implicitHeight;
+            let w = cols;
+            let h = cols / aspect;
+            if (h < rows) {
+                h = rows;
+                w = rows * aspect;
+            }
+            ctx.drawImage(sampler, (cols - w) / 2, (rows - h) / 2, w, h);
         } else {
             ctx.drawImage(sampler, ox, oy, dw, dh);
         }

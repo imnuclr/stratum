@@ -47,6 +47,21 @@ Variants {
             hold.restart();
         }
 
+        // Hyprland's own announcement, which does not wait on a property to refresh.
+        // The workspace property above did not always change for a switch, and the
+        // band simply never appeared.
+        Connections {
+            target: Hyprland
+
+            function onRawEvent(event) {
+                if (event.name === "workspace" || event.name === "workspacev2"
+                        || event.name === "focusedmon" || event.name === "focusedmonv2") {
+                    win.moving = true;
+                    hold.restart();
+                }
+            }
+        }
+
         Timer {
             id: hold
 
