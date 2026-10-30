@@ -25,7 +25,6 @@ Item {
             width: root.unit * 0.34
             height: width
             name: Icons.weather(Weather.code, Weather.day)
-            grid: 30
         }
 
         Row {
