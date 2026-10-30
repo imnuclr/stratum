@@ -55,6 +55,11 @@ Column {
             readonly property bool hovered: hover.hovered
             readonly property bool lit: hovered || (modelData.popout.length > 0 && Popouts.current === modelData.popout && Popouts.open)
 
+            // Profile and battery have nothing to show on a machine without a
+            // battery. Hiding the glyph inside left its slot behind as a gap, so
+            // the slot itself goes and the column closes up.
+            visible: (modelData.kind !== "profile" && modelData.kind !== "battery") || Power.hasBattery
+
             anchors.horizontalCenter: parent.horizontalCenter
             width: 24
             height: Math.max(20, content.implicitHeight)
@@ -122,12 +127,14 @@ Column {
                     color: Theme.fgBright
                 }
 
-                Glyph {
+                BatteryGlyph {
                     anchors.horizontalCenter: parent.horizontalCenter
                     visible: item.modelData.kind === "battery" && Power.hasBattery
-                    name: Power.charging ? "battery-charging" : "battery-vertical"
-                    size: 17
-                    color: Power.critical ? Theme.accent : (item.lit ? Theme.fg : Theme.fgDim)
+                    vertical: true
+                    size: 24
+                    level: Power.percentage
+                    charging: Power.charging
+                    color: Power.critical ? Theme.accent : (item.lit ? Theme.fg : Theme.fgBright)
                 }
 
                 DotText {
