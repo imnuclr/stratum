@@ -78,15 +78,82 @@ SettingsPage {
                 onPicked: index => Power.setProfile(Power.profiles[index])
             }
         }
+    }
 
-        SettingRow {
-            visible: Power.hasBattery
-            title: "Lower refresh rate in eco"
-            detail: "Drops the built-in screen to its slowest refresh rate while eco is on, and puts it back after."
+    /*
+     * What each profile turns off to save energy, one column per profile.
+     * Performance's column is fixed: it is the profile for wanting everything.
+     */
+    SettingCard {
+        title: "saving energy"
+        footnote: "Performance never turns anything off. Changes apply straight away to the profile you are on."
 
-            Switch {
-                checked: Config.get("power.ecoRefresh", true)
-                onToggled: value => Config.set("power.ecoRefresh", value)
+        // Column headings, over the switches.
+        Item {
+            width: parent.width
+            height: 40
+
+            Row {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+
+                Repeater {
+                    model: ["eco", "balanced", "performance"]
+
+                    SectionLabel {
+                        required property string modelData
+
+                        width: 96
+                        horizontalAlignment: Text.AlignHCenter
+                        text: modelData
+                        color: Power.profileKey === modelData ? Theme.fg : Theme.fgDim
+                    }
+                }
+            }
+        }
+
+        Repeater {
+            model: Power.savers.filter(v => !v.needsBattery || Power.hasBattery)
+
+            SettingRow {
+                id: saver
+
+                required property var modelData
+
+                title: saver.modelData.title
+                detail: saver.modelData.detail
+
+                Row {
+                    Repeater {
+                        model: ["eco", "balanced", "performance"]
+
+                        Item {
+                            id: cell
+
+                            required property string modelData
+
+                            width: 96
+                            height: 24
+
+                            Switch {
+                                anchors.centerIn: parent
+                                visible: cell.modelData !== "performance"
+                                checked: Power.saverOn(cell.modelData, saver.modelData.key)
+                                onToggled: value => Power.setSaver(cell.modelData, saver.modelData.key, value)
+                            }
+
+                            // Performance keeps everything: shown, not offered.
+                            Rectangle {
+                                anchors.centerIn: parent
+                                visible: cell.modelData === "performance"
+                                width: 10
+                                height: 2
+                                radius: 1
+                                color: Theme.fgFaint
+                            }
+                        }
+                    }
+                }
             }
         }
     }

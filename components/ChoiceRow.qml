@@ -10,6 +10,8 @@ Item {
     id: root
 
     property string icon: ""
+    // 0..100 draws Wi-Fi bars in place of the icon; below zero, no bars.
+    property int strength: -1
     property string title: ""
     property string sub: ""
     property string trailing: ""
@@ -45,15 +47,26 @@ Item {
 
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
-        visible: root.icon.length > 0
+        visible: root.icon.length > 0 && root.strength < 0
         name: root.icon
         size: 18
         color: root.chosen ? Theme.fg : Theme.fgDim
     }
 
+    WifiGlyph {
+        id: bars
+
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.strength >= 0
+        strength: Math.max(0, root.strength)
+        size: 18
+        color: root.chosen ? Theme.fg : Theme.fgBright
+    }
+
     Column {
-        anchors.left: glyph.visible ? glyph.right : parent.left
-        anchors.leftMargin: glyph.visible ? Theme.space(3) : 0
+        anchors.left: glyph.visible ? glyph.right : (bars.visible ? bars.right : parent.left)
+        anchors.leftMargin: glyph.visible || bars.visible ? Theme.space(3) : 0
         anchors.right: tail.left
         anchors.rightMargin: Theme.space(3)
         anchors.verticalCenter: parent.verticalCenter

@@ -75,6 +75,20 @@ SettingsPage {
 
         SettingRow {
             width: parent.width
+            title: "Tray"
+            detail: "The icons apps leave running in the background. On hover folds them behind a chevron until you point at it."
+
+            Segmented {
+                readonly property var modes: ["show", "hover", "hide"]
+
+                model: ["always", "on hover", "hidden"]
+                current: Math.max(0, modes.indexOf(Config.get("bar.tray", page.vertical ? "show" : "hover")))
+                onPicked: index => Config.set("bar.tray", modes[index])
+            }
+        }
+
+        SettingRow {
+            width: parent.width
             title: "Margin"
             detail: "Space between the bar and the edge of the screen."
 

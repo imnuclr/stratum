@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
 import qs.components
+import qs.config
 import qs.services
 import qs.theme
 import qs.utils
@@ -35,7 +36,7 @@ Row {
     property string monitorName: ""
     // Kept open while one of its icons has its popout up, so the icon the panel
     // hangs from does not fold away under it.
-    readonly property bool expanded: hover.hovered || closing.running || root.holding
+    readonly property bool expanded: Config.get("bar.tray", "hover") === "show" || hover.hovered || closing.running || root.holding
         || (Popouts.open && Popouts.current.startsWith("tray:") && Popouts.monitorName === root.monitorName)
 
     HoverHandler {

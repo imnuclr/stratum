@@ -123,7 +123,7 @@ SettingsPage {
             ChoiceRow {
                 required property var modelData
 
-                icon: modelData.signalStrength > 0.66 ? "wifi" : (modelData.signalStrength > 0.33 ? "wifi-arc2" : "wifi-arc1")
+                strength: Math.round(modelData.signalStrength * 100)
                 title: modelData.name
                 sub: [modelData.connected ? "connected" : (modelData.known ? "saved" : ""),
                     Wifi.isSecure(modelData) ? "secured" : "open",

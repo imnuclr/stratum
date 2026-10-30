@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.components
 import qs.services
 import qs.theme
@@ -92,7 +93,46 @@ Item {
                 if (item.hasMenu)
                     menu.open();
             } else {
-                item.activate();
+                root.bringForward();
+            }
+        }
+    }
+
+    /*
+     * A left click goes to the app's window if it has one open — onto its
+     * workspace, wherever that is — and only asks the app itself otherwise.
+     * Asking first was a toggle for many apps: Spotify, Discord and Steam hide
+     * their window when "activated" while it is open.
+     */
+    function bringForward() {
+        finder.running = false;
+        finder.running = true;
+    }
+
+    function words(text) {
+        return String(text ?? "").toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !["client", "status", "icon", "tray", "chrome", "indicator", "app"].includes(w));
+    }
+
+    Process {
+        id: finder
+
+        command: ["hyprctl", "clients", "-j"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let clients = [];
+                try {
+                    clients = JSON.parse(text);
+                } catch (e) {}
+                const wanted = new Set([...root.words(root.item.id), ...root.words(root.item.title), ...root.words(root.item.tooltipTitle)]);
+                const hit = clients.find(c => {
+                    const names = [...root.words(c.class), ...root.words(c.initialClass)];
+                    return names.some(n => wanted.has(n));
+                });
+                if (hit)
+                    Hypr.focusWindow(hit.address);
+                else
+                    root.item.activate();
             }
         }
     }

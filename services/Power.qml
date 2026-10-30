@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.UPower
 import qs.config
+import qs.theme
 
 /*
  * Battery and power profile.
@@ -76,22 +77,76 @@ Singleton {
     }
 
     /*
-     * Eco also drops the built-in panel to its lowest refresh rate, and any other
-     * profile puts it back at the highest the same resolution offers. Only the
-     * laptop's own screen, and only on a machine with a battery: an external
-     * monitor has nothing to save, and a desktop has no reason to ask.
-     * `power.ecoRefresh: false` in shell.json turns it off.
+     * What each profile switches off to save energy. Eco and balanced can each
+     * have their own set; performance never turns anything off, because it is
+     * the one you pick when you want everything. Defaults: eco saves where it
+     * costs least to notice, balanced leaves things alone.
      */
+    readonly property var savers: [
+        { key: "refresh", title: "Lower the refresh rate", detail: "The built-in screen runs at its slowest rate.", eco: true, balanced: false, needsBattery: true },
+        { key: "effects", title: "No blur or shadows", detail: "Hyprland's heaviest effects on windows.", eco: true, balanced: false },
+        { key: "motion", title: "No animations", detail: "Panels and popouts appear without moving.", eco: true, balanced: false },
+        { key: "widgets", title: "Pause desktop widgets", detail: "Clocks and gauges stop updating until you switch back.", eco: true, balanced: false },
+        { key: "drift", title: "Still wallpaper", detail: "No drifting between workspaces.", eco: true, balanced: false },
+        { key: "dim", title: "Dim the screen", detail: "Down to 40% when switching, if brighter.", eco: false, balanced: false },
+        { key: "bluetooth", title: "Turn off Bluetooth", detail: "When switching to this profile.", eco: false, balanced: false }
+    ]
+
+    readonly property string profileKey: root.profile === "power-saver" ? "eco" : root.profile
+
+    function saverOn(profileKey, key) {
+        if (profileKey === "performance")
+            return false;
+        const def = root.savers.find(s => s.key === key)?.[profileKey] ?? false;
+        return Config.get(`power.save.${profileKey}.${key}`, def);
+    }
+
+    function setSaver(profileKey, key, on) {
+        if (profileKey !== "performance")
+            Config.set(`power.save.${profileKey}.${key}`, on);
+    }
+
+    // Whether a saver is in force right now.
+    function saving(key) {
+        return root.saverOn(root.profileKey, key);
+    }
+
     readonly property bool eco: root.profile === "power-saver"
     property string wantRefresh: ""
 
-    onEcoChanged: root.applyRefresh(root.eco ? "min" : "max")
+    readonly property bool lowRefresh: root.saving("refresh") && Config.get("power.ecoRefresh", true)
+    readonly property bool calm: root.saving("motion")
+    readonly property bool noEffects: root.saving("effects")
+
+    onLowRefreshChanged: root.applyRefresh(root.lowRefresh ? "min" : "max")
 
     // At startup the daemon may already be in eco, or the battery appear late;
-    // nothing is touched unless eco is actually on.
+    // nothing is touched unless the saver is actually on.
     onHasBatteryChanged: {
-        if (root.hasBattery && root.eco)
+        if (root.hasBattery && root.lowRefresh)
             root.applyRefresh("min");
+    }
+
+    // Animations follow the profile; Theme cannot ask for this itself.
+    Binding {
+        target: Theme
+        property: "calm"
+        value: root.calm
+    }
+
+    onNoEffectsChanged: Hypr.setEffects(!root.noEffects)
+
+    // One-off savers, done on the way into a profile.
+    onProfileKeyChanged: {
+        if (root.saving("dim") && Brightness.value > 0.4)
+            Brightness.set(0.4);
+        if (root.saving("bluetooth"))
+            Bt.setEnabled(false);
+    }
+
+    Component.onCompleted: {
+        if (root.noEffects)
+            Hypr.setEffects(false);
     }
 
     function applyRefresh(which) {
