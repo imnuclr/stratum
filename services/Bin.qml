@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import Quickshell
 
 /*
  * Finding a program that may not be on the shell's own path.
