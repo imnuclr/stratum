@@ -128,7 +128,7 @@ Item {
 
                 MediaButton {
                     icon: "skip-back"
-                    enabled: Media.canPrevious
+                    available: Media.canPrevious
                     onClicked: Media.previous()
                 }
 
@@ -172,7 +172,7 @@ Item {
 
                 MediaButton {
                     icon: "skip-forward"
-                    enabled: Media.canNext
+                    available: Media.canNext
                     onClicked: Media.next()
                 }
             }
@@ -183,7 +183,7 @@ Item {
         id: button
 
         property string icon: ""
-        property bool enabled: true
+        property bool available: true
 
         signal clicked
 
@@ -196,18 +196,18 @@ Item {
             name: button.icon
             size: 15
             filled: true
-            color: !button.enabled ? Theme.fgFaint : (hover.hovered ? Theme.fg : Theme.fgBright)
+            color: !button.available ? Theme.fgFaint : (hover.hovered ? Theme.fg : Theme.fgBright)
         }
 
         HoverHandler {
             id: hover
 
-            enabled: button.enabled
+            enabled: button.available
             cursorShape: Qt.PointingHandCursor
         }
 
         TapHandler {
-            enabled: button.enabled && !Widgets.editing
+            enabled: button.available && !Widgets.editing
             onTapped: button.clicked()
         }
     }
