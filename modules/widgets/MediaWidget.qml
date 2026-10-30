@@ -87,7 +87,6 @@ Item {
                 width: parent.width * 0.36
                 height: width
                 name: "headphones"
-                grid: 26
                 color: Theme.fgBright
             }
         }
