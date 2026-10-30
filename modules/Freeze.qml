@@ -8,9 +8,13 @@ import qs.services
 /*
  * The frozen frame behind a region selection.
  *
- * Shown only on the monitor that was grabbed, and torn down (not just hidden)
- * afterwards, so the next freeze loads its own image rather than reusing the
- * last one. Takes no input: the selector above it needs every click.
+ * The window stays mapped, empty and transparent, the whole time. A window that
+ * is created when the key is pressed gets Hyprland's layer-open animation — the
+ * frozen frame slid down from the top of the screen, so the freeze itself was
+ * visible. Already mapped, the image simply appears in place. Only the grabbed
+ * monitor's loader is active, and it is torn down afterwards so the next freeze
+ * loads its own image rather than reusing the last. Takes no input: the selector
+ * above it needs every click.
  */
 Variants {
     model: Quickshell.screens
@@ -23,8 +27,8 @@ Variants {
         readonly property bool frozen: Screenshot.freezeOutput === win.modelData.name
 
         screen: modelData
-        visible: win.frozen
-        color: "black"
+        visible: true
+        color: "transparent"
         mask: Region {}
 
         WlrLayershell.layer: WlrLayer.Overlay

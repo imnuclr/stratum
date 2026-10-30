@@ -68,6 +68,22 @@ Singleton {
     property string pendingScript: ""
     readonly property string freezeFile: `${Quickshell.env("XDG_RUNTIME_DIR") ?? "/tmp"}/stratum-freeze.png`
 
+    /*
+     * From a button in a panel: the panel has to be gone before the screen is
+     * grabbed, or its closing fade is in the picture.
+     */
+    function regionSoon() {
+        Shell.close();
+        soon.restart();
+    }
+
+    Timer {
+        id: soon
+
+        interval: 380
+        onTriggered: root.region()
+    }
+
     function runFrozen(script, path) {
         if (root.busy) {
             Diag.log("screenshot", "ignored: a capture is already waiting");
