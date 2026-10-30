@@ -2,7 +2,9 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.UPower
+import qs.config
 
 /*
  * Battery and power profile.
@@ -71,5 +73,65 @@ Singleton {
             return;
         PowerProfiles.profile = name === "power-saver" ? PowerProfile.PowerSaver
             : name === "performance" ? PowerProfile.Performance : PowerProfile.Balanced;
+    }
+
+    /*
+     * Eco also drops the built-in panel to its lowest refresh rate, and any other
+     * profile puts it back at the highest the same resolution offers. Only the
+     * laptop's own screen, and only on a machine with a battery: an external
+     * monitor has nothing to save, and a desktop has no reason to ask.
+     * `power.ecoRefresh: false` in shell.json turns it off.
+     */
+    readonly property bool eco: root.profile === "power-saver"
+    property string wantRefresh: ""
+
+    onEcoChanged: root.applyRefresh(root.eco ? "min" : "max")
+
+    // At startup the daemon may already be in eco, or the battery appear late;
+    // nothing is touched unless eco is actually on.
+    onHasBatteryChanged: {
+        if (root.hasBattery && root.eco)
+            root.applyRefresh("min");
+    }
+
+    function applyRefresh(which) {
+        if (!root.hasBattery || !Config.get("power.ecoRefresh", true))
+            return;
+        root.wantRefresh = which;
+        readMonitors.running = true;
+    }
+
+    Process {
+        id: readMonitors
+
+        command: ["hyprctl", "-j", "monitors"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let monitors = [];
+                try {
+                    monitors = JSON.parse(text);
+                } catch (e) {
+                    return;
+                }
+                for (const m of monitors) {
+                    if (!/^eDP/.test(m.name))
+                        continue;
+                    // Rates on offer at the resolution already in use.
+                    const rates = [];
+                    for (const mode of m.availableModes ?? []) {
+                        const hit = /^(\d+)x(\d+)@([\d.]+)Hz$/.exec(mode);
+                        if (hit && Number(hit[1]) === m.width && Number(hit[2]) === m.height)
+                            rates.push(Number(hit[3]));
+                    }
+                    if (rates.length === 0)
+                        continue;
+                    const target = root.wantRefresh === "min" ? Math.min(...rates) : Math.max(...rates);
+                    if (Math.abs(target - m.refreshRate) < 0.5)
+                        continue;
+                    Hypr.setMonitorMode(m, m.width, m.height, target.toFixed(2));
+                }
+            }
+        }
     }
 }

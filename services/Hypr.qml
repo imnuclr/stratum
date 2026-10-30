@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 
 /*
  * Semantic wrapper over Hyprland dispatch.
@@ -25,6 +26,25 @@ Singleton {
     readonly property var toplevels: Hyprland.toplevels?.values ?? []
     readonly property var focusedWorkspace: Hyprland.focusedWorkspace
     readonly property var activeToplevel: Hyprland.activeToplevel
+
+    /*
+     * Changes one output's resolution and refresh rate, keeping where it sits and
+     * its scale. `monitor` is the object from `hyprctl -j monitors`.
+     */
+    function setMonitorMode(monitor, width, height, hz) {
+        const mode = `${width}x${height}@${hz}`;
+        const pos = `${monitor.x}x${monitor.y}`;
+        if (lua) {
+            Hyprland.dispatch(`hl.monitor({ output = "${monitor.name}", mode = "${mode}", position = "${pos}", scale = ${monitor.scale} })`);
+        } else {
+            modeProc.command = ["hyprctl", "keyword", "monitor", `${monitor.name},${mode},${pos},${monitor.scale}`];
+            modeProc.running = true;
+        }
+    }
+
+    Process {
+        id: modeProc
+    }
 
     function focusWorkspace(id) {
         Hyprland.dispatch(lua ? `hl.dsp.focus({ workspace = "${id}" })` : `workspace ${id}`);
