@@ -27,6 +27,12 @@ Singleton {
      */
     property bool settingsOpen: false
 
+    // Whether the settings window is on the workspace in front of you.
+    function settingsHere() {
+        const win = Hypr.toplevels.find(t => t.title === "Stratum Settings");
+        return !win || win.workspace?.id === Hypr.focusedWorkspace?.id;
+    }
+
     function closeSettings() {
         root.settingsOpen = false;
     }
@@ -99,6 +105,16 @@ Singleton {
 
     function toggle(name, screen, from) {
         if (name === "settings") {
+            /*
+             * Open, but on another workspace: asking for it brings it here
+             * rather than closing it. Closing first meant a second click to
+             * get it back, on the workspace you had just left.
+             */
+            if (root.settingsOpen && !root.settingsHere()) {
+                Hypr.bringWindow("title:^(Stratum Settings)$");
+                root.close();
+                return;
+            }
             root.settingsOpen = !root.settingsOpen;
             if (root.settingsOpen)
                 root.close();
@@ -119,6 +135,8 @@ Singleton {
 
     function open(name, screen) {
         if (name === "settings") {
+            if (root.settingsOpen && !root.settingsHere())
+                Hypr.bringWindow("title:^(Stratum Settings)$");
             root.settingsOpen = true;
             root.close();
             return;
