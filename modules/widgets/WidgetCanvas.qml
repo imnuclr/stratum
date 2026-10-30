@@ -49,15 +49,20 @@ PanelWindow {
         || (Config.get("widgets.enabled", true) && (!win.covered || !Config.get("widgets.hideCovered", true)))
 
     // Clear of the bar, with a margin.
-    readonly property bool barSide: Config.get("bar.orientation", "vertical") === "vertical"
-    readonly property real fieldLeft: win.barSide
-        ? Config.get("bar.width", 56) + Config.get("bar.margin", 10) * 2 + 16 : 24
-    readonly property real fieldTop: win.barSide
-        ? 24 : Config.get("bar.height", 38) + Config.get("bar.margin", 10) * 2 + 16
-    readonly property int cols: Math.max(10, Math.floor((win.monitor.width - win.fieldLeft - 24) / win.cell))
-    readonly property int rows: Math.max(10, Math.floor((win.monitor.height - win.fieldTop - 24) / win.cell))
+    readonly property bool barSide: Config.forMonitor(win.monitor.name, "bar.orientation", "vertical") === "vertical"
+    readonly property string barEdge: Config.forMonitor(win.monitor.name, "bar.edge", win.barSide ? "left" : "top")
+    readonly property bool barShown: Config.forMonitor(win.monitor.name, "bar.enabled", true)
+    readonly property real barRoom: !win.barShown ? 0 : (win.barSide
+        ? Config.forMonitor(win.monitor.name, "bar.width", 56) + Config.forMonitor(win.monitor.name, "bar.margin", 10) * 2
+        : Config.forMonitor(win.monitor.name, "bar.height", 38) + Config.forMonitor(win.monitor.name, "bar.margin", 10) * 2)
+    readonly property real fieldLeft: (win.barEdge === "left" ? win.barRoom : 0) + 24
+    readonly property real fieldTop: (win.barEdge === "top" ? win.barRoom : 0) + 24
+    readonly property real fieldRight: (win.barEdge === "right" ? win.barRoom : 0) + 24
+    readonly property real fieldBottom: (win.barEdge === "bottom" ? win.barRoom : 0) + 24
+    readonly property int cols: Math.max(10, Math.floor((win.monitor.width - win.fieldLeft - win.fieldRight) / win.cell))
+    readonly property int rows: Math.max(10, Math.floor((win.monitor.height - win.fieldTop - win.fieldBottom) / win.cell))
 
-    readonly property var items: Widgets.layoutFor(win.monitor.name, win.cols)
+    readonly property var items: Widgets.layoutFor(win.monitor.name, win.cols, win.rows)
 
     // Which widget's options are open, by id.
     property string optionsFor: ""
@@ -356,7 +361,7 @@ PanelWindow {
                                 const ny = Math.max(0, Math.min(win.rows - h, Math.round((frame.y + mover.y) / win.cell)));
                                 mover.x = 0;
                                 mover.y = 0;
-                                Widgets.move(win.monitor.name, win.cols, frame.modelData.id, nx, ny);
+                                Widgets.move(win.monitor.name, win.cols, frame.modelData.id, nx, ny, win.rows);
                             }
                         }
 
@@ -433,7 +438,7 @@ PanelWindow {
                                     const h = frame.liveH / win.cell;
                                     frame.liveW = -1;
                                     frame.liveH = -1;
-                                    Widgets.resize(win.monitor.name, win.cols, frame.modelData.id, w, h);
+                                    Widgets.resize(win.monitor.name, win.cols, frame.modelData.id, w, h, win.rows);
                                 }
                             }
                         }
@@ -812,7 +817,7 @@ PanelWindow {
                                     TapHandler {
                                         id: entryTap
 
-                                        onTapped: Widgets.add(win.monitor.name, win.cols, entry.modelData)
+                                        onTapped: Widgets.add(win.monitor.name, win.cols, entry.modelData, win.rows)
                                     }
                                 }
 

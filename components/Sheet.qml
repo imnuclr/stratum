@@ -205,11 +205,17 @@ PanelWindow {
         ? Config.get("bar.width", 56) + Config.get("bar.margin", 10) + Theme.space(1)
         : 0
 
+    // Which side the column bar is on, so a sheet keeps clear of it there.
+    readonly property bool barRight: Config.get("bar.orientation", "vertical") === "vertical"
+        && Config.get("bar.edge", "left") === "right"
+    readonly property real insetLeft: root.barRight ? 0 : root.barOffset
+    readonly property real insetRight: root.barRight ? root.barOffset : 0
+
     // Clamped so a sheet growing from an item near the far edge stays on screen
-    // rather than hanging off it.
-    readonly property real cardX: Math.round(Math.max(root.barOffset + Theme.space(1),
-        Math.min(monitor.width - root.sheetWidth - Theme.space(1),
-            root.barOffset + (monitor.width - root.barOffset) * root.originX - root.sheetWidth / 2)))
+    // rather than hanging off it, and clear of the bar on either side.
+    readonly property real cardX: Math.round(Math.max(root.insetLeft + Theme.space(1),
+        Math.min(monitor.width - root.insetRight - root.sheetWidth - Theme.space(1),
+            root.insetLeft + (monitor.width - root.insetLeft - root.insetRight) * root.originX - root.sheetWidth / 2)))
 
     /*
      * A sheet anchored to the bottom pins its bottom edge, full stop. Deriving y

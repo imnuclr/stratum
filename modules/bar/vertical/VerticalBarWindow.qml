@@ -112,6 +112,7 @@ PanelWindow {
         monitorName: root.name
         vertical: true
         barBottom: 0
-        barEdge: root.onLeft ? column.width : 0
+        barEdge: root.onLeft ? column.width : column.x
+        opensLeft: !root.onLeft
     }
 }
