@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import Quickshell
 
 /*
  * What the on-screen indicator is saying, and for how long.
