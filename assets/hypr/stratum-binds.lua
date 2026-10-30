@@ -45,6 +45,9 @@ hl.bind("SUPER + SHIFT + S", hl.dsp.global("stratum:screenshotRegion"))
 hl.bind("SUPER + Print", hl.dsp.global("stratum:screenshot"), locked)
 hl.bind("CTRL + Print", hl.dsp.global("stratum:screenshotEdit"), locked)
 
+-- The launcher: apps, files, settings and sums.
+hl.bind("SUPER + SPACE", hl.dsp.global("stratum:launcher"))
+
 -- Lock the session. Not "locked": it should not fire while already locked.
 hl.bind("SUPER + L", hl.dsp.global("stratum:lock"))
 
