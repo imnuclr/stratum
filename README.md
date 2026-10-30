@@ -28,8 +28,8 @@ Daily-drivable on both monitors. Phases follow the roadmap in
 - [x] **6** &mdash; lock screen: real session lock, dithered avatar, time-of-day
       greeting, smooth password box. Locks from SUPER + L, the session menu or
       `loginctl lock-session`; `qs -c stratum ipc call lock preview` shows it without
-      locking. *Fingerprint and a wallpaper backdrop remain.* The PAM path has not
-      been exercised with a real password yet.
+      locking. Password unlock confirmed on real hardware. *Fingerprint and a
+      wallpaper backdrop remain.*
 - [ ] **7** &mdash; settings. **Started**: a centred panel from the control centre's
       gear with wallpaper, appearance, notifications and advanced pages, and a safe
       config/theme writer behind it. Clicks on its controls are untested (needs a
