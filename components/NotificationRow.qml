@@ -53,6 +53,7 @@ Rectangle {
                 anchors.right: dismiss.left
                 anchors.rightMargin: Theme.space(2)
                 elide: Text.ElideRight
+                color: Theme.fgBright
                 text: `${root.notification?.appName ?? "system"} · ${Notifs.age(root.notification)}`
             }
 
@@ -70,7 +71,7 @@ Rectangle {
                     anchors.centerIn: parent
                     name: "close"
                     size: 14
-                    color: closeHover.hovered ? Theme.fg : Theme.fgFaint
+                    color: closeHover.hovered ? Theme.fg : Theme.fgDim
 
                     Behavior on color {
                         ColorAnimation {
@@ -98,7 +99,7 @@ Rectangle {
             visible: text.length > 0
             color: Theme.fg
             font.family: Theme.fontUi
-            font.pixelSize: 15
+            font.pixelSize: 16
             font.weight: Font.Medium
             renderType: Text.NativeRendering
         }
@@ -113,9 +114,9 @@ Rectangle {
             textFormat: Text.StyledText
             text: root.notification?.body ?? ""
             visible: text.length > 0
-            color: Theme.fgDim
+            color: Theme.fgBright
             font.family: Theme.fontUi
-            font.pixelSize: 13
+            font.pixelSize: 14
             renderType: Text.NativeRendering
         }
 

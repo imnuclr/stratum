@@ -5,12 +5,17 @@ import Quickshell
 import Quickshell.Io
 
 /*
- * NVIDIA GPU load, temperature and memory, via nvidia-smi.
+ * GPU load, temperature and memory, from whichever GPU this machine has.
  *
- * There is no sysfs path for utilisation on the proprietary driver, so this
- * shells out. The process is cheap but not free, so it only runs while
- * something is reading it, and `available` stays false on machines without the
- * tool so consumers can hide rather than show zeros.
+ * NVIDIA has no sysfs path for utilisation, so that one shells out to
+ * nvidia-smi. AMD publishes busy percentage, VRAM and temperature in sysfs. Intel
+ * publishes none of load, so its clock is read instead: how far the GPU has
+ * clocked up between its minimum and maximum is a fair stand-in for how hard it
+ * is working, though it says nothing of temperature or memory (shared with the
+ * system). One probe script tries them in that order and prints the same four
+ * numbers whichever answered, so `available` stays false only when none did.
+ *
+ * Costs nothing unless read: it only runs while something is watching.
  */
 Singleton {
     id: root
@@ -47,8 +52,35 @@ Singleton {
     Process {
         id: probe
 
-        command: ["nvidia-smi", "--query-gpu=utilization.gpu,temperature.gpu,memory.used,memory.total",
-            "--format=csv,noheader,nounits"]
+        command: ["sh", "-c", `
+            if command -v nvidia-smi >/dev/null 2>&1; then
+                nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null && exit 0
+            fi
+            for d in /sys/class/drm/card[0-9]*/device; do
+                [ -r "$d/gpu_busy_percent" ] || continue
+                busy=$(cat "$d/gpu_busy_percent")
+                t=$(cat "$d"/hwmon/hwmon*/temp1_input 2>/dev/null | head -n1)
+                used=$(cat "$d/mem_info_vram_used" 2>/dev/null || echo 0)
+                total=$(cat "$d/mem_info_vram_total" 2>/dev/null || echo 0)
+                echo "$busy,$(( \${t:-0} / 1000 )),$(( used / 1048576 )),$(( total / 1048576 ))"
+                exit 0
+            done
+            for c in /sys/class/drm/card[0-9]*; do
+                for g in "$c/gt/gt0" "$c"; do
+                    cur=$(cat "$g/rps_cur_freq_mhz" "$g/gt_cur_freq_mhz" 2>/dev/null | head -n1)
+                    [ -n "$cur" ] || continue
+                    max=$(cat "$g/rps_max_freq_mhz" "$g/gt_max_freq_mhz" 2>/dev/null | head -n1)
+                    min=$(cat "$g/rps_min_freq_mhz" "$g/gt_min_freq_mhz" 2>/dev/null | head -n1)
+                    span=$(( \${max:-0} - \${min:-0} ))
+                    [ "$span" -gt 0 ] || continue
+                    pct=$(( (cur - min) * 100 / span ))
+                    [ "$pct" -lt 0 ] && pct=0
+                    echo "$pct,0,0,0"
+                    exit 0
+                done
+            done
+            exit 1
+        `]
 
         stdout: StdioCollector {
             onStreamFinished: {

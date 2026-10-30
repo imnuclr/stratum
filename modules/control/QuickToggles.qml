@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.components
 import qs.config
 import qs.services
@@ -25,6 +26,11 @@ Item {
 
     property bool arranging: false
 
+    // While one is being dragged: where it started, and the slot it is over now.
+    // The others read these to make room, so they move aside as it passes.
+    property int dragFrom: -1
+    property int dragTo: -1
+
     // Every toggle there is. The config chooses which of these show, and where.
     readonly property var registry: ({
         "dnd": { icon: "bell-off", label: "dnd", active: Notifs.dnd, available: true, act: () => Notifs.toggleDnd() },
@@ -34,10 +40,21 @@ Item {
         "mic": { icon: "mic-off", label: "mic", active: Audio.sourceMuted, available: true, act: () => Audio.toggleSourceMuted() },
         "record": { icon: "record", label: "record", active: Toggles.recording, available: Toggles.hasRecorder, act: () => Toggles.toggleRecording() },
         "vpn": { icon: "shield", label: "vpn", active: Toggles.vpnUp, available: Toggles.hasVpn, act: () => Toggles.toggleVpn() },
-        "theme": { icon: "contrast", label: "dark", active: Toggles.dark, available: true, act: () => Toggles.toggleDark() }
+        "theme": { icon: "contrast", label: "dark", active: Toggles.dark, available: true, act: () => Toggles.toggleDark() },
+
+        // Not on the panel until added: hold a toggle, then pick from the names.
+        "wifi": { icon: Wifi.enabled ? "wifi" : "wifi-off", label: "wifi", active: Wifi.enabled, available: true, act: () => Wifi.setEnabled(!Wifi.enabled) },
+        "bluetooth": { icon: Bt.enabled ? "bluetooth" : "bluetooth-off", label: "bluetooth", active: Bt.enabled, available: Bt.available, act: () => Bt.toggle() },
+        "mute": { icon: "volume-mute", label: "mute", active: Audio.muted, available: true, act: () => Audio.toggleMuted() },
+        "eco": { icon: "bolt", label: "eco", active: Power.eco, available: Power.hasBattery, act: () => Power.setProfile(Power.eco ? "balanced" : "power-saver") },
+        "lock": { icon: "lock", label: "lock", active: false, available: true, act: () => { Shell.close(); Quickshell.execDetached(["loginctl", "lock-session"]); } },
+        "shot": { icon: "scan", label: "capture", active: false, available: true, act: () => Screenshot.regionSoon() },
+        "settings": { icon: "settings", label: "settings", active: false, available: true, act: () => Shell.toggle("settings", Shell.openScreen, "control") }
     })
 
-    readonly property var allIds: ["dnd", "night", "airplane", "caffeine", "mic", "record", "vpn", "theme"]
+    // The order here is the order the add-chips are offered in.
+    readonly property var allIds: ["dnd", "night", "airplane", "caffeine", "mic", "record", "vpn", "theme",
+        "wifi", "bluetooth", "mute", "eco", "lock", "shot", "settings"]
 
     // Unknown names in the file are ignored rather than drawn as holes.
     readonly property var order: (Config.get("controlCentre.toggles", root.allIds) ?? []).filter(id => root.allIds.includes(id))
@@ -94,8 +111,31 @@ Item {
 
             readonly property var entry: root.registry[modelData]
 
-            x: (index % root.columns) * root.cell
-            y: Math.floor(index / root.columns) * (root.rowHeight + root.rowGap)
+            // Where this one is shown, which differs from where it is in the order
+            // only while another is being dragged across it.
+            readonly property int shown: {
+                const from = root.dragFrom;
+                const to = root.dragTo;
+                if (from < 0 || index === from)
+                    return index;
+                if (from < to && index > from && index <= to)
+                    return index - 1;
+                if (from > to && index >= to && index < from)
+                    return index + 1;
+                return index;
+            }
+
+            // The slot the dragged circle is currently over.
+            readonly property int overSlot: {
+                const cx = slotItem.x + mover.x + slotItem.width / 2;
+                const cy = slotItem.y + mover.y + slotItem.height / 2;
+                const col = Math.max(0, Math.min(root.columns - 1, Math.floor(cx / root.cell)));
+                const row = Math.max(0, Math.min(root.rows - 1, Math.floor(cy / (root.rowHeight + root.rowGap))));
+                return Math.min(root.order.length - 1, row * root.columns + col);
+            }
+
+            x: (shown % root.columns) * root.cell
+            y: Math.floor(shown / root.columns) * (root.rowHeight + root.rowGap)
             width: root.cell
             height: root.rowHeight
 
@@ -170,19 +210,27 @@ Item {
                     yAxis.enabled: true
 
                     onActiveChanged: {
-                        if (active)
+                        if (active) {
+                            root.dragFrom = slotItem.index;
+                            root.dragTo = slotItem.index;
                             return;
-                        // Where the circle was let go, as a slot in the grid.
-                        const cx = slotItem.x + mover.x + slotItem.width / 2;
-                        const cy = slotItem.y + mover.y + slotItem.height / 2;
-                        const col = Math.max(0, Math.min(root.columns - 1, Math.floor(cx / root.cell)));
-                        const row = Math.max(0, Math.min(root.rows - 1, Math.floor(cy / (root.rowHeight + root.rowGap))));
-                        const target = Math.min(root.order.length - 1, row * root.columns + col);
+                        }
+                        const target = slotItem.overSlot;
                         mover.x = 0;
                         mover.y = 0;
+                        root.dragFrom = -1;
+                        root.dragTo = -1;
                         if (target !== slotItem.index)
                             root.move(slotItem.index, target);
                     }
+                }
+
+                Binding {
+                    target: root
+                    property: "dragTo"
+                    value: slotItem.overSlot
+                    when: drag.active
+                    restoreMode: Binding.RestoreNone
                 }
 
                 // Takes it off the panel. It stays in the palette underneath.
@@ -241,17 +289,35 @@ Item {
 
                     required property string modelData
 
-                    width: chipLabel.implicitWidth + Theme.space(4)
-                    height: 30
+                    width: chipRow.implicitWidth + Theme.space(4)
+                    height: 34
                     radius: height / 2
                     color: chipHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
 
-                    SectionLabel {
-                        id: chipLabel
+                    Row {
+                        id: chipRow
 
                         anchors.centerIn: parent
-                        text: `+ ${root.registry[chip.modelData].label}`
-                        color: Theme.fgBright
+                        spacing: Theme.space(2)
+
+                        Glyph {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: root.registry[chip.modelData].icon
+                            size: 15
+                            color: Theme.fg
+                        }
+
+                        SectionLabel {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.registry[chip.modelData].label
+                            color: Theme.fg
+                        }
+
+                        SectionLabel {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "+"
+                            color: Theme.fgBright
+                        }
                     }
 
                     HoverHandler {

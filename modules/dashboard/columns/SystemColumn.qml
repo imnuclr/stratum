@@ -19,7 +19,7 @@ Item {
             model: [
                 { value: SysStats.cpu, reading: `${Math.round(SysStats.cpu * 100)}`, caption: `cpu · ${Math.round(SysStats.temperature)}°` },
                 { value: SysStats.memory, reading: `${Math.round(SysStats.memory * 100)}`, caption: `mem · ${SysStats.memoryShort}` },
-                { value: Gpu.usage, reading: Gpu.available ? `${Math.round(Gpu.usage * 100)}` : "--", caption: Gpu.available ? `gpu · ${Math.round(Gpu.temperature)}°` : "gpu · n/a" }
+                { value: Gpu.usage, reading: Gpu.available ? `${Math.round(Gpu.usage * 100)}` : "--", caption: Gpu.available ? (Gpu.temperature > 0 ? `gpu · ${Math.round(Gpu.temperature)}°` : "gpu") : "gpu · n/a" }
             ]
 
             Column {

@@ -51,6 +51,7 @@ Sheet {
 
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
+                color: Theme.fgBright
                 text: Notifs.any ? `notifications · ${Notifs.count}` : "notifications"
             }
 

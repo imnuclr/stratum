@@ -33,21 +33,28 @@ Item {
 
             Column {
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
+                spacing: 3
 
-                SectionLabel {
-                    text: Power.full ? "fully charged" : (Power.charging ? "charging" : "on battery")
-                    dim: false
+                Text {
+                    text: Power.full ? "Fully charged" : (Power.charging ? "Charging" : "On battery")
+                    color: Theme.fg
+                    font.family: Theme.fontUi
+                    font.pixelSize: 15
+                    font.weight: Font.Medium
+                    renderType: Text.NativeRendering
                 }
 
-                SectionLabel {
-                    dim: true
+                Text {
+                    color: Theme.fgBright
+                    font.family: Theme.fontUi
+                    font.pixelSize: 14
+                    renderType: Text.NativeRendering
                     text: {
                         if (Power.full)
-                            return "plugged in";
+                            return "Plugged in";
                         const t = Power.charging ? Power.timeToFull : Power.timeToEmpty;
                         if (t <= 0)
-                            return "estimating…";
+                            return "Estimating…";
                         return Power.charging ? `${Power.formatTime(t)} until full` : `${Power.formatTime(t)} remaining`;
                     }
                 }
