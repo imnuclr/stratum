@@ -110,13 +110,31 @@ Stratum's version brings the app's window to the workspace you're on, from anywh
 
 ### "Colours from wallpaper" says matugen isn't installed, but it is
 
-1. `stratum update` — older versions had a bug that stopped matugen being found.
-2. Check the shell can see it: `command -v matugen`. If it's somewhere unusual, link
-   it into `~/.local/bin`.
-3. Open **Settings → Appearance** again; it looks for matugen each time.
+Ask the running shell what it knows:
 
-If it says **matugen: …** with an error instead, matugen ran and failed; the message
-says why. matugen 3 needs no setup; matugen 2 works too.
+```bash
+stratum ipc palette status
+```
+
+It prints the matugen it found (if any), how the search went, the wallpaper it would
+read, and any error. Then:
+
+- **`matugen: (none)`** and **`search: found nothing`** — the shell can't see it. Find
+  where it is with `command -v matugen` in your terminal, and tell the shell:
+  ```bash
+  stratum ipc config set theme.matugen '"/usr/bin/matugen"'
+  ```
+  (use the path you got). `stratum ipc palette find` searches again.
+- **`matugen: /…/matugen`** but colours don't change — check **mode** isn't `off`
+  (Settings → Appearance → Colours from wallpaper → accent or full), then
+  `stratum ipc palette run` and look at **error**.
+- **`error: matugen: …`** — matugen ran and complained. Try the same thing yourself:
+  ```bash
+  matugen image ~/path/to/wallpaper.jpg --json hex --dry-run
+  ```
+  If that asks you to pick a colour, add `--source-color-index 0` (Stratum does).
+- **`image: (no wallpaper)`** — Stratum isn't drawing a wallpaper on your first screen;
+  set one in Settings → Wallpaper.
 
 ### The wallpaper depth effect does nothing
 
@@ -132,6 +150,17 @@ says why. matugen 3 needs no setup; matugen 2 works too.
 (hold the widget → options → hours); **auto** follows the switch.
 
 ---
+
+### The accent doesn't reach my terminal, Spotify or Discord
+
+Switch each on in **Settings → Appearance → Apps**. Then:
+
+- **kitty / ghostty** change at once. **foot / alacritty** from the next window.
+- **Spotify** needs Spicetify installed and applied once (`spicetify backup apply`);
+  switching it on selects the Stratum theme and restarts Spotify.
+- **Vesktop / Discord (Vencord)**: open Vencord settings → Themes and tick
+  **Stratum** once. It follows the shell's colours live after that.
+- **GTK apps** pick it up when they next open.
 
 ## Hardware
 
