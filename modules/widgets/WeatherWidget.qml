@@ -11,17 +11,20 @@ import qs.utils
 Item {
     id: root
 
+    property var item: ({})
+    property bool live: true
+
     readonly property real unit: Math.min(root.width, root.height)
 
     Column {
         anchors.centerIn: parent
-        spacing: Math.round(root.unit * 0.04)
+        spacing: root.unit * 0.03
 
         DotMatrix {
             anchors.horizontalCenter: parent.horizontalCenter
             pattern: WeatherGlyphs.forCode(Weather.code, Weather.day)
-            cell: Math.max(3, root.unit * 0.034)
-            dotSize: cell * 0.7
+            cell: Math.max(3, root.unit * 0.05)
+            dotSize: cell * 0.72
         }
 
         Row {
@@ -30,14 +33,14 @@ Item {
 
             DotText {
                 text: Weather.ready ? `${Math.round(Weather.temperature)}` : "--"
-                size: root.unit * 0.27
+                size: root.unit * 0.34
                 plain: true
             }
 
             DotText {
-                y: root.unit * 0.02
+                y: root.unit * 0.03
                 text: "°"
-                size: root.unit * 0.13
+                size: root.unit * 0.15
                 plain: true
             }
         }
@@ -48,7 +51,7 @@ Item {
                 const c = Weather.condition.length > 0 ? Weather.condition : "weather";
                 return isNaN(Weather.todayMax) ? c : `${c} · ${Math.round(Weather.todayMin)}°/${Math.round(Weather.todayMax)}°`;
             }
-            color: Theme.fgDim
+            color: Theme.fgBright
         }
     }
 }

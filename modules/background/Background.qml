@@ -61,6 +61,12 @@ Variants {
                     Shell.open("picker", win.modelData.name);
                 }
             }
+
+            // Right-click on the desktop arranges the widgets.
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                onTapped: Widgets.editing = !Widgets.editing
+            }
         }
 
         /*

@@ -65,6 +65,21 @@ Singleton {
                 echo "$busy,$(( \${t:-0} / 1000 )),$(( used / 1048576 )),$(( total / 1048576 ))"
                 exit 0
             done
+            # Intel on the xe driver (Lunar Lake, Battlemage and later): the clock
+            # lives under the tile, and act_freq reads 0 while the GPU is idle.
+            for f in /sys/class/drm/card[0-9]*/device/tile[0-9]*/gt0/freq0; do
+                [ -r "$f/act_freq" ] || continue
+                cur=$(cat "$f/act_freq")
+                max=$(cat "$f/rp0_freq" 2>/dev/null || cat "$f/max_freq")
+                min=$(cat "$f/rpn_freq" 2>/dev/null || cat "$f/min_freq")
+                span=$(( \${max:-0} - \${min:-0} ))
+                [ "$span" -gt 0 ] || continue
+                pct=$(( (cur > min ? cur - min : 0) * 100 / span ))
+                [ "$pct" -gt 100 ] && pct=100
+                t=$(cat \${f%/tile*}/hwmon/hwmon*/temp*_input 2>/dev/null | sort -n | tail -n1)
+                echo "$pct,$(( \${t:-0} / 1000 )),0,0"
+                exit 0
+            done
             for c in /sys/class/drm/card[0-9]*; do
                 for g in "$c/gt/gt0" "$c"; do
                     cur=$(cat "$g/rps_cur_freq_mhz" "$g/gt_cur_freq_mhz" 2>/dev/null | head -n1)

@@ -1,7 +1,9 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.components
 import qs.config
@@ -11,11 +13,16 @@ import qs.theme
 /*
  * The desktop's widgets, on the layer just above the wallpaper.
  *
- * Out of edit mode the whole surface is click-through, so the desktop behaves
- * as it always did and widgets are only something to look at. In edit mode it
- * takes the pointer: a grid shows, each widget gets an outline, a corner to
- * resize by and a button to remove it, and dragging moves it, snapping to the grid
- * where it is let go. A bar at the foot adds more.
+ * Out of edit mode the surface takes the pointer only over the widgets
+ * themselves, so their controls work and the rest of the desktop behaves as it
+ * always did. Holding on any widget, right-clicking the desktop, Super+Shift+W or
+ * the control centre all enter edit mode: a grid shows, and each widget gets an
+ * outline, a corner to resize by, a button to remove it and one for its options.
+ * Dragging moves a widget, snapping to the grid where it is let go. A bar at the
+ * foot adds more.
+ *
+ * While windows cover the desktop the widgets are not seen, so they stop asking
+ * their services for readings (`live`), and pick up again when it is uncovered.
  *
  * Layout is in grid cells and kept per monitor (services/Widgets.qml).
  */
@@ -28,6 +35,11 @@ PanelWindow {
     readonly property bool focused: Hypr.focusedWorkspace?.monitor?.name === win.monitor.name
     readonly property real cell: Widgets.cell
 
+    // Any window on this monitor's workspace counts as covering the desktop.
+    readonly property var workspace: Hyprland.monitorFor(win.monitor)?.activeWorkspace ?? null
+    readonly property bool covered: (win.workspace?.toplevels?.values?.length ?? 0) > 0
+    readonly property bool live: win.editing || !win.covered
+
     // Clear of the bar, with a margin.
     readonly property bool barSide: Config.get("bar.orientation", "vertical") === "vertical"
     readonly property real fieldLeft: win.barSide
@@ -39,6 +51,10 @@ PanelWindow {
 
     readonly property var items: Widgets.layoutFor(win.monitor.name, win.cols)
 
+    // Which widget's options are open, by id.
+    property string optionsFor: ""
+    onEditingChanged: if (!editing) win.optionsFor = ""
+
     function componentFor(type) {
         return ({
             "clock": clockWidget,
@@ -47,7 +63,11 @@ PanelWindow {
             "date": dateWidget,
             "gpu": gpuWidget,
             "media": mediaWidget,
-            "stats": statsWidget
+            "stats": statsWidget,
+            "battery": batteryWidget,
+            "disk": diskWidget,
+            "network": networkWidget,
+            "photo": photoWidget
         })[type];
     }
 
@@ -66,11 +86,39 @@ PanelWindow {
         right: true
     }
 
+    /*
+     * The whole screen while editing; otherwise only the widgets. The regions for
+     * the widgets are made as the widgets are, one per widget, and follow them.
+     */
     mask: Region {
+        id: maskRegion
+
         x: 0
         y: 0
         width: win.editing ? win.width : 0
         height: win.editing ? win.height : 0
+    }
+
+    property var hits: []
+
+    function rebuildHits() {
+        const next = [];
+        for (let i = 0; i < frames.count; i++) {
+            const f = frames.itemAt(i);
+            if (f)
+                next.push(hitRegion.createObject(maskRegion, { item: f }));
+        }
+        const old = win.hits;
+        maskRegion.regions = next;
+        win.hits = next;
+        for (const r of old)
+            r.destroy();
+    }
+
+    Component {
+        id: hitRegion
+
+        Region {}
     }
 
     FocusScope {
@@ -89,6 +137,12 @@ PanelWindow {
                 NumberAnimation {
                     duration: Theme.standard
                 }
+            }
+
+            // A click on bare desktop closes any open options.
+            TapHandler {
+                enabled: win.editing
+                onTapped: win.optionsFor = ""
             }
         }
 
@@ -119,26 +173,33 @@ PanelWindow {
                     const ctx = getContext("2d");
                     ctx.reset();
                     ctx.fillStyle = "rgba(255,255,255,0.22)";
+                    ctx.beginPath();
                     for (let y = 0; y <= height; y += win.cell) {
                         for (let x = 0; x <= width; x += win.cell) {
-                            ctx.beginPath();
+                            ctx.moveTo(x + 1.1, y);
                             ctx.arc(x, y, 1.1, 0, 2 * Math.PI);
-                            ctx.fill();
                         }
                     }
+                    ctx.fill();
                 }
             }
 
             Repeater {
+                id: frames
+
                 model: win.items
+                onItemAdded: Qt.callLater(win.rebuildHits)
+                onItemRemoved: Qt.callLater(win.rebuildHits)
 
                 Item {
                     id: frame
 
                     required property var modelData
 
-                    readonly property var def: Widgets.types[frame.modelData.type]
+                    readonly property var def: Widgets.types[frame.modelData.type] ?? Widgets.types.clock
                     readonly property bool round: frame.def.shape === "round"
+                    readonly property string look: Widgets.option(frame.modelData, "style")
+                    readonly property real corner: frame.round ? Math.min(width, height) / 2 : Theme.rTile
                     // While resizing, the size follows the pointer; otherwise it is
                     // the layout's.
                     property real liveW: -1
@@ -150,6 +211,14 @@ PanelWindow {
                     y: frame.modelData.y * win.cell
                     width: frame.liveW >= 0 ? frame.liveW : frame.modelData.w * win.cell
                     height: frame.liveH >= 0 ? frame.liveH : frame.modelData.h * win.cell
+                    z: win.optionsFor === frame.modelData.id ? 20 : 0
+
+                    // Out of edit mode, holding a widget is the way into edit mode.
+                    TapHandler {
+                        enabled: !win.editing
+                        longPressThreshold: 0.6
+                        onLongPressed: Widgets.editing = true
+                    }
 
                     // The part that is dragged; the frame keeps its place by binding.
                     Item {
@@ -186,21 +255,46 @@ PanelWindow {
                             }
                         }
 
+                        // The tile, for the tile style.
                         Rectangle {
                             anchors.fill: parent
-                            radius: frame.round ? Math.min(width, height) / 2 : Theme.rTile
-                            color: frame.def.shape === "none" ? "transparent" : Theme.surface
+                            radius: frame.corner
+                            color: Theme.surface
+                            visible: frame.look === "tile"
                         }
 
+                        /*
+                         * The widget. In the shadow style it carries a soft dark
+                         * shadow of its own shape, which is what keeps white text
+                         * legible over a pale part of the wallpaper.
+                         */
                         Loader {
+                            id: content
+
                             anchors.fill: parent
                             sourceComponent: win.componentFor(frame.modelData.type)
+
+                            onLoaded: {
+                                item.item = Qt.binding(() => frame.modelData);
+                                item.live = Qt.binding(() => win.live);
+                            }
+
+                            layer.enabled: frame.look === "shadow"
+                            layer.effect: MultiEffect {
+                                autoPaddingEnabled: true
+                                shadowEnabled: true
+                                shadowColor: "#000000"
+                                shadowOpacity: 0.9
+                                shadowBlur: 0.8
+                                shadowVerticalOffset: 2
+                                shadowHorizontalOffset: 0
+                            }
                         }
 
                         // What marks a widget as movable.
                         Rectangle {
                             anchors.fill: parent
-                            radius: frame.round ? Math.min(width, height) / 2 : Theme.rTile
+                            radius: frame.corner
                             color: "transparent"
                             border.width: 1
                             border.color: Theme.outline
@@ -221,8 +315,10 @@ PanelWindow {
                             target: mover
 
                             onActiveChanged: {
-                                if (active)
+                                if (active) {
+                                    win.optionsFor = "";
                                     return;
+                                }
                                 const w = frame.modelData.w;
                                 const h = frame.modelData.h;
                                 const nx = Math.max(0, Math.min(win.cols - w, Math.round((frame.x + mover.x) / win.cell)));
@@ -233,26 +329,28 @@ PanelWindow {
                             }
                         }
 
-                        // Take it off the desktop.
-                        Rectangle {
+                        // Options and removal, at the top right.
+                        Row {
                             visible: win.editing
-                            x: parent.width - width - 6
-                            y: 6
-                            width: 22
-                            height: 22
-                            radius: 11
-                            color: Theme.accent
+                            x: parent.width - width - (frame.round ? parent.width * 0.15 : 8)
+                            y: frame.round ? parent.height * 0.08 : 8
+                            spacing: 6
 
-                            Glyph {
-                                anchors.centerIn: parent
-                                name: "close"
-                                size: 11
-                                stroke: 2.2
-                                color: Theme.bg
+                            CornerButton {
+                                icon: "settings"
+                                fill: win.optionsFor === frame.modelData.id ? Theme.fg : Theme.surfaceTop
+                                ink: win.optionsFor === frame.modelData.id ? Theme.bg : Theme.fg
+                                onClicked: win.optionsFor = win.optionsFor === frame.modelData.id ? "" : frame.modelData.id
                             }
 
-                            TapHandler {
-                                onTapped: Widgets.remove(win.monitor.name, win.cols, frame.modelData.id)
+                            CornerButton {
+                                icon: "close"
+                                fill: Theme.accent
+                                ink: Theme.bg
+                                onClicked: {
+                                    win.optionsFor = "";
+                                    Widgets.remove(win.monitor.name, win.cols, frame.modelData.id);
+                                }
                             }
                         }
 
@@ -260,16 +358,16 @@ PanelWindow {
                         // stolen from, so the drag above does not also take it.
                         Rectangle {
                             visible: win.editing
-                            x: parent.width - width - 6
-                            y: parent.height - height - 6
-                            width: 20
-                            height: 20
-                            radius: 10
+                            x: parent.width - width - (frame.round ? parent.width * 0.15 : 8)
+                            y: parent.height - height - (frame.round ? parent.height * 0.15 : 8)
+                            width: 18
+                            height: 18
+                            radius: 9
                             color: Theme.fg
 
                             MouseArea {
                                 anchors.fill: parent
-                                anchors.margins: -6
+                                anchors.margins: -8
                                 preventStealing: true
                                 cursorShape: Qt.SizeFDiagCursor
 
@@ -282,6 +380,7 @@ PanelWindow {
                                     startY = p.y;
                                     frame.grabW = frame.width;
                                     frame.grabH = frame.height;
+                                    win.optionsFor = "";
                                 }
 
                                 onPositionChanged: mouse => {
@@ -291,6 +390,9 @@ PanelWindow {
                                     const snap = v => Math.round(v / win.cell) * win.cell;
                                     frame.liveW = Math.max(frame.def.minW * win.cell, snap(frame.grabW + p.x - startX));
                                     frame.liveH = Math.max(frame.def.minH * win.cell, snap(frame.grabH + p.y - startY));
+                                    // A disc stays a disc.
+                                    if (frame.round)
+                                        frame.liveH = frame.liveW;
                                 }
 
                                 onReleased: {
@@ -301,6 +403,78 @@ PanelWindow {
                                     frame.liveW = -1;
                                     frame.liveH = -1;
                                     Widgets.resize(win.monitor.name, win.cols, frame.modelData.id, w, h);
+                                }
+                            }
+                        }
+                    }
+
+                    // This widget's options, beside it.
+                    Rectangle {
+                        id: options
+
+                        readonly property var list: [Widgets.styleOption].concat(frame.def.options ?? [])
+                        readonly property bool open: win.optionsFor === frame.modelData.id
+                        // To the right if it fits, otherwise to the left.
+                        readonly property bool right: frame.x + frame.width + 12 + width < field.width
+
+                        x: options.right ? frame.width + 12 : -width - 12
+                        y: Math.max(-frame.y, Math.min(0, field.height - frame.y - height))
+                        width: optionsBody.implicitWidth + Theme.space(4) * 2
+                        height: optionsBody.implicitHeight + Theme.space(4) * 2
+                        radius: Theme.rTile
+                        color: Theme.deep
+                        border.width: 1
+                        border.color: Theme.outline
+                        opacity: options.open ? 1 : 0
+                        visible: opacity > 0.01
+                        scale: options.open ? 1 : 0.96
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Theme.standard
+                            }
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: Theme.standard
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.soft
+                            }
+                        }
+
+                        Column {
+                            id: optionsBody
+
+                            anchors.centerIn: parent
+                            spacing: Theme.space(3)
+
+                            SectionLabel {
+                                text: frame.def.label
+                                color: Theme.fgBright
+                            }
+
+                            Repeater {
+                                model: options.list
+
+                                Column {
+                                    id: optionRow
+
+                                    required property var modelData
+
+                                    spacing: Theme.space(1)
+
+                                    SectionLabel {
+                                        text: optionRow.modelData.label
+                                        color: Theme.fgDim
+                                    }
+
+                                    Segmented {
+                                        model: optionRow.modelData.values
+                                        current: Math.max(0, optionRow.modelData.values.indexOf(Widgets.option(frame.modelData, optionRow.modelData.key)))
+                                        onPicked: index => Widgets.setOption(win.monitor.name, win.cols, frame.modelData.id,
+                                            optionRow.modelData.key, optionRow.modelData.values[index])
+                                    }
                                 }
                             }
                         }
@@ -316,9 +490,9 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 36
-            width: palette.implicitWidth + Theme.space(5) * 2
-            height: 56
-            radius: height / 2
+            width: Math.min(barBody.implicitWidth, win.width - 160) + Theme.space(5) * 2
+            height: barBody.implicitHeight + Theme.space(4) * 2
+            radius: Theme.rSheet
             color: Theme.deep
             border.width: 1
             border.color: Theme.outline
@@ -331,121 +505,148 @@ PanelWindow {
                 }
             }
 
-            Row {
-                id: palette
+            Column {
+                id: barBody
 
                 anchors.centerIn: parent
-                spacing: Theme.space(2)
+                spacing: Theme.space(3)
 
-                SectionLabel {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "add"
-                    color: Theme.fgBright
-                    rightPadding: Theme.space(1)
+                Flow {
+                    width: Math.min(implicitWidth, win.width - 160)
+                    spacing: Theme.space(2)
+
+                    Repeater {
+                        model: Widgets.typeNames
+
+                        Rectangle {
+                            id: chip
+
+                            required property string modelData
+
+                            width: chipRow.implicitWidth + Theme.space(4)
+                            height: 34
+                            radius: height / 2
+                            color: chipHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+
+                            Row {
+                                id: chipRow
+
+                                anchors.centerIn: parent
+                                spacing: Theme.space(2)
+
+                                Glyph {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    name: Widgets.types[chip.modelData].icon
+                                    size: 14
+                                    color: Theme.fg
+                                }
+
+                                SectionLabel {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: `+ ${Widgets.types[chip.modelData].label}`
+                                    color: Theme.fg
+                                }
+                            }
+
+                            HoverHandler {
+                                id: chipHover
+
+                                cursorShape: Qt.PointingHandCursor
+                            }
+
+                            TapHandler {
+                                onTapped: Widgets.add(win.monitor.name, win.cols, chip.modelData)
+                            }
+                        }
+                    }
                 }
 
-                Repeater {
-                    model: Widgets.typeNames
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: Theme.space(3)
+
+                    SectionLabel {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "drag to move · corner to resize · esc when done"
+                        color: Theme.fgDim
+                    }
 
                     Rectangle {
-                        id: chip
-
-                        required property string modelData
-
-                        width: chipRow.implicitWidth + Theme.space(4)
+                        width: resetLabel.implicitWidth + Theme.space(4)
                         height: 34
-                        radius: height / 2
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: chipHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+                        radius: 17
+                        color: resetHover.hovered ? Theme.surfaceTop : "transparent"
 
-                        Row {
-                            id: chipRow
+                        SectionLabel {
+                            id: resetLabel
 
                             anchors.centerIn: parent
-                            spacing: Theme.space(2)
-
-                            Glyph {
-                                anchors.verticalCenter: parent.verticalCenter
-                                name: Widgets.types[chip.modelData].icon
-                                size: 14
-                                color: Theme.fg
-                            }
-
-                            SectionLabel {
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: Widgets.types[chip.modelData].label
-                                color: Theme.fg
-                            }
+                            text: "reset"
+                            color: Theme.fgBright
                         }
 
                         HoverHandler {
-                            id: chipHover
+                            id: resetHover
 
                             cursorShape: Qt.PointingHandCursor
                         }
 
                         TapHandler {
-                            onTapped: Widgets.add(win.monitor.name, win.cols, chip.modelData)
+                            onTapped: Widgets.reset(win.monitor.name)
                         }
                     }
-                }
 
-                Rectangle {
-                    width: resetLabel.implicitWidth + Theme.space(4)
-                    height: 34
-                    radius: 17
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: resetHover.hovered ? Theme.surfaceTop : "transparent"
+                    Rectangle {
+                        width: doneLabel.implicitWidth + Theme.space(5)
+                        height: 34
+                        radius: 17
+                        color: Theme.fg
 
-                    SectionLabel {
-                        id: resetLabel
+                        SectionLabel {
+                            id: doneLabel
 
-                        anchors.centerIn: parent
-                        text: "reset"
-                        color: Theme.fgBright
-                    }
+                            anchors.centerIn: parent
+                            text: "done"
+                            color: Theme.bg
+                        }
 
-                    HoverHandler {
-                        id: resetHover
-
-                        cursorShape: Qt.PointingHandCursor
-                    }
-
-                    TapHandler {
-                        onTapped: Widgets.reset(win.monitor.name)
-                    }
-                }
-
-                Rectangle {
-                    width: doneLabel.implicitWidth + Theme.space(5)
-                    height: 34
-                    radius: 17
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: Theme.fg
-
-                    SectionLabel {
-                        id: doneLabel
-
-                        anchors.centerIn: parent
-                        text: "done"
-                        color: Theme.bg
-                    }
-
-                    TapHandler {
-                        onTapped: Widgets.editing = false
+                        TapHandler {
+                            onTapped: Widgets.editing = false
+                        }
                     }
                 }
             }
         }
+    }
 
-        SectionLabel {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: bar.top
-            anchors.bottomMargin: Theme.space(3)
-            text: "drag to move · corner to resize · esc when done"
-            color: Theme.fgBright
-            opacity: bar.opacity
-            visible: bar.visible
+    component CornerButton: Rectangle {
+        id: corner
+
+        property string icon: ""
+        property color fill: Theme.surfaceTop
+        property color ink: Theme.fg
+
+        signal clicked
+
+        width: 24
+        height: 24
+        radius: 12
+        color: corner.fill
+
+        Glyph {
+            anchors.centerIn: parent
+            name: corner.icon
+            size: 12
+            stroke: 2
+            color: corner.ink
+        }
+
+        HoverHandler {
+            cursorShape: Qt.PointingHandCursor
+        }
+
+        TapHandler {
+            onTapped: corner.clicked()
         }
     }
 
@@ -489,5 +690,29 @@ PanelWindow {
         id: statsWidget
 
         StatsWidget {}
+    }
+
+    Component {
+        id: batteryWidget
+
+        BatteryWidget {}
+    }
+
+    Component {
+        id: diskWidget
+
+        DiskWidget {}
+    }
+
+    Component {
+        id: networkWidget
+
+        NetworkWidget {}
+    }
+
+    Component {
+        id: photoWidget
+
+        PhotoWidget {}
     }
 }
