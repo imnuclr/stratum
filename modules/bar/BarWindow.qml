@@ -60,15 +60,6 @@ PanelWindow {
     }
 
     // Everything outside the bar strip and the open popout is click-through.
-    FadeBand {
-        vertical: false
-        atStart: root.onTop
-        solid: root.barHeight + root.margin
-        anchors.left: parent.left
-        anchors.top: root.onTop ? parent.top : undefined
-        anchors.bottom: root.onTop ? undefined : parent.bottom
-    }
-
     mask: Region {
         item: strip
 
