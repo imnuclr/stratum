@@ -62,6 +62,14 @@ Item {
             colored: root.colored
             circular: true
             source: root.source
+            visible: root.source.length > 0
+        }
+
+        NoCover {
+            anchors.centerIn: parent
+            width: root.size - 10
+            height: width
+            visible: root.source.length === 0
         }
     }
 }

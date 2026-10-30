@@ -30,13 +30,12 @@ Item {
                 cell: 3
                 dotScale: 0.5
                 source: Media.artUrl
-                visible: Media.artUrl.length > 0
             }
 
             Column {
                 // Whatever the art leaves. A fixed width here ran the title off
                 // the end of the deck.
-                width: parent.width - (art.visible ? art.width + parent.spacing : 0)
+                width: parent.width - art.width - parent.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: Theme.space(1)
 
