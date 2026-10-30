@@ -121,7 +121,7 @@
         "width": 300
     },
     "debug": {
-        "trace": true
+        "trace": false
     },
     "notifications": {
         "width": 380,

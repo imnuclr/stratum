@@ -106,6 +106,16 @@ PanelWindow {
      */
     property bool clickDismiss: false
 
+    // False for the first moments after the shell starts, while every panel is
+    // finding out that it is closed; nothing is drawn or animated until then.
+    property bool settled: false
+
+    Timer {
+        running: true
+        interval: 600
+        onTriggered: root.settled = true
+    }
+
     HyprlandFocusGrab {
         windows: [root]
         active: root.open && root.clickDismiss
@@ -436,6 +446,7 @@ PanelWindow {
                     }
 
                     opacity: 1
+                    visible: root.settled || root.open
                     // A hint, not the motion: the slide says where it came from.
                     scale: 1
 
@@ -478,6 +489,10 @@ PanelWindow {
                         Transition {
                             from: ""
                             to: "closed"
+                            // Not on the way in: every panel is born open and
+                            // drops to closed at once, and animating that showed
+                            // every panel in the shell at once on each start.
+                            enabled: root.settled
 
                             NumberAnimation {
                                 properties: "slide,opacity,scale"

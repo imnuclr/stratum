@@ -15,6 +15,17 @@ SettingsPage {
     title: "Advanced"
     detail: "Diagnostics and where Stratum keeps its files."
 
+    function saveName() {
+        const v = nameField.text.trim();
+        if (v.length > 0 && v !== Account.user)
+            Config.set("lock.name", v);
+        else
+            Config.unset("lock.name");
+        nameField.text = Qt.binding(() => Account.firstName);
+        // Done typing: the field gives up the keyboard.
+        page.forceActiveFocus();
+    }
+
     SettingCard {
         SettingRow {
             width: parent.width
@@ -47,12 +58,29 @@ SettingsPage {
             title: "Your name"
             detail: "How the greeting and lock screen address you."
 
-            TextField {
-                width: 200
-                height: 30
-                placeholder: Account.firstName
-                text: Config.get("lock.name", "")
-                onAccepted: value => value.trim().length > 0 ? Config.set("lock.name", value.trim()) : Config.unset("lock.name")
+            // Starts as the name already in use; ✓ or Enter saves it and lets
+            // go of the keyboard, and clearing it goes back to your account's.
+            Row {
+                spacing: Theme.space(2)
+
+                TextField {
+                    id: nameField
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 200
+                    height: 30
+                    placeholder: Account.user
+                    text: Account.firstName
+                    onAccepted: page.saveName()
+                }
+
+                LinkButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "check"
+                    text: "save"
+                    visible: nameField.text.trim() !== Account.firstName
+                    onClicked: page.saveName()
+                }
             }
         }
 
