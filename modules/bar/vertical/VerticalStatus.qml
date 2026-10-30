@@ -42,8 +42,7 @@ Column {
             { kind: "bluetooth", popout: "bluetooth" },
             { kind: "audio", popout: "audio" },
             { kind: "dnd", popout: "" },
-            { kind: "profile", popout: "" },
-            { kind: "battery", popout: "" },
+            { kind: "battery", popout: "battery" },
             { kind: "power", popout: "" }
         ]
 
@@ -55,10 +54,9 @@ Column {
             readonly property bool hovered: hover.hovered
             readonly property bool lit: hovered || (modelData.popout.length > 0 && Popouts.current === modelData.popout && Popouts.open)
 
-            // Profile and battery have nothing to show on a machine without a
-            // battery. Hiding the glyph inside left its slot behind as a gap, so
+            // Battery has nothing to show on a machine without one. Hiding the glyph inside left its slot behind as a gap, so
             // the slot itself goes and the column closes up.
-            visible: (modelData.kind !== "profile" && modelData.kind !== "battery") || Power.hasBattery
+            visible: modelData.kind !== "battery" || Power.hasBattery
 
             anchors.horizontalCenter: parent.horizontalCenter
             width: 24
@@ -110,21 +108,6 @@ Column {
                     name: Notifs.dnd ? "bell-off" : "bell"
                     size: 17
                     color: Notifs.dnd ? Theme.accent : (item.lit ? Theme.fg : Theme.fgBright)
-                }
-
-                /*
-                 * A reading, not a control: the profile is set in the control
-                 * centre, where the four levels are named and the consequence of
-                 * each is legible. A click target that silently cycles through
-                 * them is how you end up on power-saver without knowing.
-                 */
-                ProfileGlyph {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    visible: item.modelData.kind === "profile" && Power.hasBattery
-                    size: 17
-                    level: Math.max(1, Math.round((Power.profiles.indexOf(Power.profile) + 1)
-                        / Math.max(1, Power.profiles.length) * 4))
-                    color: Theme.fgBright
                 }
 
                 BatteryGlyph {

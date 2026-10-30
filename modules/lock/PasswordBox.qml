@@ -14,7 +14,9 @@ import qs.theme
  * animated, so the row opens up to make room for each character and closes behind
  * each deletion, and the others slide to follow.
  *
- * Six dim dots are always there as the resting state, and typing fills them in.
+ * One dim dot rests in the middle. The first character fills it and each one
+ * after opens the row outward from the centre, so the box grows from where the
+ * eye already is rather than starting at the left edge and re-centring.
  */
 Item {
     id: root
@@ -22,7 +24,7 @@ Item {
     required property var auth
     property real u: 1
 
-    readonly property int resting: 6
+    readonly property int resting: 1
     readonly property int slots: 40
     readonly property real pitch: 26 * root.u
     readonly property real dot: 11 * root.u
@@ -47,11 +49,11 @@ Item {
     SequentialAnimation {
         id: shaking
 
-        NumberAnimation { target: root; property: "shake"; to: -14 * root.u; duration: 55; easing.type: Easing.OutQuad }
-        NumberAnimation { target: root; property: "shake"; to: 12 * root.u; duration: 90; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: root; property: "shake"; to: -8 * root.u; duration: 90; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: root; property: "shake"; to: 4 * root.u; duration: 80; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: root; property: "shake"; to: 0; duration: 90; easing.type: Easing.OutQuad }
+        NumberAnimation { target: root; property: "shake"; to: -14 * root.u; duration: 40; easing.type: Easing.OutQuad }
+        NumberAnimation { target: root; property: "shake"; to: 12 * root.u; duration: 65; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: root; property: "shake"; to: -8 * root.u; duration: 65; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: root; property: "shake"; to: 4 * root.u; duration: 60; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: root; property: "shake"; to: 0; duration: 65; easing.type: Easing.OutQuad }
     }
 
     Rectangle {
@@ -85,8 +87,8 @@ Item {
                 loops: Animation.Infinite
                 alwaysRunToEnd: true
 
-                NumberAnimation { to: 0.35; duration: 420; easing.type: Easing.InOutSine }
-                NumberAnimation { to: 1; duration: 420; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 0.35; duration: 320; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1; duration: 320; easing.type: Easing.InOutSine }
             }
 
             Repeater {

@@ -76,9 +76,18 @@ Row {
         }
     }
 
-    Battery {
-        anchors.verticalCenter: parent.verticalCenter
+    // Hover opens the battery popout: charge, time left, and the power profile.
+    StatusItem {
+        popout: "battery"
         visible: Power.hasBattery
+        implicitWidth: battery.implicitWidth
+        implicitHeight: battery.implicitHeight
+
+        Battery {
+            id: battery
+
+            anchors.centerIn: parent
+        }
     }
 
     /*

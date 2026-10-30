@@ -308,6 +308,8 @@ Item {
                         return "BluetoothPopout.qml";
                     case "audio":
                         return "AudioPopout.qml";
+                    case "battery":
+                        return "BatteryPopout.qml";
                     default:
                         return "";
                     }
