@@ -141,8 +141,15 @@ Column {
                 id: hover
 
                 onHoveredChanged: {
-                    if (item.modelData.popout.length === 0)
+                    // An icon with no popout of its own still ends the previous
+                    // icon's: the group hover keeps a popout alive across the
+                    // gaps, which also kept it open on the way to a neighbour
+                    // that has nothing to show.
+                    if (item.modelData.popout.length === 0) {
+                        if (hovered)
+                            Popouts.hide();
                         return;
+                    }
                     if (hovered) {
                         const centre = item.mapToItem(null, 0, item.height / 2);
                         Popouts.showAtY(item.modelData.popout, centre.y, root.monitorName);
@@ -157,7 +164,7 @@ Column {
                     if (item.modelData.kind === "dnd")
                         Notifs.toggleDnd();
                     else if (item.modelData.kind === "power")
-                        Shell.toggle("session");
+                        Shell.toggle("session", root.monitorName, "bar");
                 }
             }
         }

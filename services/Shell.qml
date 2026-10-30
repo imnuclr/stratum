@@ -27,6 +27,10 @@ Singleton {
      */
     property string openScreen: ""
 
+    // Where the open panel was asked for from — "bar", "control" or empty — so a
+    // panel reachable from more than one place can open beside whichever it was.
+    property string openFrom: ""
+
     // Set when a panel was opened by hover, so a click-opened panel is not
     // dismissed by the pointer wandering off.
     /*
@@ -77,7 +81,13 @@ Singleton {
     }
     property int holds: 0
 
-    function toggle(name, screen) {
+    function toggle(name, screen, from) {
+        // A click on the trigger that opened a click-dismissed panel first lands
+        // outside it, closing it, and then arrives here as a toggle. Without this
+        // the panel closed and immediately opened again.
+        if (cooldown.running && name === root.lastClosed && openPanel.length === 0)
+            return;
+        root.openFrom = from ?? "";
         root.hoverOpened = false;
         root.expandedChip = "";
         adopt.stop();

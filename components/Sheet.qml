@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.config
 import qs.services
@@ -88,6 +89,20 @@ PanelWindow {
     // Panels opened by hover keep themselves alive while hovered; Shell counts
     // the holds and closes once nothing is holding.
     property bool hoverDismiss: false
+
+    /*
+     * Closes on a click anywhere outside the card, for a sheet that was opened by
+     * a click and so has nothing like hover-out to close it. The compositor's
+     * focus grab does the work: a press on any other surface ends the grab, and
+     * that is the signal.
+     */
+    property bool clickDismiss: false
+
+    HyprlandFocusGrab {
+        windows: [root]
+        active: root.open && root.clickDismiss
+        onCleared: Shell.close()
+    }
 
     /*
      * One hold per sheet, taken when the pointer arrives and given back only
@@ -458,36 +473,6 @@ PanelWindow {
                             }
                         }
                     ]
-
-                    /*
-                     * Dismiss affordance at the bottom edge. Clicking outside already
-                     * closes the sheet, but nothing on the sheet itself said so.
-                     */
-                    Rectangle {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: Theme.space(2)
-                        width: 9
-                        height: 9
-                        radius: width / 2
-                        color: grip.containsMouse ? Theme.fg : Theme.fgFaint
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: Theme.micro
-                            }
-                        }
-
-                        MouseArea {
-                            id: grip
-
-                            anchors.fill: parent
-                            anchors.margins: -8
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Shell.close()
-                        }
-                    }
                 }
             }
         }

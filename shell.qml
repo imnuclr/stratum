@@ -94,6 +94,8 @@ ShellRoot {
     Settings {}
     Shortcuts {}
 
+    Freeze {}
+
     /*
      * Settings, scriptably. Values are JSON, so `config set notifications.toastMs 8000`
      * and `config set debug.trace true` both mean what they look like.

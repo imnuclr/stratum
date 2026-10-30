@@ -74,7 +74,7 @@ Item {
                 }
 
                 TapHandler {
-                    onTapped: Shell.toggle(modelData.action)
+                    onTapped: Shell.toggle(modelData.action, Shell.openScreen, "control")
                 }
             }
         }

@@ -83,20 +83,25 @@ Item {
             }
         }
 
-        // A bolt through the cell. Dark where it crosses the fill, light where
-        // it crosses the empty part, so it reads at either end of the charge.
+        // A bolt through the cell. Light with a dark outline rather than one flat
+        // colour: flat dark vanished wherever it crossed the empty part of the
+        // cell, so a half-charged battery showed half a bolt and the whole thing
+        // looked off-centre. The outline keeps its full shape over both.
         Shape {
             id: bolt
 
-            anchors.centerIn: body
+            x: body.width / 2 - width / 2
+            y: body.height / 2 - height / 2
             visible: root.charging
             rotation: root.vertical ? 90 : 0
-            width: root.thick * 0.55
-            height: root.thick * 0.8
+            width: root.thick * 0.5
+            height: root.thick * 0.72
 
             ShapePath {
-                strokeWidth: 0
-                fillColor: root.level > 0.5 ? Theme.bg : root.color
+                strokeColor: Theme.bg
+                strokeWidth: Math.max(1, root.size * 0.05)
+                fillColor: root.color
+                joinStyle: ShapePath.RoundJoin
                 // Points scaled to this item, so the bolt grows with the cell.
                 startX: bolt.width * 0.62
                 startY: 0
