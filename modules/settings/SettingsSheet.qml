@@ -37,7 +37,9 @@ FloatingWindow {
             Shell.close();
     }
 
-    readonly property int page: Math.max(0, root.pages.findIndex(p => p.label === Shell.settingsPage))
+    // Older names for pages that have since been merged, so links still land.
+    readonly property var aliases: ({ "display": "displays", "monitors": "displays" })
+    readonly property int page: Math.max(0, root.pages.findIndex(p => p.label === (root.aliases[Shell.settingsPage] ?? Shell.settingsPage)))
     // What is on screen. Follows `page` a moment later, once the old page has
     // faded out, so the swap happens while nothing is visible.
     property int shown: 0
@@ -63,12 +65,11 @@ FloatingWindow {
         { label: "widgets", name: "Widgets", icon: "grid", group: "desktop", words: "desktop clock weather", component: widgetsPage },
         { label: "launcher", name: "Launcher", icon: "search", group: "desktop", words: "spotlight search apps files calculator web", component: launcherPage },
         { label: "notifications", name: "Notifications", icon: "bell", group: "desktop", words: "toasts do not disturb dnd", component: notificationsPage },
-        { label: "display", name: "Display", icon: "brightness", group: "system", words: "brightness night light screen", component: displayPage },
+        { label: "displays", name: "Displays", icon: "monitor", group: "system", words: "display monitors screens brightness night light resolution refresh rate hz scale arrange position", component: displaysPage },
         { label: "sound", name: "Sound", icon: "volume-2", group: "system", words: "volume audio speakers headphones microphone mic output input", component: soundPage },
         { label: "network", name: "Network", icon: "wifi", group: "system", words: "wifi wi-fi ethernet wired vpn airplane internet", component: networkPage },
         { label: "bluetooth", name: "Bluetooth", icon: "bluetooth", group: "system", words: "devices pair headphones", component: bluetoothPage },
         { label: "power", name: "Power", icon: "bolt", group: "system", words: "battery profile eco performance sleep caffeine awake", component: powerPage },
-        { label: "monitors", name: "Monitors", icon: "monitor", group: "system", words: "displays screens arrange", component: monitorsPage },
         { label: "keybinds", name: "Keybinds", icon: "keyboard", group: "system", words: "keyboard shortcuts keys hotkeys", component: keybindsPage },
         { label: "about", name: "About", icon: "info", group: "stratum", words: "version system computer hardware", component: aboutPage },
         { label: "advanced", name: "Advanced", icon: "sliders", group: "stratum", words: "debug config files folder", component: advancedPage }
@@ -200,6 +201,8 @@ FloatingWindow {
                                 Behavior on color {
                                     ColorAnimation {
                                         duration: Theme.micro
+                                        easing.type: Easing.Bezier
+                                        easing.bezierCurve: Theme.smooth
                                     }
                                 }
 
@@ -273,6 +276,8 @@ FloatingWindow {
             Behavior on color {
                 ColorAnimation {
                     duration: Theme.micro
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
                 }
             }
 
@@ -403,11 +408,6 @@ FloatingWindow {
         BarPage {}
     }
 
-    Component {
-        id: monitorsPage
-
-        MonitorsPage {}
-    }
 
     Component {
         id: widgetsPage
@@ -439,9 +439,9 @@ FloatingWindow {
     }
 
     Component {
-        id: displayPage
+        id: displaysPage
 
-        DisplayPage {}
+        DisplaysPage {}
     }
 
     Component {

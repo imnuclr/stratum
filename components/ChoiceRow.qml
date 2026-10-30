@@ -34,6 +34,8 @@ Item {
         Behavior on color {
             ColorAnimation {
                 duration: Theme.micro
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
     }
@@ -127,6 +129,8 @@ Item {
                 Behavior on width {
                     NumberAnimation {
                         duration: Theme.standard
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
                     }
                 }
             }

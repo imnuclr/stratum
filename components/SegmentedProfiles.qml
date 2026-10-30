@@ -42,6 +42,8 @@ Row {
                 Behavior on color {
                     ColorAnimation {
                         duration: Theme.standard
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
                     }
                 }
             }

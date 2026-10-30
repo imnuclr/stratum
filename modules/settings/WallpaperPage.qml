@@ -15,6 +15,8 @@ import qs.theme
 Item {
     id: page
 
+    Component.onCompleted: Cutout.find()
+
     // Empty means the whole desktop; otherwise one monitor by name.
     property string target: ""
 
@@ -248,6 +250,8 @@ Item {
                     Behavior on opacity {
                         NumberAnimation {
                             duration: Theme.standard
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
                         }
                     }
                 }

@@ -16,6 +16,8 @@ import qs.theme
 SettingsPage {
     id: page
 
+    Component.onCompleted: Palette.find()
+
     icon: "contrast"
     title: "Appearance"
     detail: "Light or dark, colours from your wallpaper, and the accent."
@@ -59,7 +61,6 @@ SettingsPage {
 
         SettingRow {
             width: parent.width
-            implicitHeight: 112
             title: "Accent"
             detail: "The one colour used for emphasis: the play button, the chosen item, the unread count."
 
@@ -107,6 +108,8 @@ SettingsPage {
                             Behavior on opacity {
                                 NumberAnimation {
                                     duration: Theme.standard
+                                    easing.type: Easing.Bezier
+                                    easing.bezierCurve: Theme.smooth
                                 }
                             }
                         }

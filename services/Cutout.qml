@@ -90,6 +90,13 @@ Singleton {
 
     property string failed: ""
 
+    // Looks for the program again: something installed after the shell started
+    // is picked up the next time its settings are opened.
+    function find() {
+        if (!probe.running && root.binary.length === 0)
+            probe.running = true;
+    }
+
     Process {
         id: probe
 

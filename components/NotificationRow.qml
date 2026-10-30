@@ -65,12 +65,16 @@ Rectangle {
     Behavior on color {
         ColorAnimation {
             duration: Theme.micro
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.smooth
         }
     }
 
     Behavior on border.color {
         ColorAnimation {
             duration: Theme.micro
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.smooth
         }
     }
 
@@ -155,6 +159,8 @@ Rectangle {
                     Behavior on color {
                         ColorAnimation {
                             duration: Theme.micro
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
                         }
                     }
                 }
