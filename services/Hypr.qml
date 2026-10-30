@@ -31,11 +31,28 @@ Singleton {
      * Changes one output's resolution and refresh rate, keeping where it sits and
      * its scale. `monitor` is the object from `hyprctl -j monitors`.
      */
+    /*
+     * Runs Lua in Hyprland's config at runtime, for settings (hl.config) and
+     * outputs (hl.monitor). There is no direct way in: a dispatch arrives as
+     * `return hl.dispatch(<what was sent>)`, and hl.dispatch takes only an
+     * action, so sending hl.config(...) was refused every time. Sent instead is
+     * a function that runs the Lua — guarded, so a statement Hyprland rejects
+     * does not stop the ones after it — and returns a harmless action.
+     */
+    function runLua(statements) {
+        const body = [].concat(statements).map(st => `pcall(function() ${st} end)`).join(" ");
+        Hyprland.dispatch(`(function() ${body} return hl.dsp.exec_cmd("true") end)()`);
+    }
+
+    function configure(table) {
+        root.runLua(`hl.config(${table})`);
+    }
+
     function setMonitorMode(monitor, width, height, hz) {
         const mode = `${width}x${height}@${hz}`;
         const pos = `${monitor.x}x${monitor.y}`;
         if (lua) {
-            Hyprland.dispatch(`hl.monitor({ output = "${monitor.name}", mode = "${mode}", position = "${pos}", scale = ${monitor.scale} })`);
+            root.runLua(`hl.monitor({ output = "${monitor.name}", mode = "${mode}", position = "${pos}", scale = ${monitor.scale} })`);
         } else {
             modeProc.command = ["hyprctl", "keyword", "monitor", `${monitor.name},${mode},${pos},${monitor.scale}`];
             modeProc.running = true;
@@ -55,7 +72,7 @@ Singleton {
         if (on) {
             Quickshell.execDetached(["hyprctl", "reload"]);
         } else if (lua) {
-            Hyprland.dispatch(`hl.config({ decoration = { blur = { enabled = false }, shadow = { enabled = false } } })`);
+            root.configure("{ decoration = { blur = { enabled = false }, shadow = { enabled = false } } }");
         } else {
             Quickshell.execDetached(["hyprctl", "--batch", "keyword decoration:blur:enabled 0 ; keyword decoration:shadow:enabled 0"]);
         }

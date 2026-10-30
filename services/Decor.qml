@@ -75,9 +75,14 @@ Singleton {
              * form is refused too, the solid colour stays.
              */
             const solid = root.rgba(c.accent, "ff");
-            Hyprland.dispatch(`hl.config({ decoration = { shadow = { color = "${glow}" } } })`);
-            Hyprland.dispatch(`hl.config({ general = { col = { active_border = "${solid}", inactive_border = "${inactive}" } } })`);
-            Hyprland.dispatch(`hl.config({ general = { col = { active_border = { colors = { "${solid}", "${root.rgba(c.tertiary, "ff")}" }, angle = 45 } } } })`);
+            Hypr.runLua([
+                `hl.config({ decoration = { shadow = { color = "${glow}" } } })`,
+                `hl.config({ general = { col = { active_border = "${solid}", inactive_border = "${inactive}" } } })`,
+                // The gradient, in each form it might take; whichever is
+                // accepted last wins, and the solid colour stays if none is.
+                `hl.config({ general = { col = { active_border = "${active}" } } })`,
+                `hl.config({ general = { col = { active_border = { colors = { "${solid}", "${root.rgba(c.tertiary, "ff")}" }, angle = 45 } } } })`
+            ]);
         } else {
             Quickshell.execDetached(["hyprctl", "--batch",
                 `keyword general:col.active_border ${active} ; keyword general:col.inactive_border ${inactive} ; keyword decoration:shadow:color ${glow}`]);
@@ -90,9 +95,9 @@ Singleton {
         const on = root.blur !== "off";
         const s = root.strengths[root.blur] ?? root.strengths.medium;
         if (Hypr.lua) {
-            Hyprland.dispatch(on
-                ? `hl.config({ decoration = { blur = { enabled = true, size = ${s.size}, passes = ${s.passes} } } })`
-                : `hl.config({ decoration = { blur = { enabled = false } } })`);
+            Hypr.configure(on
+                ? `{ decoration = { blur = { enabled = true, size = ${s.size}, passes = ${s.passes} } } }`
+                : "{ decoration = { blur = { enabled = false } } }");
         } else {
             Quickshell.execDetached(["hyprctl", "--batch", on
                 ? `keyword decoration:blur:enabled 1 ; keyword decoration:blur:size ${s.size} ; keyword decoration:blur:passes ${s.passes}`

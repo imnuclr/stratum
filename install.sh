@@ -317,7 +317,13 @@ install_app() {
   IFS='|' read -r _ name archp fedp flat <<<"$found"
   say "→ $name"
   case "$DISTRO" in
-    arch) [ -n "$archp" ] && arch_install $archp ;;
+    arch)
+      # Arch's own spotify-launcher already provides Spotify; adding the AUR
+      # build beside it gives two Spotifys in the app list.
+      if [ "$id" = spotify ] && pacman -Qq spotify-launcher >/dev/null 2>&1; then
+        archp="spicetify-cli"
+      fi
+      [ -n "$archp" ] && arch_install $archp ;;
     fedora)
       if [ -n "$fedp" ]; then fedora_install $fedp
       elif [ -n "$flat" ] && command -v flatpak >/dev/null; then flatpak install -y flathub "$flat"
@@ -326,6 +332,12 @@ install_app() {
   esac
 
   # Spicetify has to be allowed to change Spotify's files, then applied once.
+  # spotify-launcher keeps Spotify in your home folder, where Spicetify does
+  # not look unless told.
+  local sl="$HOME/.local/share/spotify-launcher/install/usr/share/spotify"
+  if [ "$id" = spotify ] && [ -d "$sl" ] && command -v spicetify >/dev/null; then
+    spicetify config spotify_path "$sl" >/dev/null 2>&1 && ok "Spicetify pointed at spotify-launcher's Spotify"
+  fi
   if [ "$id" = spotify ] && command -v spicetify >/dev/null; then
     for d in /opt/spotify /usr/share/spotify; do
       [ -d "$d" ] && $SUDO chmod a+wr "$d" && $SUDO chmod -R a+wr "$d/Apps" 2>/dev/null

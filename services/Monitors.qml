@@ -68,7 +68,7 @@ Singleton {
     function send(changes) {
         for (const name of Object.keys(changes)) {
             if (Hypr.lua) {
-                Hyprland.dispatch(root.line(name, changes[name]));
+                Hypr.runLua(root.line(name, changes[name]));
             } else {
                 Quickshell.execDetached(["hyprctl", "keyword", "monitor", root.line(name, changes[name])]);
             }
