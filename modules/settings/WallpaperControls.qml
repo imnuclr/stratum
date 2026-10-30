@@ -49,10 +49,10 @@ Column {
             id: sizeRing
 
             // Size of each dot, as a share of the space it has.
-            value: (Config.get("wallpaper.dotScale", 0.5) - 0.2) / 0.75
-            reading: `${Math.round((0.2 + sizeRing.live * 0.75) * 100)}`
+            value: (Math.min(0.5, Config.get("wallpaper.dotScale", 0.5)) - 0.12) / 0.38
+            reading: `${Math.round(sizeRing.live * 100)}`
             caption: "dot · size"
-            onCommitted: v => Config.set("wallpaper.dotScale", Math.round((0.2 + v * 0.75) * 100) / 100)
+            onCommitted: v => Config.set("wallpaper.dotScale", Math.round((0.12 + v * 0.38) * 100) / 100)
         }
 
         RingDial {

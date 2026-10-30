@@ -56,7 +56,11 @@ Item {
         visible: root.look === "dots"
         source: root.source.toString()
         cell: root.dotSize
-        dotScale: root.dotScale
+        // Capped below touching: past half a cell the dots overlap and a pale
+        // picture turns into a solid sheet with holes.
+        dotScale: Math.min(0.5, root.dotScale)
+        fit: "crop"
+        autoLevels: root.mono
         halftone: true
         colored: !root.mono
         dotAlpha: root.light
