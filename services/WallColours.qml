@@ -10,6 +10,10 @@ import qs.services
 /*
  * Colours taken from the wallpaper, through matugen.
  *
+ * Not called Palette: Qt Quick has a Palette type of its own, and in any file
+ * that imports QtQuick that name meant Qt's, which has none of this — so the
+ * setting read "matugen not installed" whatever was installed.
+ *
  * Off by default, because the design is monochrome with one red and this is the
  * one thing that changes that. Two strengths, `theme.fromWallpaper` in shell.json:
  *   accent  only the emphasis colour follows the picture

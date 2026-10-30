@@ -27,7 +27,7 @@ Singleton {
     property bool ready: false
     property string error: ""
     property var tokens: ({})
-    // Colours worked out from the wallpaper (services/Palette.qml), laid over
+    // Colours worked out from the wallpaper (services/WallColours.qml), laid over
     // everything else when that is switched on, and empty when it is not.
     property var generated: ({})
     onGeneratedChanged: root.tokens = Config.merge(Config.merge(root.preset, root.user), root.generated)

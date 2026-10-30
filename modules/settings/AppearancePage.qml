@@ -17,7 +17,7 @@ import qs.theme
 SettingsPage {
     id: page
 
-    Component.onCompleted: Palette.find()
+    Component.onCompleted: WallColours.find()
 
     icon: "contrast"
     title: "Appearance"
@@ -48,15 +48,15 @@ SettingsPage {
         SettingRow {
             width: parent.width
             title: "Colours from wallpaper"
-            detail: !Palette.available
-                ? (Palette.searched === "searching" ? "Looking for matugen…"
-                    : `matugen wasn't found (${Palette.searched}). If it is installed, set its path: stratum ipc config set theme.matugen '"/path/to/matugen"'`)
-                : (Palette.error.length > 0 ? Palette.error
-                    : `Accent follows the picture; full also tints the surfaces. Using ${Palette.binary}.`)
+            detail: !WallColours.available
+                ? (WallColours.searched === "searching" ? "Looking for matugen…"
+                    : `matugen wasn't found (${WallColours.searched}). If it is installed, set its path: stratum ipc config set theme.matugen '"/path/to/matugen"'`)
+                : (WallColours.error.length > 0 ? WallColours.error
+                    : `Accent follows the picture; full also tints the surfaces. Using ${WallColours.binary}.`)
 
             Segmented {
                 model: ["off", "accent", "full"]
-                current: Math.max(0, ["off", "accent", "full"].indexOf(Palette.mode))
+                current: Math.max(0, ["off", "accent", "full"].indexOf(WallColours.mode))
                 onPicked: index => Config.set("theme.fromWallpaper", ["off", "accent", "full"][index])
             }
         }

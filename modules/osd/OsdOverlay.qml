@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs.components
+import qs.config
 import qs.services
 import qs.theme
 
@@ -27,7 +28,10 @@ Variants {
         required property ShellScreen modelData
 
         readonly property bool focused: Hypr.focusedWorkspace?.monitor?.name === win.modelData.name
-        readonly property bool up: Osd.shown && win.focused
+        // On every screen by default (osd.everywhere: false keeps it to the
+        // focused one): the screen you are looking at is not always the one
+        // Hyprland thinks is focused.
+        readonly property bool up: Osd.shown && (win.focused || Config.get("osd.everywhere", true))
 
         // 0 is the bare pill, 1 the whole indicator.
         property real p: 0

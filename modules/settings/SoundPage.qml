@@ -65,6 +65,17 @@ SettingsPage {
                 onToggled: value => Config.set("osd.enabled", value)
             }
         }
+
+        SettingRow {
+            visible: Config.get("osd.enabled", true)
+            title: "On every screen"
+            detail: "Off shows it only on the screen you are using."
+
+            Switch {
+                checked: Config.get("osd.everywhere", true)
+                onToggled: value => Config.set("osd.everywhere", value)
+            }
+        }
     }
 
     SettingCard {
