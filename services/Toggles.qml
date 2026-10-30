@@ -104,6 +104,13 @@ Singleton {
         root.recording = true;
     }
 
+    function toggleRecordRegion() {
+        if (root.recording)
+            root.stopRecording();
+        else
+            root.recordRegion();
+    }
+
     function setDark(value) {
         if (root.dark === value)
             return;
@@ -143,6 +150,10 @@ Singleton {
 
     Process {
         id: recorder
+
+        // Cancelling the selection, or the recorder dying, must not leave the
+        // toggle claiming something is still being recorded.
+        onExited: root.recording = false
     }
 
     /*

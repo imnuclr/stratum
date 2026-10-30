@@ -47,3 +47,8 @@ hl.bind("CTRL + Print", hl.dsp.global("stratum:screenshotEdit"), locked)
 
 -- Lock the session. Not "locked": it should not fire while already locked.
 hl.bind("SUPER + L", hl.dsp.global("stratum:lock"))
+
+-- Record: Alt + Print picks a region (press again to stop), Super + Alt + Print
+-- records the whole screen.
+hl.bind("ALT + Print", hl.dsp.global("stratum:recordRegion"), locked)
+hl.bind("SUPER + ALT + Print", hl.dsp.global("stratum:record"), locked)

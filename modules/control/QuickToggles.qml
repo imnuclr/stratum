@@ -39,6 +39,7 @@ Item {
         "caffeine": { icon: "coffee", label: "caffeine", active: Toggles.caffeine, available: true, act: () => Toggles.toggleCaffeine() },
         "mic": { icon: "mic-off", label: "mic", active: Audio.sourceMuted, available: true, act: () => Audio.toggleSourceMuted() },
         "record": { icon: "record", label: "record", active: Toggles.recording, available: Toggles.hasRecorder, act: () => Toggles.toggleRecording() },
+        "recarea": { icon: "scan", label: "rec area", active: Toggles.recording, available: Toggles.hasRecorder, act: () => { Shell.close(); Toggles.toggleRecordRegion(); } },
         "vpn": { icon: "shield", label: "vpn", active: Toggles.vpnUp, available: Toggles.hasVpn, act: () => Toggles.toggleVpn() },
         "theme": { icon: "contrast", label: "dark", active: Toggles.dark, available: true, act: () => Toggles.toggleDark() },
 
@@ -54,7 +55,7 @@ Item {
 
     // The order here is the order the add-chips are offered in.
     readonly property var allIds: ["dnd", "night", "airplane", "caffeine", "mic", "record", "vpn", "theme",
-        "wifi", "bluetooth", "mute", "eco", "lock", "shot", "settings"]
+        "wifi", "bluetooth", "mute", "eco", "lock", "shot", "recarea", "settings"]
 
     // Unknown names in the file are ignored rather than drawn as holes.
     readonly property var order: (Config.get("controlCentre.toggles", root.allIds) ?? []).filter(id => root.allIds.includes(id))

@@ -38,6 +38,8 @@ ShellRoot {
         // rather than on first panel open.
         Config.ready;
         Theme.ready;
+        // Lazy, so touched here: nothing else asks for it until a colour is wanted.
+        Palette.mode;
     }
 
     // Quickshell singletons are lazy, and a lazy singleton never registers its

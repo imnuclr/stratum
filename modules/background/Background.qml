@@ -27,6 +27,12 @@ Variants {
 
         readonly property url wanted: Wallpaper.urlFor(win.modelData.name)
 
+        // How the picture is drawn: as it is or as dots, in colour or without.
+        readonly property string look: Config.get("wallpaper.look", "original")
+        readonly property bool mono: Config.get("wallpaper.mono", false)
+        readonly property real dotSize: Config.get("wallpaper.dotSize", 8)
+        readonly property real light: Config.get("wallpaper.light", 1)
+
         screen: modelData
         WlrLayershell.layer: WlrLayer.Background
         WlrLayershell.namespace: "stratum-background"
@@ -84,42 +90,40 @@ Variants {
             layerA.source = win.wanted;
         }
 
-        Image {
+        WallLayer {
             id: layerA
 
             anchors.fill: parent
-            fillMode: Image.PreserveAspectCrop
-            // Cropped to this monitor rather than scaled to a common size: the
-            // 3440x1440 and the 1920x1080 want different parts of the same file.
-            sourceSize.width: win.modelData.width
-            sourceSize.height: win.modelData.height
-            asynchronous: true
-            cache: false
             opacity: 0
+            pixelWidth: win.modelData.width
+            pixelHeight: win.modelData.height
+            look: win.look
+            mono: win.mono
+            dotSize: win.dotSize
+            light: win.light
 
-            onStatusChanged: {
-                if (layerA.status === Image.Ready && win.pending === layerA) {
+            onReady: {
+                if (win.pending === layerA) {
                     fade.target = layerA;
                     fade.restart();
                 }
             }
         }
 
-        Image {
+        WallLayer {
             id: layerB
 
             anchors.fill: parent
-            fillMode: Image.PreserveAspectCrop
-            // Cropped to this monitor rather than scaled to a common size: the
-            // 3440x1440 and the 1920x1080 want different parts of the same file.
-            sourceSize.width: win.modelData.width
-            sourceSize.height: win.modelData.height
-            asynchronous: true
-            cache: false
             opacity: 0
+            pixelWidth: win.modelData.width
+            pixelHeight: win.modelData.height
+            look: win.look
+            mono: win.mono
+            dotSize: win.dotSize
+            light: win.light
 
-            onStatusChanged: {
-                if (layerB.status === Image.Ready && win.pending === layerB) {
+            onReady: {
+                if (win.pending === layerB) {
                     fade.target = layerB;
                     fade.restart();
                 }

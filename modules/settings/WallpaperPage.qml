@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Widgets
 import qs.components
+import qs.config
 import qs.services
 import qs.theme
 
@@ -131,6 +132,51 @@ Item {
                     onClicked: Wallpaper.cycle(1, page.target)
                 }
             }
+        }
+
+        /*
+         * How the picture is drawn on the desktop. Dots are the shell's own
+         * rendering of it; mono takes the colour out of either. The sliders only
+         * mean something for dots, so they only show for dots.
+         */
+        Row {
+            spacing: Theme.space(3)
+
+            Segmented {
+                model: ["original", "dots"]
+                current: Config.get("wallpaper.look", "original") === "dots" ? 1 : 0
+                onPicked: index => Config.set("wallpaper.look", index === 1 ? "dots" : "original")
+            }
+
+            Segmented {
+                model: ["colour", "mono"]
+                current: Config.get("wallpaper.mono", false) ? 1 : 0
+                onPicked: index => Config.set("wallpaper.mono", index === 1)
+            }
+        }
+
+        SliderPill {
+            readonly property real dot: Config.get("wallpaper.dotSize", 8)
+
+            width: parent.width
+            height: visible ? 44 : 0
+            visible: Config.get("wallpaper.look", "original") === "dots"
+            icon: "scan"
+            value: (dot - 4) / 20
+            label: `${Math.round(dot)}`
+            onMoved: v => Config.set("wallpaper.dotSize", Math.round(4 + v * 20))
+        }
+
+        SliderPill {
+            readonly property real lit: Config.get("wallpaper.light", 1)
+
+            width: parent.width
+            height: visible ? 44 : 0
+            visible: Config.get("wallpaper.look", "original") === "dots"
+            icon: "brightness"
+            value: (lit - 0.5) / 1.5
+            label: `${Math.round(lit * 100)}`
+            onMoved: v => Config.set("wallpaper.light", Math.round((0.5 + v * 1.5) * 20) / 20)
         }
     }
 

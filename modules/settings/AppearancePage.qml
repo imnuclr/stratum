@@ -50,6 +50,21 @@ Item {
 
         SettingRow {
             width: parent.width
+            title: "Colours from wallpaper"
+            detail: !Palette.available
+                ? "Needs matugen, which is not installed."
+                : (Palette.error.length > 0 ? Palette.error
+                    : "Accent follows the picture; full also tints the surfaces. Off keeps the red.")
+
+            Segmented {
+                model: ["off", "accent", "full"]
+                current: Math.max(0, ["off", "accent", "full"].indexOf(Palette.mode))
+                onPicked: index => Config.set("theme.fromWallpaper", ["off", "accent", "full"][index])
+            }
+        }
+
+        SettingRow {
+            width: parent.width
             implicitHeight: 112
             title: "Accent"
             detail: "The one colour used for emphasis: the play button, the chosen item, the unread count."
