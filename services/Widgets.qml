@@ -25,18 +25,47 @@ Singleton {
     // coarse enough that snapping does something.
     readonly property real cell: 20
 
-    // What can be placed. `shape` says what sits behind a widget: nothing, a
-    // rounded tile, or a disc.
+    /*
+     * What can be placed.
+     *
+     * `shape` is the outline of its tile, a rounded square or a disc. `style` is
+     * how it sits on the wallpaper by default: on a tile, bare with a soft shadow
+     * under it (so it still reads on a pale picture), or bare. `options` are the
+     * per-widget choices offered in edit mode, each a list of values; the first is
+     * the default.
+     */
     readonly property var types: ({
-        "clock": { label: "clock", icon: "moon", w: 54, h: 26, minW: 24, minH: 10, shape: "none" },
-        "greeting": { label: "greeting", icon: "sun", w: 44, h: 14, minW: 22, minH: 6, shape: "none" },
-        "weather": { label: "weather", icon: "cloud-sun", w: 15, h: 15, minW: 9, minH: 9, shape: "round" },
-        "date": { label: "date", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "tile" },
-        "gpu": { label: "gpu", icon: "scan", w: 15, h: 15, minW: 9, minH: 9, shape: "round" },
-        "media": { label: "now playing", icon: "play", w: 31, h: 15, minW: 20, minH: 10, shape: "tile" },
-        "stats": { label: "system", icon: "terminal", w: 47, h: 15, minW: 26, minH: 10, shape: "tile" }
+        "clock": { label: "clock", icon: "moon", w: 54, h: 26, minW: 24, minH: 10, shape: "square", style: "shadow",
+            options: [{ key: "hours", label: "hours", values: ["24h", "12h"] }, { key: "date", label: "date", values: ["show", "hide"] }] },
+        "greeting": { label: "greeting", icon: "sun", w: 44, h: 14, minW: 22, minH: 6, shape: "square", style: "shadow",
+            options: [{ key: "facts", label: "details", values: ["show", "hide"] }] },
+        "weather": { label: "weather", icon: "cloud-sun", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
+        "date": { label: "calendar", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "square", style: "tile", options: [] },
+        "gpu": { label: "gpu", icon: "scan", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
+        "media": { label: "now playing", icon: "play", w: 31, h: 15, minW: 20, minH: 10, shape: "square", style: "tile",
+            options: [{ key: "art", label: "cover", values: ["dots", "colour", "plain"] }] },
+        "stats": { label: "system", icon: "terminal", w: 47, h: 15, minW: 26, minH: 10, shape: "square", style: "tile", options: [] },
+        "battery": { label: "battery", icon: "battery-vertical", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
+        "disk": { label: "disk", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
+        "network": { label: "network", icon: "wifi", w: 24, h: 11, minW: 16, minH: 8, shape: "square", style: "tile", options: [] },
+        "photo": { label: "photo", icon: "scan", w: 20, h: 15, minW: 8, minH: 8, shape: "square", style: "tile",
+            options: [{ key: "look", label: "look", values: ["dots", "plain"] }, { key: "every", label: "change", values: ["hour", "day", "never"] }] }
     })
-    readonly property var typeNames: ["clock", "greeting", "weather", "date", "gpu", "media", "stats"]
+    readonly property var typeNames: ["clock", "greeting", "weather", "date", "gpu", "media", "stats", "battery", "disk", "network", "photo"]
+
+    // Every widget can choose how it sits on the wallpaper.
+    readonly property var styleOption: ({ key: "style", label: "style", values: ["tile", "shadow", "plain"] })
+
+    // A widget's option, falling back to its type's default.
+    function option(item, key) {
+        const set = item?.opts?.[key];
+        if (set !== undefined)
+            return set;
+        const t = root.types[item?.type];
+        if (key === "style")
+            return t?.style ?? "tile";
+        return t?.options?.find(o => o.key === key)?.values?.[0] ?? "";
+    }
 
     // monitor name -> [{ id, type, x, y, w, h }]
     property var layouts: ({})
@@ -49,7 +78,7 @@ Singleton {
 
     function make(type, x, y) {
         const t = root.types[type];
-        return { id: root.uid(), type: type, x: x, y: y, w: t.w, h: t.h };
+        return { id: root.uid(), type: type, x: x, y: y, w: t.w, h: t.h, opts: {} };
     }
 
     // Laid out for a screen `cols` cells across: the clock and greeting at the left,
@@ -109,6 +138,17 @@ Singleton {
             const t = root.types[it.type];
             it.w = Math.max(t.minW, Math.round(w));
             it.h = Math.max(t.minH, Math.round(h));
+        });
+    }
+
+    function setOption(name, cols, id, key, value) {
+        root.edit(name, cols, list => {
+            const it = list.find(i => i.id === id);
+            if (!it)
+                return;
+            const opts = Object.assign({}, it.opts ?? {});
+            opts[key] = value;
+            it.opts = opts;
         });
     }
 

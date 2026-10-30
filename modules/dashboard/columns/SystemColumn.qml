@@ -13,45 +13,32 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: Theme.space(4)
 
-        Repeater {
-            // Captions carry a second reading each, so the rings can stay as
-            // bare numbers without losing what they refer to.
-            model: [
-                { value: SysStats.cpu, reading: `${Math.round(SysStats.cpu * 100)}`, caption: `cpu · ${Math.round(SysStats.temperature)}°` },
-                { value: SysStats.memory, reading: `${Math.round(SysStats.memory * 100)}`, caption: `mem · ${SysStats.memoryShort}` },
-                { value: Gpu.usage, reading: Gpu.available ? `${Math.round(Gpu.usage * 100)}` : "--", caption: Gpu.available ? (Gpu.temperature > 0 ? `gpu · ${Math.round(Gpu.temperature)}°` : "gpu") : "gpu · n/a" }
-            ]
+        // Built once and left in place: the readings are bindings on each ring,
+        // so a new value moves the ring rather than replacing it. They used to be
+        // an array of readings handed to a Repeater, which rebuilt all three rings
+        // on every poll and so could never animate.
+        MetricRing {
+            size: 92
+            numberSize: 23
+            value: SysStats.cpu
+            number: SysStats.cpu * 100
+            caption: SysStats.temperature > 0 ? `cpu · ${Math.round(SysStats.temperature)}°` : "cpu"
+        }
 
-            Column {
-                required property var modelData
+        MetricRing {
+            size: 92
+            numberSize: 23
+            value: SysStats.memory
+            number: SysStats.memory * 100
+            caption: `mem · ${SysStats.memoryShort}`
+        }
 
-                spacing: Theme.space(2)
-
-                DotRing {
-                    width: 92
-                    height: 92
-                    count: 44
-                    dotSize: 4.2
-
-                    value: modelData.value
-
-                    DotText {
-                        anchors.centerIn: parent
-                        text: modelData.reading
-                        size: 23
-                        // These change every second. The cascade is the shell's
-                        // signature on a value that changes occasionally; on one
-                        // that changes constantly it is a flicker.
-                        plain: true
-                    }
-                }
-
-                SectionLabel {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    dim: true
-                    text: modelData.caption
-                }
-            }
+        MetricRing {
+            size: 92
+            numberSize: 23
+            value: Gpu.usage
+            number: Gpu.available ? Gpu.usage * 100 : -1
+            caption: Gpu.available ? (Gpu.temperature > 0 ? `gpu · ${Math.round(Gpu.temperature)}°` : "gpu") : "gpu · n/a"
         }
     }
 

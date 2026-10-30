@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Widgets
 import qs.components
 import qs.services
 import qs.theme
@@ -6,35 +7,82 @@ import qs.theme
 /*
  * What is playing: the disc, the track, how far through it is, and the buttons.
  *
- * The buttons are a reading — widgets on the desktop do not take the pointer, so
- * these show what is available and the keys and the control centre are where it
- * is changed.
+ * The buttons work: the canvas takes the pointer over its widgets (and nowhere
+ * else), so these are real controls. When the player gives no cover — a browser
+ * tab often does not — a dotted ring stands in its place so the card keeps its
+ * shape.
  */
 Item {
     id: root
 
-    readonly property real disc: root.height - Theme.space(4) * 2
+    property var item: ({})
+    property bool live: true
 
-    Component.onCompleted: Media.watch()
-    Component.onDestruction: Media.unwatch()
+    readonly property string cover: Widgets.option(root.item, "art")
+    readonly property real disc: root.height - Theme.space(4) * 2
+    readonly property bool hasArt: Media.artUrl.length > 0
+
+    Watch {
+        service: Media
+        live: root.live
+    }
 
     Row {
         anchors.fill: parent
         anchors.margins: Theme.space(4)
         spacing: Theme.space(5)
 
-        SpinningArt {
+        Item {
             anchors.verticalCenter: parent.verticalCenter
-            size: root.disc
-            cell: Math.max(2.5, root.disc / 56)
-            source: Media.artUrl
-            colored: false
-            visible: Media.artUrl.length > 0
+            width: root.disc
+            height: root.disc
+
+            SpinningArt {
+                anchors.fill: parent
+                size: root.disc
+                cell: Math.max(2.5, root.disc / 56)
+                source: Media.artUrl
+                colored: root.cover === "colour"
+                visible: root.hasArt && root.cover !== "plain"
+            }
+
+            ClippingRectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Theme.surfaceHi
+                visible: root.hasArt && root.cover === "plain"
+
+                Image {
+                    anchors.fill: parent
+                    source: root.hasArt && root.cover === "plain" ? Media.artUrl : ""
+                    fillMode: Image.PreserveAspectCrop
+                    sourceSize.width: 400
+                    asynchronous: true
+                }
+            }
+
+            // No cover: a ring and a pair of headphones, so the card keeps its shape.
+            DotRing {
+                anchors.fill: parent
+                visible: !root.hasArt
+                count: 40
+                dotSize: Math.max(2, root.disc / 40)
+                value: 1
+                onColor: Theme.dotOff
+                animated: false
+
+                Glyph {
+                    anchors.centerIn: parent
+                    name: "headphones"
+                    size: root.disc * 0.26
+                    color: Theme.fgDim
+                }
+            }
         }
 
         Column {
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - (Media.artUrl.length > 0 ? root.disc + Theme.space(5) : 0)
+            width: parent.width - root.disc - Theme.space(5)
             spacing: Theme.space(1)
 
             SectionLabel {
@@ -50,7 +98,7 @@ Item {
                 text: Media.available ? Media.title : "Nothing playing"
                 color: Theme.fg
                 font.family: Theme.fontUi
-                font.pixelSize: Math.max(18, root.height * 0.13)
+                font.pixelSize: Math.max(18, root.height * 0.12)
                 font.weight: Font.Medium
                 renderType: Text.NativeRendering
             }
@@ -62,7 +110,7 @@ Item {
                 visible: text.length > 0
                 color: Theme.fgDim
                 font.family: Theme.fontUi
-                font.pixelSize: Math.max(12, root.height * 0.075)
+                font.pixelSize: Math.max(12, root.height * 0.07)
                 renderType: Text.NativeRendering
             }
 
@@ -78,37 +126,89 @@ Item {
                 topPadding: Theme.space(2)
                 spacing: Theme.space(4)
 
-                Glyph {
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: "skip-back"
-                    size: 15
-                    filled: true
-                    color: Media.canPrevious ? Theme.fgBright : Theme.fgFaint
+                MediaButton {
+                    icon: "skip-back"
+                    enabled: Media.canPrevious
+                    onClicked: Media.previous()
                 }
 
+                // The one coloured control, as on the other media cards.
                 Rectangle {
-                    width: Math.max(36, root.height * 0.24)
+                    width: Math.max(36, root.height * 0.22)
                     height: width
                     radius: width / 2
                     color: Theme.accent
+                    scale: playTap.pressed ? 0.9 : (playHover.hovered ? 1.06 : 1)
+
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: Theme.standard
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.gentle
+                        }
+                    }
 
                     Glyph {
                         anchors.centerIn: parent
                         name: Media.playing ? "pause" : "play"
                         size: parent.width * 0.38
                         filled: true
-                        color: "#FFFFFF"
+                        color: Theme.bg
+                    }
+
+                    HoverHandler {
+                        id: playHover
+
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    TapHandler {
+                        id: playTap
+
+                        enabled: !Widgets.editing
+                        onTapped: Media.playPause()
                     }
                 }
 
-                Glyph {
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: "skip-forward"
-                    size: 15
-                    filled: true
-                    color: Media.canNext ? Theme.fgBright : Theme.fgFaint
+                MediaButton {
+                    icon: "skip-forward"
+                    enabled: Media.canNext
+                    onClicked: Media.next()
                 }
             }
+        }
+    }
+
+    component MediaButton: Item {
+        id: button
+
+        property string icon: ""
+        property bool enabled: true
+
+        signal clicked
+
+        anchors.verticalCenter: parent.verticalCenter
+        width: 28
+        height: 28
+
+        Glyph {
+            anchors.centerIn: parent
+            name: button.icon
+            size: 15
+            filled: true
+            color: !button.enabled ? Theme.fgFaint : (hover.hovered ? Theme.fg : Theme.fgBright)
+        }
+
+        HoverHandler {
+            id: hover
+
+            enabled: button.enabled
+            cursorShape: Qt.PointingHandCursor
+        }
+
+        TapHandler {
+            enabled: button.enabled && !Widgets.editing
+            onTapped: button.clicked()
         }
     }
 }

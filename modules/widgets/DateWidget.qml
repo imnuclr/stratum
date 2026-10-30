@@ -4,36 +4,47 @@ import qs.services
 import qs.theme
 
 /*
- * The month, the day as a large numeral, and the week with today marked.
+ * The month at the top, the day as a large numeral under it, and the week along
+ * the bottom with today underlined. Everything aligned to the left edge.
  */
 Item {
     id: root
 
+    property var item: ({})
+    property bool live: true
+
+    readonly property real unit: Math.min(root.width, root.height)
+    readonly property real inset: root.unit * 0.13
     // Monday first.
     readonly property int today: (Time.now.getDay() + 6) % 7
 
     SectionLabel {
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.margins: Theme.space(5)
+        id: month
+
+        x: root.inset
+        y: root.inset
         text: Time.format("MMMM")
         color: Theme.fgDim
+        font.pixelSize: Math.max(10, root.unit * 0.05)
     }
 
     DotText {
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: -root.height * 0.02
+        x: root.inset - root.unit * 0.01
+        anchors.top: month.bottom
+        anchors.topMargin: root.unit * 0.06
         text: Time.format("d")
-        size: Math.min(root.width, root.height) * 0.36
+        size: root.unit * 0.42
         plain: true
     }
 
     Row {
-        anchors.horizontalCenter: parent.horizontalCenter
+        id: week
+
+        x: root.inset
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.space(5)
-        spacing: Math.max(Theme.space(2), (root.width - Theme.space(5) * 2 - 7 * 8) / 6 - 6)
+        anchors.bottomMargin: root.inset
+        width: root.width - root.inset * 2
+        spacing: (week.width - 7 * root.unit * 0.04) / 6
 
         Repeater {
             model: ["M", "T", "W", "T", "F", "S", "S"]
@@ -42,17 +53,20 @@ Item {
                 required property string modelData
                 required property int index
 
-                spacing: 2
+                width: root.unit * 0.04
+                spacing: root.unit * 0.02
 
                 SectionLabel {
+                    anchors.horizontalCenter: parent.horizontalCenter
                     text: parent.modelData
                     color: parent.index === root.today ? Theme.fg : Theme.fgFaint
+                    font.pixelSize: Math.max(9, root.unit * 0.042)
                 }
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 8
-                    height: 1.5
+                    width: root.unit * 0.055
+                    height: Math.max(1.5, root.unit * 0.008)
                     color: Theme.fg
                     opacity: parent.index === root.today ? 1 : 0
                 }

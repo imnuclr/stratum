@@ -9,6 +9,9 @@ import qs.theme
 Item {
     id: root
 
+    property var item: ({})
+    property bool live: true
+
     readonly property string greeting: {
         const h = Time.hours;
         if (h < 5)
@@ -40,7 +43,7 @@ Item {
 
             Text {
                 text: `${Account.firstName.length > 0 ? Account.firstName : Account.user}.`
-                color: Theme.fgDim
+                color: Theme.fgBright
                 font.family: Theme.fontUi
                 font.pixelSize: root.type
                 font.weight: Font.Light
@@ -49,6 +52,7 @@ Item {
         }
 
         Row {
+            visible: Widgets.option(root.item, "facts") !== "hide"
             spacing: Theme.space(4)
 
             Row {
@@ -64,7 +68,7 @@ Item {
                 SectionLabel {
                     anchors.verticalCenter: parent.verticalCenter
                     text: `${Notifs.count} ${Notifs.count === 1 ? "notification" : "notifications"}`
-                    color: Theme.fgDim
+                    color: Theme.fgBright
                 }
             }
 
@@ -72,7 +76,7 @@ Item {
                 visible: Weather.ready
                 anchors.verticalCenter: parent.verticalCenter
                 text: `${Math.round(Weather.temperature)}° ${Weather.condition}`
-                color: Theme.fgDim
+                color: Theme.fgBright
             }
         }
     }
