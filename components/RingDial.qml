@@ -90,9 +90,16 @@ Item {
         }
     }
 
-    WheelHandler {
-        onWheel: event => {
-            root.live = root.clamp(root.live + (event.angleDelta.y > 0 ? 0.04 : -0.04));
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton
+
+        onWheel: wheel => {
+            // A touchpad may report pixels and no angle.
+            const d = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.pixelDelta.y * 4;
+            if (d === 0)
+                return;
+            root.live = root.clamp(root.live + (d > 0 ? 0.04 : -0.04));
             settle.restart();
         }
     }
