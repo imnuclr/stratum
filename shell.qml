@@ -14,6 +14,7 @@ import qs.modules.bar
 import qs.modules.control
 import qs.modules.dashboard
 import qs.modules.hotzones
+import qs.modules.launcher
 import qs.modules.lock
 import qs.modules.notifications
 import qs.modules.osd
@@ -99,6 +100,7 @@ ShellRoot {
     Session {}
     Lock {}
     Settings {}
+    Spotlight {}
     WallpaperMenus {}
     WallpaperPickers {}
     Shortcuts {}

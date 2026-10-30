@@ -27,6 +27,7 @@ Singleton {
 
     // What the shell can be asked to do from a key.
     readonly property var actions: [
+        { name: "launcher", label: "launcher" },
         { name: "lock", label: "lock the screen" },
         { name: "session", label: "session menu" },
         { name: "control", label: "control centre" },
@@ -65,6 +66,7 @@ Singleton {
         { mods: ["SUPER"], key: "Print", action: "screenshot" },
         { mods: ["CTRL"], key: "Print", action: "screenshotEdit" },
         { mods: ["SUPER"], key: "L", action: "lock" },
+        { mods: ["SUPER"], key: "SPACE", action: "launcher" },
         { mods: ["ALT"], key: "Print", action: "recordRegion" },
         { mods: ["SUPER", "ALT"], key: "Print", action: "record" },
         { mods: ["SUPER", "SHIFT"], key: "W", action: "widgetsEdit" }
