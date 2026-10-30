@@ -46,7 +46,7 @@ Item {
     // beneath completely and the crossfade has no see-through gaps.
     Rectangle {
         anchors.fill: parent
-        color: Theme.bg
+        color: Theme.wall
         visible: root.look === "dots"
     }
 
@@ -101,6 +101,7 @@ Item {
         property real mono: root.mono ? 1 : 0
         property real lo: root.lo
         property real hi: root.hi
+        property real ink: Theme.dark ? 0 : 1
     }
 
     // A small copy of the picture, read for its tones.

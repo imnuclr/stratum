@@ -319,7 +319,9 @@ Item {
                     case "battery":
                         return "BatteryPopout.qml";
                     default:
-                        return "";
+                        // One per tray item, so moving between icons is a
+                        // change of trigger; all of them share one panel.
+                        return loader.have.startsWith("tray:") ? "TrayPopout.qml" : "";
                     }
                 }
 

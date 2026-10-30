@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
 import qs.components
+import qs.services
 import qs.theme
 import qs.utils
 
@@ -31,7 +32,11 @@ Row {
      * release, and nothing in the tray could be clicked at all.
      */
     property bool holding: false
+    property string monitorName: ""
+    // Kept open while one of its icons has its popout up, so the icon the panel
+    // hangs from does not fold away under it.
     readonly property bool expanded: hover.hovered || closing.running || root.holding
+        || (Popouts.open && Popouts.current.startsWith("tray:") && Popouts.monitorName === root.monitorName)
 
     HoverHandler {
         id: hover
@@ -209,6 +214,7 @@ Row {
                         anchors.fill: parent
                         item: entry.modelData
                         edge: Edges.Bottom
+                        monitorName: root.monitorName
                         onHeld: down => root.holding = down
                     }
                 }

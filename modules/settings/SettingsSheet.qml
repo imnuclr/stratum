@@ -308,7 +308,7 @@ FloatingWindow {
         Rectangle {
             id: rule
 
-            anchors.left: rail.right
+            anchors.left: railScroll.right
             anchors.leftMargin: Theme.space(5)
             anchors.top: parent.top
             anchors.bottom: parent.bottom

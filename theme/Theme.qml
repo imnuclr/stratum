@@ -41,6 +41,8 @@ Singleton {
     // --- colour ---
     readonly property color bg: pick("color.bg", "#080808")
     readonly property color panel: pick("color.panel", "#0B0B0B")
+    // Behind the wallpaper's dots: paper on a light theme, rather than the grey bg.
+    readonly property color wall: pick("color.wall", root.bg)
     readonly property color surface: pick("color.surface", "#121212")
     readonly property color surfaceHi: pick("color.surfaceHi", "#1B1B1B")
     readonly property color surfaceTop: pick("color.surfaceTop", "#242424")

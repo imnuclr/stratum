@@ -41,6 +41,8 @@ Column {
                 anchors.horizontalCenter: parent.horizontalCenter
                 item: modelData
                 size: 17
+                monitorName: root.monitorName
+                vertical: true
                 edge: Config.forMonitor(root.monitorName, "bar.edge", "left") === "right" ? Edges.Left : Edges.Right
             }
         }
