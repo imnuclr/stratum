@@ -28,6 +28,9 @@ Singleton {
     // Tomorrow onward: { day, code, max, min }. Index 0 of the API's daily
     // arrays is today, which the current conditions already cover.
     property var daily: []
+    // Today's range, which `daily` (tomorrow onward) does not carry.
+    property real todayMax: NaN
+    property real todayMin: NaN
     property string sunrise: ""
     property string sunset: ""
 
@@ -151,6 +154,8 @@ Singleton {
                         // rather than parsed as UTC and shifted.
                         root.sunrise = (d.sunrise?.[0] ?? "").slice(11);
                         root.sunset = (d.sunset?.[0] ?? "").slice(11);
+                        root.todayMax = d.temperature_2m_max?.[0] ?? NaN;
+                        root.todayMin = d.temperature_2m_min?.[0] ?? NaN;
 
                         const names = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
                         const days = [];

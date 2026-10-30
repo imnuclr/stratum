@@ -4,7 +4,8 @@ import qs.services
 import qs.theme
 
 /*
- * Processor, memory and graphics at a glance, with a minute of processor load.
+ * Processor, memory, graphics and disk in large numerals, with a minute of
+ * processor load as a field of dots beside them.
  */
 Item {
     id: root
@@ -12,17 +13,21 @@ Item {
     Component.onCompleted: {
         SysStats.watch();
         Gpu.watch();
+        Disk.watch();
     }
     Component.onDestruction: {
         SysStats.unwatch();
         Gpu.unwatch();
+        Disk.unwatch();
     }
+
+    readonly property real figure: Math.max(22, root.height * 0.22)
 
     readonly property var figures: [
         { label: "cpu", value: `${Math.round(SysStats.cpu * 100)}%` },
         { label: "mem", value: SysStats.memoryShort },
-        { label: "gpu", value: Gpu.available ? `${Math.round(Gpu.usage * 100)}%` : "--" },
-        { label: "temp", value: SysStats.temperature > 0 ? `${Math.round(SysStats.temperature)}°` : "--" }
+        { label: "gpu", value: Gpu.available ? (Gpu.temperature > 0 ? `${Math.round(Gpu.temperature)}°` : `${Math.round(Gpu.usage * 100)}%`) : "--" },
+        { label: "disk", value: Disk.available ? `${Math.round(Disk.used * 100)}%` : "--" }
     ]
 
     Grid {
@@ -30,8 +35,8 @@ Item {
         anchors.leftMargin: Theme.space(5)
         anchors.verticalCenter: parent.verticalCenter
         columns: 2
-        rowSpacing: Theme.space(4)
-        columnSpacing: Theme.space(6)
+        rowSpacing: Math.round(root.height * 0.1)
+        columnSpacing: Math.round(root.width * 0.08)
 
         Repeater {
             model: root.figures
@@ -39,47 +44,46 @@ Item {
             Column {
                 required property var modelData
 
-                spacing: 2
+                spacing: Theme.space(1)
 
                 SectionLabel {
                     text: parent.modelData.label
-                    color: Theme.fgBright
+                    color: Theme.fgDim
                 }
 
                 DotText {
                     text: parent.modelData.value
-                    size: 24
+                    size: root.figure
                     plain: true
                 }
             }
         }
     }
 
-    // A minute of load, one column of dots per sample.
+    // A minute of load, one column per sample, on a field of unlit dots.
     Column {
         anchors.right: parent.right
         anchors.rightMargin: Theme.space(5)
         anchors.top: parent.top
-        anchors.topMargin: Theme.space(4)
+        anchors.topMargin: Theme.space(5)
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.space(4)
-        width: Math.max(120, root.width * 0.42)
-        spacing: Theme.space(2)
+        anchors.bottomMargin: Theme.space(5)
+        width: Math.max(120, root.width * 0.4)
+        spacing: Theme.space(3)
 
         SectionLabel {
             text: "cpu · 60 s"
-            color: Theme.fgBright
+            color: Theme.fgDim
         }
 
         Row {
             id: graph
 
-            readonly property int rows: 6
+            readonly property int rows: 7
             readonly property real pitch: width / SysStats.historyLength
 
             width: parent.width
-            height: parent.height - Theme.space(2) - 12
-            spacing: 0
+            height: parent.height - Theme.space(3) - 14
 
             Repeater {
                 model: SysStats.cpuHistory
@@ -101,7 +105,8 @@ Item {
                             height: 3
                             radius: 1.5
                             anchors.horizontalCenter: parent.horizontalCenter
-                            // Lit from the bottom up.
+                            // Lit from the bottom up; the floor row is always lit, so
+                            // an idle machine still draws its line.
                             color: (graph.rows - 1 - index) < Math.max(1, Math.round(parent.modelData * graph.rows))
                                 ? Theme.dotOn : Theme.dotOff
                         }

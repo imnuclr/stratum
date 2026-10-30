@@ -4,7 +4,7 @@ import qs.services
 import qs.theme
 
 /*
- * GPU load as a dotted ring, with its temperature underneath.
+ * GPU load as a dotted ring, the figure in the middle and its temperature under.
  */
 Item {
     id: root
@@ -13,26 +13,28 @@ Item {
     Component.onDestruction: Gpu.unwatch()
 
     DotRing {
-        anchors.centerIn: parent
-        width: Math.min(root.width, root.height) - Theme.space(3)
-        height: width
-        count: 44
-        dotSize: Math.max(2.4, width / 24)
+        anchors.fill: parent
+        anchors.margins: Theme.space(2)
+        count: 56
+        dotSize: Math.max(2.4, width / 36)
         value: Gpu.usage
-
-        DotText {
-            anchors.centerIn: parent
-            text: Gpu.available ? `${Math.round(Gpu.usage * 100)}` : "--"
-            size: Math.max(18, parent.height * 0.3)
-            plain: true
-        }
     }
 
-    SectionLabel {
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.space(4)
-        text: Gpu.available ? (Gpu.temperature > 0 ? `gpu · ${Math.round(Gpu.temperature)}°` : "gpu") : "gpu · n/a"
-        color: Theme.fgBright
+    Column {
+        anchors.centerIn: parent
+        spacing: Theme.space(2)
+
+        DotText {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: Gpu.available ? `${Math.round(Gpu.usage * 100)}` : "--"
+            size: Math.min(root.width, root.height) * 0.27
+            plain: true
+        }
+
+        SectionLabel {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: Gpu.available ? (Gpu.temperature > 0 ? `gpu · ${Math.round(Gpu.temperature)}°` : "gpu") : "gpu · n/a"
+            color: Theme.fgDim
+        }
     }
 }

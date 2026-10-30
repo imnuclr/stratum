@@ -15,23 +15,25 @@ Item {
     SectionLabel {
         anchors.left: parent.left
         anchors.top: parent.top
-        anchors.margins: Theme.space(4)
+        anchors.margins: Theme.space(5)
         text: Time.format("MMMM")
-        color: Theme.fgBright
+        color: Theme.fgDim
     }
 
     DotText {
-        anchors.centerIn: parent
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: -root.height * 0.02
         text: Time.format("d")
-        size: Math.max(24, root.height * 0.32)
+        size: Math.min(root.width, root.height) * 0.36
         plain: true
     }
 
     Row {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Theme.space(4)
-        spacing: Math.max(Theme.space(2), (root.width - Theme.space(4) * 2 - 7 * 8) / 6 - 6)
+        anchors.bottomMargin: Theme.space(5)
+        spacing: Math.max(Theme.space(2), (root.width - Theme.space(5) * 2 - 7 * 8) / 6 - 6)
 
         Repeater {
             model: ["M", "T", "W", "T", "F", "S", "S"]
@@ -44,7 +46,7 @@ Item {
 
                 SectionLabel {
                     text: parent.modelData
-                    color: parent.index === root.today ? Theme.fg : Theme.fgDim
+                    color: parent.index === root.today ? Theme.fg : Theme.fgFaint
                 }
 
                 Rectangle {
@@ -52,7 +54,7 @@ Item {
                     width: 8
                     height: 1.5
                     color: Theme.fg
-                    visible: parent.index === root.today
+                    opacity: parent.index === root.today ? 1 : 0
                 }
             }
         }

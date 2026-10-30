@@ -18,6 +18,7 @@ Item {
     property real size: 64
     property real cell: 3
     property real dotScale: 0.5
+    property bool colored: true
 
     implicitWidth: size
     implicitHeight: size
@@ -58,7 +59,7 @@ Item {
             cell: root.cell
             dotScale: root.dotScale
             halftone: true
-            colored: true
+            colored: root.colored
             circular: true
             source: root.source
         }
