@@ -61,10 +61,25 @@ Singleton {
         debounce.restart();
     }
 
+    /*
+     * A laptop backlight is not linear to the eye: the bottom few percent are the
+     * whole difference between dim and dark, and the top twenty barely register,
+     * so equal steps in the raw value jump at one end and do nothing at the other.
+     * Stepped in square-root space instead, so a step is about as visible wherever
+     * it lands, and never below 1% so the screen cannot be pressed to black.
+     * External monitors are left as they are.
+     */
     function stepFor(id, delta) {
         const i = root.indexOf(id);
-        if (i >= 0)
-            root.setFor(id, root.displays[i].value + delta);
+        if (i < 0)
+            return;
+        const now = root.displays[i].value;
+        if (root.internal) {
+            const next = Math.pow(Math.max(0, Math.min(1, Math.sqrt(now) + delta)), 2);
+            root.setFor(id, Math.max(0.01, next));
+        } else {
+            root.setFor(id, now + delta);
+        }
     }
 
     /*
