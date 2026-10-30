@@ -104,7 +104,7 @@ Item {
         name: "brightnessUp"
         onPressed: {
             Brightness.step(root.brightnessStep);
-            Osd.brightness(Brightness.value + root.brightnessStep);
+            Osd.brightness(Brightness.value);
         }
     }
 
@@ -113,7 +113,7 @@ Item {
         name: "brightnessDown"
         onPressed: {
             Brightness.step(-root.brightnessStep);
-            Osd.brightness(Brightness.value - root.brightnessStep);
+            Osd.brightness(Brightness.value);
         }
     }
 
