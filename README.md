@@ -25,11 +25,15 @@ Daily-drivable on both monitors. Phases follow the roadmap in
       monitor, crossfaded, per-monitor choice. *Cutout parallax, depth shader and
       shader-based transitions remain* (qt6-shadertools is installed).
 - [ ] **5** &mdash; widget canvas + edit mode
-- [ ] **6** &mdash; lock screen
-- [ ] **7** &mdash; settings. **In progress**: a centred panel from the control centre's
-      gear, with wallpaper, appearance, notifications and advanced pages, and a safe
-      config/theme writer behind it. Not yet committed; clicks on its controls are
-      untested. Open on a page with `qs -c stratum ipc call panel settings <page>`.
+- [x] **6** &mdash; lock screen: real session lock, dithered avatar, time-of-day
+      greeting, smooth password box. Locks from SUPER + L, the session menu or
+      `loginctl lock-session`; `qs -c stratum ipc call lock preview` shows it without
+      locking. *Fingerprint and a wallpaper backdrop remain.* The PAM path has not
+      been exercised with a real password yet.
+- [ ] **7** &mdash; settings. **Started**: a centred panel from the control centre's
+      gear with wallpaper, appearance, notifications and advanced pages, and a safe
+      config/theme writer behind it. Clicks on its controls are untested (needs a
+      synthetic pointer). Open on a page with `qs -c stratum ipc call panel settings <page>`.
       *Still to come: bar, monitors and keybind pages; the schema-driven version.*
 - [ ] **8** &mdash; polish. **Toasts done** (focused monitor only, hover holds, urgent
       ones stay, do-not-disturb). *OSD, launcher, remaining widgets, `stratumctl`,
