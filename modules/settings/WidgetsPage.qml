@@ -9,24 +9,14 @@ import qs.theme
  * The desktop widgets: whether they are shown, whether they step aside for
  * windows, and the way into arranging them.
  */
-Flickable {
+SettingsPage {
     id: page
 
-    contentHeight: body.implicitHeight
-    clip: true
-    boundsBehavior: Flickable.StopAtBounds
+    icon: "grid"
+    title: "Widgets"
+    detail: "The clock, weather and friends on your desktop."
 
-    Column {
-        id: body
-
-        width: page.width
-        spacing: 0
-
-        SectionLabel {
-            text: "widgets"
-            bottomPadding: Theme.space(3)
-        }
-
+    SettingCard {
         SettingRow {
             width: parent.width
             title: "Show widgets"

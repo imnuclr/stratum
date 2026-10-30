@@ -8,24 +8,18 @@ import qs.theme
 /*
  * How notifications announce themselves.
  */
-Item {
+SettingsPage {
     id: page
+
+    icon: "bell"
+    title: "Notifications"
+    detail: "How notifications announce themselves, and for how long."
 
     readonly property real minSeconds: 2
     readonly property real maxSeconds: 15
     readonly property real toastSeconds: Config.get("notifications.toastMs", 5000) / 1000
 
-    Column {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        spacing: 0
-
-        SectionLabel {
-            text: "notifications"
-            bottomPadding: Theme.space(3)
-        }
-
+    SettingCard {
         SettingRow {
             width: parent.width
             title: "Do not disturb"

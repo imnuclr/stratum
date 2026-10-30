@@ -8,20 +8,14 @@ import qs.theme
 /*
  * What the shell is doing and where it keeps things, for when something is wrong.
  */
-Item {
+SettingsPage {
     id: page
 
-    Column {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        spacing: 0
+    icon: "sliders"
+    title: "Advanced"
+    detail: "Diagnostics and where Stratum keeps its files."
 
-        SectionLabel {
-            text: "advanced"
-            bottomPadding: Theme.space(3)
-        }
-
+    SettingCard {
         SettingRow {
             width: parent.width
             title: "Diagnostic tracing"

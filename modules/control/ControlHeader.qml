@@ -20,7 +20,7 @@ Item {
 
         DotText {
             anchors.verticalCenter: parent.verticalCenter
-            text: Time.format("HH:mm")
+            text: Time.format(Time.hm)
             size: 26
             // Changes once a minute, but the cascade on a clock in a panel that
             // is only up for seconds just looks like a glitch.

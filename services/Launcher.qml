@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.config
 
 /*
  * Searching for things to open: applications, files, the shell's own settings
@@ -86,6 +87,11 @@ Singleton {
             .map(x => x.e);
     }
 
+    function forget() {
+        root.counts = ({});
+        writer.restart();
+    }
+
     function launched(entry) {
         const next = Object.assign({}, root.counts);
         next[entry.id] = (next[entry.id] ?? 0) + 1;
@@ -144,7 +150,7 @@ Singleton {
 
     function searchFiles(query) {
         root.fileQuery = query;
-        if (query.length < 3) {
+        if (query.length < 3 || !Config.get("launcher.files", true)) {
             root.files = [];
             return;
         }

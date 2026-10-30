@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs.components
+import qs.config
 import qs.services
 import qs.theme
 
@@ -175,9 +176,10 @@ PanelWindow {
 
         if (q.length === 0) {
             groups.push(["frequent", Launcher.rankApps("", 8).map(e => root.appRow(e, "frequent"))]);
-            groups.push(["recent files", Launcher.recent.slice(0, 6).map(p => root.fileRow(p, "recent files"))]);
+            if (Config.get("launcher.recent", true))
+                groups.push(["recent files", Launcher.recent.slice(0, 6).map(p => root.fileRow(p, "recent files"))]);
         } else {
-            const sum = Launcher.calc(q);
+            const sum = Config.get("launcher.calc", true) ? Launcher.calc(q) : null;
             if (sum !== null) {
                 groups.push(["calculator", [{
                     group: "calculator", title: String(sum), sub: `${q} =`, icon: "calc", kind: "calc",
@@ -209,10 +211,11 @@ PanelWindow {
                 .slice(0, 4)
                 .map(x => ({ group: "actions", title: x.a.title, sub: "stratum", icon: x.a.icon, kind: "action", score: x.s, hint: "do it", act: x.a.act, keep: x.a.keep }));
 
-            const recent = Launcher.recent
+            const recent = !Config.get("launcher.recent", true) ? [] : Launcher.recent
                 .filter(p => Launcher.score(p.slice(p.lastIndexOf("/") + 1), q) >= 40)
                 .slice(0, 4);
-            const files = [...recent, ...Launcher.files.filter(p => !recent.includes(p))]
+            const found = Config.get("launcher.files", true) ? Launcher.files : [];
+            const files = [...recent, ...found.filter(p => !recent.includes(p))]
                 .slice(0, 8)
                 .map(p => root.fileRow(p, "files"));
 
@@ -233,11 +236,20 @@ PanelWindow {
             }
 
             groups.push(["apps", apps], ["actions", acts], ["settings", pages], ["files", files]);
-            groups.push(["web", [{
-                group: "web", title: `search the web for “${q}”`, sub: "duckduckgo", icon: "globe", kind: "web",
-                hint: "open in your browser",
-                act: () => Quickshell.execDetached(["xdg-open", `https://duckduckgo.com/?q=${encodeURIComponent(q)}`])
-            }]]);
+            const engine = Config.get("launcher.engine", "duckduckgo");
+            const engines = {
+                duckduckgo: "https://duckduckgo.com/?q=",
+                google: "https://www.google.com/search?q=",
+                brave: "https://search.brave.com/search?q=",
+                startpage: "https://www.startpage.com/do/search?q="
+            };
+            if (Config.get("launcher.web", true)) {
+                groups.push(["web", [{
+                    group: "web", title: `search the web for “${q}”`, sub: engine, icon: "globe", kind: "web",
+                    hint: "open in your browser",
+                    act: () => Quickshell.execDetached(["xdg-open", (engines[engine] ?? engines.duckduckgo) + encodeURIComponent(q)])
+                }]]);
+            }
         }
 
         const rows = [];

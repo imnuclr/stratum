@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.config
 
 /*
  * What the on-screen indicator is saying, and for how long.
@@ -25,6 +26,8 @@ Singleton {
     property bool shown: false
 
     function show(icon, label, level, dim) {
+        if (!Config.get("osd.enabled", true))
+            return;
         root.icon = icon;
         root.label = label;
         root.level = level;

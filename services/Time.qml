@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.config
 
 /*
  * One clock for the whole shell. Ticks per minute by default; a consumer that
@@ -13,6 +14,10 @@ Singleton {
 
     property date now: new Date()
     property int secondConsumers: 0
+
+    // Hours and minutes as you like them read: Settings → Appearance → Clock.
+    readonly property bool twelveHour: Config.get("clock.twelveHour", false)
+    readonly property string hm: root.twelveHour ? "h:mm" : "HH:mm"
 
     readonly property int hours: now.getHours()
     readonly property int minutes: now.getMinutes()
