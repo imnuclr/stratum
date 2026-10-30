@@ -85,8 +85,6 @@ ShellRoot {
 
     // Bottom of the stack, so everything else draws over it.
     Background {}
-    // Before the bar, so its surface is mapped underneath the bar's own.
-    BarFade {}
     Bar {}
     Dashboard {}
     Control {}

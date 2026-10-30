@@ -32,6 +32,17 @@ Item {
         saturation: -1
     }
 
+    // The dots are drawn on nothing, so two dotted layers fading over each other
+    // each showed through the other's gaps — and when the old one was emptied at
+    // the end of the fade, every dot it had been contributing vanished in a single
+    // frame, which was the flicker. Given its own ground, the layer on top covers
+    // the one beneath completely, and the fade is an ordinary crossfade.
+    Rectangle {
+        anchors.fill: parent
+        color: Theme.bg
+        visible: root.look === "dots"
+    }
+
     Image {
         id: picture
 
