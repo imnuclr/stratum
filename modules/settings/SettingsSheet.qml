@@ -147,8 +147,7 @@ FloatingWindow {
 
             anchors.top: search.bottom
             anchors.topMargin: Theme.space(3)
-            anchors.bottom: closer.top
-            anchors.bottomMargin: Theme.space(3)
+            anchors.bottom: parent.bottom
             anchors.left: parent.left
             width: root.railWidth
             contentHeight: rail.implicitHeight
@@ -264,53 +263,6 @@ FloatingWindow {
         }
 
         Rectangle {
-            id: closer
-
-            anchors.left: parent.left
-            anchors.bottom: parent.bottom
-            width: root.railWidth
-            height: 40
-            radius: height / 2
-            color: closeHover.hovered ? Theme.accent : Theme.surfaceHi
-
-            Behavior on color {
-                ColorAnimation {
-                    duration: Theme.micro
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.smooth
-                }
-            }
-
-            Row {
-                anchors.centerIn: parent
-                spacing: Theme.space(2)
-
-                Glyph {
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: "close"
-                    size: 14
-                    color: closeHover.hovered ? Theme.bg : Theme.fg
-                }
-
-                SectionLabel {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "close"
-                    color: closeHover.hovered ? Theme.bg : Theme.fgBright
-                }
-            }
-
-            HoverHandler {
-                id: closeHover
-
-                cursorShape: Qt.PointingHandCursor
-            }
-
-            TapHandler {
-                onTapped: Shell.closeSettings()
-            }
-        }
-
-        Rectangle {
             id: rule
 
             anchors.left: railScroll.right
@@ -327,6 +279,8 @@ FloatingWindow {
             anchors.left: rule.right
             anchors.leftMargin: Theme.space(5)
             anchors.right: parent.right
+            // Clear of the close button in the corner.
+            anchors.rightMargin: 44
             anchors.top: parent.top
             anchors.bottom: parent.bottom
 
@@ -381,6 +335,45 @@ FloatingWindow {
                     }
                 }
             }
+        }
+    }
+
+    // Closes the window, in the corner a close button is looked for.
+    Rectangle {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: Theme.space(4)
+        width: 34
+        height: 34
+        radius: 17
+        z: 10
+        color: closeHover.hovered ? Theme.accent : Theme.surfaceHi
+        border.width: 1
+        border.color: closeHover.hovered ? Theme.accent : Theme.line
+
+        Behavior on color {
+            ColorAnimation {
+                duration: Theme.micro
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
+            }
+        }
+
+        Glyph {
+            anchors.centerIn: parent
+            name: "close"
+            size: 15
+            color: closeHover.hovered ? "#FFFFFF" : Theme.fg
+        }
+
+        HoverHandler {
+            id: closeHover
+
+            cursorShape: Qt.PointingHandCursor
+        }
+
+        TapHandler {
+            onTapped: Shell.closeSettings()
         }
     }
 
