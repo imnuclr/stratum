@@ -173,6 +173,38 @@ ShellRoot {
         }
     }
 
+    // `stratum ipc palette status` — what the shell knows about matugen. Here
+    // rather than in Palette: a handler inside a lazy singleton never registers.
+    IpcHandler {
+        target: "palette"
+
+        function status(): string {
+            // Undefined here means Palette itself failed to load: see the log.
+            if (Palette.mode === undefined)
+                return "Palette did not load — run: qs -c stratum log | grep -i -B2 -A6 palette";
+            return [
+                `mode:     ${Palette.mode}`,
+                `matugen:  ${Palette.binary || "(none)"}`,
+                `search:   ${Palette.searched}`,
+                `image:    ${Palette.image || "(no wallpaper)"}`,
+                `error:    ${Palette.error || "(none)"}`,
+                `colours:  ${JSON.stringify(Theme.generated?.color ?? {})}`
+            ].join("\n");
+        }
+
+        function find(): string {
+            Palette.binary = "";
+            Palette.find();
+            return "searching again — ask for status in a second";
+        }
+
+        function run(): string {
+            Palette.cache = ({});
+            Palette.refresh();
+            return "running matugen — ask for status in a second";
+        }
+    }
+
     // An app's window brought to this workspace, or the app started: what an
     // "open app" key runs.
     IpcHandler {

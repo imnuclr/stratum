@@ -122,6 +122,13 @@ Singleton {
     // Looks for the program again: something installed after the shell started
     // is picked up the next time its settings are opened.
     function find() {
+        // A path you gave is used as it is: nothing to search for.
+        if (root.configured.length > 0) {
+            root.binary = root.configured;
+            root.searched = "set in config (theme.matugen)";
+            root.refresh();
+            return;
+        }
         if (probe.running)
             return;
         root.searched = "searching";
@@ -132,8 +139,6 @@ Singleton {
          * ran nothing, and matugen was "not installed" for good.
          */
         probe.command = ["sh", "-c", Bin.finder, "sh", "matugen"];
-        if (root.configured.length > 0)
-            probe.command = ["sh", "-c", '[ -x "$1" ] && echo "$1"', "sh", root.configured];
         probe.running = true;
     }
 
@@ -160,34 +165,6 @@ Singleton {
                 }
                 root.refresh();
             }
-        }
-    }
-
-    // `stratum ipc palette status` — what the shell knows about matugen.
-    IpcHandler {
-        target: "palette"
-
-        function status(): string {
-            return [
-                `mode:     ${root.mode}`,
-                `matugen:  ${root.binary || "(none)"}`,
-                `search:   ${root.searched}`,
-                `image:    ${root.image || "(no wallpaper)"}`,
-                `error:    ${root.error || "(none)"}`,
-                `colours:  ${JSON.stringify(Theme.generated?.color ?? {})}`
-            ].join("\n");
-        }
-
-        function find(): string {
-            root.binary = "";
-            root.find();
-            return "searching again — ask for status in a second";
-        }
-
-        function run(): string {
-            root.cache = ({});
-            root.refresh();
-            return "running matugen — ask for status in a second";
         }
     }
 
