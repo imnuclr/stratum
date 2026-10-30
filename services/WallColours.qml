@@ -55,19 +55,43 @@ Singleton {
         }
     }
 
+    /*
+     * The full scheme behind the shell's colours, for apps to be themed from:
+     * the wallpaper's when colours come from it, otherwise one built from the
+     * accent you picked. Either way the apps get a whole matched set — surfaces,
+     * text, primary, secondary, tertiary — rather than one colour on grey.
+     */
+    property var scheme: null
+    readonly property string key: root.mode !== "off" && root.image.length > 0
+        ? root.image
+        : `accent:${Theme.user?.color?.accent ?? Theme.preset?.color?.accent ?? "#E5252B"}`
+
+    onKeyChanged: root.refresh()
+
+    // One role from the scheme, for the current light or dark: "" if none.
+    function role(name) {
+        return root.scheme ? root.colour(root.scheme, name) : "";
+    }
+
     function refresh() {
-        if (root.mode === "off" || root.image.length === 0) {
+        const fromWall = root.mode !== "off" && root.image.length > 0;
+        if (!fromWall)
             Theme.generated = ({});
-            return;
-        }
-        const known = root.cache[root.image];
+        const known = root.cache[root.key];
         if (known) {
-            Theme.generated = root.tokensFrom(known);
+            root.scheme = known;
+            if (fromWall)
+                Theme.generated = root.tokensFrom(known);
             return;
         }
         if (!root.available || probe.running || matugen.running)
             return;
-        root.running = root.image;
+        root.running = root.key;
+        if (!fromWall) {
+            matugen.command = [root.binary, "color", "hex", root.key.slice("accent:".length), "--json", "hex", "--dry-run"];
+            matugen.running = true;
+            return;
+        }
         /*
          * matugen 3 stops to ask which of the picture's colours to build from
          * when it finds several, and with nobody at a terminal it waits for ever
@@ -188,7 +212,7 @@ Singleton {
 
         stdout: StdioCollector {
             onStreamFinished: {
-                if (root.running !== root.image)
+                if (root.running !== root.key)
                     return root.refresh();
                 if (text.trim().length === 0)
                     return;
@@ -204,7 +228,9 @@ Singleton {
                 const next = Object.assign({}, root.cache);
                 next[root.running] = scheme;
                 root.cache = next;
-                Theme.generated = root.tokensFrom(scheme);
+                root.scheme = scheme;
+                if (root.mode !== "off" && root.image.length > 0)
+                    Theme.generated = root.tokensFrom(scheme);
             }
         }
 

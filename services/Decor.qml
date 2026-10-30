@@ -26,7 +26,54 @@ Singleton {
     })
 
     onBlurChanged: root.apply()
-    Component.onCompleted: root.apply()
+    Component.onCompleted: {
+        root.apply();
+        root.paintBorders();
+    }
+
+    /*
+     * Window borders and their glow in the shell's colours: the accent running
+     * into the tertiary across active windows, a quiet surface tone on the rest,
+     * and the shadow tinted to match — so the edge of a window agrees with
+     * everything inside it. "config" leaves your own border colours alone.
+     */
+    readonly property string borders: Config.get("windows.borders", "accent")
+    readonly property var colours: AppTheme.palette
+
+    onBordersChanged: {
+        if (root.borders === "config")
+            Quickshell.execDetached(["hyprctl", "reload"]);
+        else
+            paint.restart();
+    }
+    onColoursChanged: paint.restart()
+
+    Timer {
+        id: paint
+
+        interval: 300
+        onTriggered: root.paintBorders()
+    }
+
+    // #rrggbb and an alpha as Hyprland's rgba(rrggbbaa).
+    function rgba(hex, alpha) {
+        return `rgba(${String(hex).slice(1, 7)}${alpha})`;
+    }
+
+    function paintBorders() {
+        if (root.borders === "config" || GameMode.on)
+            return;
+        const c = root.colours;
+        const active = `${root.rgba(c.accent, "ff")} ${root.rgba(c.tertiary, "ff")} 45deg`;
+        const inactive = root.rgba(c.bgTop, "aa");
+        const glow = root.rgba(c.accent, "55");
+        if (Hypr.lua) {
+            Hyprland.dispatch(`hl.config({ general = { col = { active_border = "${active}", inactive_border = "${inactive}" } }, decoration = { shadow = { color = "${glow}" } } })`);
+        } else {
+            Quickshell.execDetached(["hyprctl", "--batch",
+                `keyword general:col.active_border ${active} ; keyword general:col.inactive_border ${inactive} ; keyword decoration:shadow:color ${glow}`]);
+        }
+    }
 
     function apply() {
         if (root.blur === "config" || Power.noEffects || GameMode.on)
@@ -48,8 +95,10 @@ Singleton {
         target: Hyprland
 
         function onRawEvent(event) {
-            if (event.name === "configreloaded")
+            if (event.name === "configreloaded") {
                 root.apply();
+                root.paintBorders();
+            }
         }
     }
 }
