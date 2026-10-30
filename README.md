@@ -13,19 +13,44 @@ field, and album art is dithered into dots. Five greys and one red.
 
 ## Status
 
-Phase 1 of 8. The bar is daily-drivable on both monitors: live clock, workspaces,
-focused window, system tray, and a status cluster wired to real services.
-See [`DESIGN.md`](DESIGN.md) for the full plan.
+Daily-drivable on both monitors. Phases follow the roadmap in
+[`DESIGN.md`](DESIGN.md) §10, which also records the lessons learned along the way.
 
 - [x] **0** &mdash; skeleton, config + theme singletons, dot primitives
-- [x] **1** &mdash; bar: tray, status cluster, active window
-- [ ] **2** &mdash; remaining services (media, notifications, GPU, weather, sysstats)
-- [ ] **3** &mdash; dashboard strip + control centre
-- [ ] **4** &mdash; wallpaper layer + depth parallax
+- [x] **1** &mdash; bar: per-display workspaces, tray, status cluster, active window, popouts
+- [x] **2** &mdash; services: SysStats, Media, Netstat, Weather, Notifications. *Gpu remains.*
+- [x] **3** &mdash; dashboard + control centre. Wi-Fi and Bluetooth lists open above the
+      panel, brightness is per monitor. *In-place tile expansion remains.*
+- [ ] **4** &mdash; wallpaper + depth. **Wallpaper layer done**: drawn by the shell per
+      monitor, crossfaded, per-monitor choice. *Cutout parallax, depth shader and
+      shader-based transitions remain* (qt6-shadertools is installed).
 - [ ] **5** &mdash; widget canvas + edit mode
 - [ ] **6** &mdash; lock screen
-- [ ] **7** &mdash; settings app
-- [ ] **8** &mdash; launcher, OSD, polish
+- [ ] **7** &mdash; settings. **In progress**: a centred panel from the control centre's
+      gear, with wallpaper, appearance, notifications and advanced pages, and a safe
+      config/theme writer behind it. Not yet committed; clicks on its controls are
+      untested. Open on a page with `qs -c stratum ipc call panel settings <page>`.
+      *Still to come: bar, monitors and keybind pages; the schema-driven version.*
+- [ ] **8** &mdash; polish. **Toasts done** (focused monitor only, hover holds, urgent
+      ones stay, do-not-disturb). *OSD, launcher, remaining widgets, `stratumctl`,
+      install script and screenshots remain.*
+
+### Not in the roadmap
+
+Work that doesn't belong to a phase above:
+
+- **Colour theming from the wallpaper** (matugen is installed), keeping the single red
+  accent as an option. The accent picker already exists in Settings.
+- **Motion pass**: one soft curve for large surfaces, shorter exits, measured in time.
+
+### Known loose ends
+
+- `Tray.qml` uses a conditional `duration` on a Behavior, the pattern that silently
+  failed elsewhere (DESIGN.md, lesson 45). Unchecked.
+- `debug.trace` is on by default; decide whether it should be off.
+- Power-profile control: the intended behaviour was never pinned down.
+- Clicking is untested in automated checks: it needs `ydotoold`, which has not been
+  started.
 
 ## Install
 
