@@ -38,7 +38,10 @@ PanelWindow {
 
     // Any window on this monitor's workspace counts as covering the desktop.
     readonly property var workspace: Hyprland.monitorFor(win.monitor)?.activeWorkspace ?? null
-    readonly property bool covered: (win.workspace?.toplevels?.values?.length ?? 0) > 0
+    // Stratum's own windows (settings) do not count: opening settings to change
+    // a widget hid the very widgets being changed.
+    readonly property bool covered: (win.workspace?.toplevels?.values ?? [])
+        .some(t => t.title !== "Stratum Settings" && !/quickshell/i.test(t.lastIpcObject?.class ?? ""))
     readonly property bool live: win.shown && (win.editing || !win.covered)
     /*
      * Widgets belong to the bare desktop. With a window on the workspace they
@@ -118,6 +121,82 @@ PanelWindow {
     }
 
     property var hits: []
+
+    /*
+     * The wallpaper, shrunk to a 32 × 18 grid of brightnesses, for widgets to
+     * choose their ink by. Read once per picture; the picture is stretched
+     * rather than cropped, which is near enough for "light or dark here".
+     */
+    property var grounds: []
+    readonly property string wallUrl: {
+        const path = Wallpaper.forMonitor(win.monitor.name);
+        return path ? `file://${path}` : "";
+    }
+
+    function groundAt(x, y, w, h) {
+        if (win.grounds.length !== 32 * 18)
+            return Theme.dark ? 0.2 : 0.8;
+        const x0 = Math.max(0, Math.floor(x / win.width * 32));
+        const x1 = Math.min(31, Math.floor((x + w) / win.width * 32));
+        const y0 = Math.max(0, Math.floor(y / win.height * 18));
+        const y1 = Math.min(17, Math.floor((y + h) / win.height * 18));
+        let sum = 0, n = 0;
+        for (let j = y0; j <= y1; j++)
+            for (let i = x0; i <= x1; i++) {
+                sum += win.grounds[j * 32 + i];
+                n++;
+            }
+        let v = n > 0 ? sum / n : 0.5;
+        // The dotted look shows the picture as dots on a ground: black under
+        // the dark theme, paper under the light one, which pulls it that way.
+        if (Config.get("wallpaper.look", "original") === "dots")
+            v = Theme.dark ? v * 0.55 : 1 - (1 - v) * 0.45;
+        return v;
+    }
+
+    Canvas {
+        id: sampler
+
+        width: 32
+        height: 18
+        opacity: 0
+        renderStrategy: Canvas.Immediate
+
+        property string loaded: ""
+
+        Connections {
+            target: win
+
+            function onWallUrlChanged() {
+                sampler.take();
+            }
+        }
+
+        Component.onCompleted: sampler.take()
+
+        function take() {
+            if (win.wallUrl.length === 0)
+                return;
+            if (sampler.isImageLoaded(win.wallUrl))
+                sampler.requestPaint();
+            else
+                sampler.loadImage(win.wallUrl);
+        }
+
+        onImageLoaded: sampler.requestPaint()
+
+        onPaint: {
+            if (!sampler.isImageLoaded(win.wallUrl))
+                return;
+            const ctx = getContext("2d");
+            ctx.drawImage(win.wallUrl, 0, 0, 32, 18);
+            const px = ctx.getImageData(0, 0, 32, 18).data;
+            const out = [];
+            for (let i = 0; i < 32 * 18; i++)
+                out.push((0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2]) / 255);
+            win.grounds = out;
+        }
+    }
 
     function rebuildHits() {
         const next = [];
@@ -240,6 +319,13 @@ PanelWindow {
                     readonly property var def: Widgets.types[frame.modelData.type] ?? Widgets.types.clock
                     readonly property bool round: frame.def.shape === "round"
                     readonly property string look: Widgets.option(frame.modelData, "style")
+                    // How bright the wallpaper is under this widget, and so which
+                    // ink reads on it. Covers and photos are never flipped.
+                    readonly property real ground: win.groundAt(field.x + frame.x, field.y + frame.y, frame.width, frame.height)
+                    readonly property bool lightInk: frame.look === "tile" ? Theme.dark : frame.ground < 0.56
+                    readonly property bool flipInk: frame.look !== "tile"
+                        && !["media", "photo"].includes(frame.modelData.type)
+                        && frame.lightInk !== Theme.dark
                     readonly property real corner: frame.round ? Math.min(width, height) / 2 : Math.max(Theme.rTile, Math.min(44, Math.min(width, height) * 0.17))
                     // While resizing, the size follows the pointer; otherwise it is
                     // the layout's.
@@ -307,30 +393,43 @@ PanelWindow {
                         }
 
                         /*
-                         * The widget. In the shadow style it carries a soft dark
-                         * shadow of its own shape, which is what keeps white text
-                         * legible over a pale part of the wallpaper.
+                         * The widget. Off a tile it sits on the wallpaper, so its
+                         * ink is chosen by what is behind it rather than by the
+                         * theme: light ink with a dark shadow over a dark part of
+                         * the picture, dark ink with a light glow over a pale one.
+                         * Black text with a black shadow, which is what the light
+                         * theme drew on a mid-tone wallpaper, was unreadable.
                          */
-                        Loader {
-                            id: content
-
+                        Item {
                             anchors.fill: parent
-                            sourceComponent: win.componentFor(frame.modelData.type)
-
-                            onLoaded: {
-                                item.item = Qt.binding(() => frame.modelData);
-                                item.live = Qt.binding(() => win.live);
-                            }
 
                             layer.enabled: frame.look === "shadow"
                             layer.effect: MultiEffect {
                                 autoPaddingEnabled: true
                                 shadowEnabled: true
-                                shadowColor: "#000000"
-                                shadowOpacity: 0.9
+                                shadowColor: frame.lightInk ? "#000000" : "#FFFFFF"
+                                shadowOpacity: frame.lightInk ? 0.9 : 0.8
                                 shadowBlur: 0.8
-                                shadowVerticalOffset: 2
+                                shadowVerticalOffset: frame.lightInk ? 2 : 0
                                 shadowHorizontalOffset: 0
+                            }
+
+                            Loader {
+                                id: content
+
+                                anchors.fill: parent
+                                sourceComponent: win.componentFor(frame.modelData.type)
+
+                                onLoaded: {
+                                    item.item = Qt.binding(() => frame.modelData);
+                                    item.live = Qt.binding(() => win.live);
+                                }
+
+                                // The theme drew it for the other kind of ground.
+                                layer.enabled: frame.flipInk
+                                layer.effect: ShaderEffect {
+                                    fragmentShader: Qt.resolvedUrl("../../assets/shaders/invert.frag.qsb")
+                                }
                             }
                         }
 
