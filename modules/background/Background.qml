@@ -40,8 +40,8 @@ Variants {
         WlrLayershell.layer: WlrLayer.Background
         WlrLayershell.namespace: "stratum-background"
         WlrLayershell.exclusionMode: ExclusionMode.Ignore
-        // Nothing here is interactive; the desktop below must still get clicks.
-        mask: Region {}
+        // Takes the pointer, for holding on the wallpaper (below). Windows sit above
+        // this layer, so only bare desktop reaches it.
 
         anchors.top: true
         anchors.bottom: true
@@ -49,6 +49,20 @@ Variants {
         anchors.right: true
 
         color: Theme.bg
+
+        // Hold on the bare desktop for a moment and the wallpaper page opens.
+        Item {
+            anchors.fill: parent
+            z: 100
+
+            TapHandler {
+                longPressThreshold: 0.6
+                onLongPressed: {
+                    Shell.settingsPage = "wallpaper";
+                    Shell.open("settings", win.modelData.name);
+                }
+            }
+        }
 
         /*
          * Two layers that trade places, so the picture on screen is never touched.

@@ -44,6 +44,9 @@ Canvas {
     // Scales brightness before it sets a dot's size. Thin strokes average out to
     // a faint grey at this resolution and need lifting to stay visible.
     property real gain: 1
+    // How bright the dots are drawn, 0 to 1. Separate from `gain`, which scales the
+    // brightness that decides a halftone dot's radius and so changes its size.
+    property real dotAlpha: 1
     /*
      * Crops to the subject when the picture has a plain ground around it. Avatars
      * drawn on a white square are mostly white square, and at a few dozen dots
@@ -98,6 +101,7 @@ Canvas {
     onColoredChanged: requestPaint()
     onInvertChanged: requestPaint()
     onGainChanged: requestPaint()
+    onDotAlphaChanged: requestPaint()
 
     Image {
         id: sampler
@@ -252,6 +256,7 @@ Canvas {
         }
 
         ctx.fillStyle = dotColor;
+        ctx.globalAlpha = Math.max(0.05, Math.min(1, dotAlpha));
 
         for (let y = 0; y < rows; y++) {
             for (let x = 0; x < cols; x++) {

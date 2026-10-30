@@ -20,6 +20,7 @@ Item {
     property bool mono: false
     property real dotSize: 8
     property real dotScale: 0.5
+    // 0 to 1: how bright the dots are. Their size is a separate setting.
     property real light: 1
 
     signal ready
@@ -58,7 +59,7 @@ Item {
         dotScale: root.dotScale
         halftone: true
         colored: !root.mono
-        gain: root.light
+        dotAlpha: root.light
     }
 
     // Reaches the picture's own loader; the dots read the same file themselves.

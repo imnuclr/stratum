@@ -124,10 +124,11 @@ Sheet {
             RingDial {
                 id: lightRing
 
-                value: (Config.get("wallpaper.light", 1) - 0.5) / 1.5
-                reading: `${Math.round((0.5 + lightRing.live * 1.5) * 100)}`
+                // How bright the dots are, not how big: that is the first ring.
+                value: (Math.min(1, Config.get("wallpaper.light", 1)) - 0.15) / 0.85
+                reading: `${Math.round((0.15 + lightRing.live * 0.85) * 100)}`
                 caption: "light · %"
-                onCommitted: v => Config.set("wallpaper.light", Math.round((0.5 + v * 1.5) * 20) / 20)
+                onCommitted: v => Config.set("wallpaper.light", Math.round((0.15 + v * 0.85) * 20) / 20)
             }
         }
 

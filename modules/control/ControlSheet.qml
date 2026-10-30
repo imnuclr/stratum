@@ -85,6 +85,8 @@ Sheet {
         anchors.fill: parent
         radius: Theme.rSheet
         color: Theme.surface
+        border.width: 1
+        border.color: Theme.outline
         opacity: Shell.expandedChip.length > 0 ? 1 : 0
 
         /*
