@@ -36,20 +36,44 @@ Item {
         anchors.right: parent.right
         spacing: Theme.space(3)
 
+        // Where the pictures come from, and the way to point it elsewhere.
         Item {
             width: parent.width
-            height: heading.implicitHeight
+            height: 34
 
             SectionLabel {
                 id: heading
 
+                anchors.verticalCenter: parent.verticalCenter
                 text: "wallpaper"
             }
 
-            SectionLabel {
+            Row {
                 anchors.right: parent.right
-                text: `${Wallpaper.entries.length} images`
-                dim: true
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.space(2)
+
+                SectionLabel {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: `${Wallpaper.dir.replace(Quickshell.env("HOME"), "~")} · ${Wallpaper.entries.length} images`
+                    dim: true
+                }
+
+                LinkButton {
+                    text: "change folder"
+                    icon: "folder"
+                    onClicked: Picker.folder("Wallpaper folder", path => Config.set("wallpaper.dir", path))
+                }
+
+                LinkButton {
+                    text: "open"
+                    onClicked: Quickshell.execDetached(["xdg-open", Wallpaper.dir])
+                }
+
+                LinkButton {
+                    text: "rescan"
+                    onClicked: Wallpaper.scan()
+                }
             }
         }
 

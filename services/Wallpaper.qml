@@ -108,6 +108,7 @@ Singleton {
     }
 
     Component.onCompleted: root.scan()
+    onDirChanged: root.scan()
 
     Process {
         id: lister

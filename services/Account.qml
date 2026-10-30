@@ -37,6 +37,11 @@ Singleton {
 
     property string avatar: ""
 
+    onAvatarCandidatesChanged: {
+        finder.running = false;
+        finder.running = true;
+    }
+
     Component.onCompleted: {
         names.running = true;
         finder.running = true;
