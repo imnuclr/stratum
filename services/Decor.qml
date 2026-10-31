@@ -96,9 +96,8 @@ Singleton {
             Hypr.runLua([
                 `hl.config({ decoration = { shadow = { color = "${glow}" } } })`,
                 `hl.config({ general = { col = { active_border = "${solid}", inactive_border = "${inactive}" } } })`,
-                // The gradient, in each form it might take; whichever is
-                // accepted last wins, and the solid colour stays if none is.
-                `hl.config({ general = { col = { active_border = "${active}" } } })`,
+                // The gradient as a table (a "a b 45deg" string is refused in
+                // Lua); the solid colour above stays if this is refused too.
                 `hl.config({ general = { col = { active_border = { colors = { "${solid}", "${root.rgba(c.tertiary, "ff")}" }, angle = 45 } } } })`
             ]);
         } else {
