@@ -11,9 +11,10 @@ import qs.services
  *
  * If a window of the app is open anywhere — another workspace, a scratchpad
  * (special workspace), another monitor — it is brought to the workspace you are
- * on and focused, as an ordinary window. If none is, the app is started, and
- * its window is pulled here when it appears, so a window rule sending it to a
- * scratchpad does not win.
+ * on and focused, as an ordinary window. If none is, the app is started with
+ * Hyprland told to open it on this workspace, which wins over a window rule
+ * sending it to a scratchpad, so it never shows up there first. Its window is
+ * still pulled here if it appears elsewhere anyway.
  *
  *     qs -c stratum ipc call apps open spotify
  */
@@ -45,8 +46,10 @@ Singleton {
             ...root.words(entry?.startupClass), ...root.words(String(entry?.execString ?? "").split(" ")[0].split("/").pop())]);
     }
 
-    function open(name) {
-        root.pending = { name: name, entry: root.entryFor(name) };
+    // launch false: only bring a window that exists or turns up soon (a
+    // notification's own action is starting the app); never start it here.
+    function open(name, launch) {
+        root.pending = { name: name, entry: root.entryFor(name), launch: launch !== false };
         monitors.running = false;
         monitors.running = true;
     }
@@ -77,6 +80,30 @@ Singleton {
     }
 
     property var pending: null
+
+    function quote(word) {
+        return "'" + String(word).replace(/'/g, "'\\''") + "'";
+    }
+
+    /*
+     * Starts the app on the workspace in front of you. The workspace goes in an
+     * exec rule on the launch itself: a window rule has only the app's class to
+     * go on, and an exec rule beats it.
+     */
+    function start(job) {
+        const cmd = job.entry?.command?.length > 0
+            ? job.entry.command.map(root.quote).join(" ")
+            : job.name;
+        // A scratchpad left open would hide the window as it appears.
+        if (root.overlay.length > 0) {
+            Hyprland.dispatch(Hypr.lua
+                ? `hl.dsp.workspace.toggle_special("${root.overlay}")`
+                : `togglespecialworkspace ${root.overlay}`);
+            root.overlay = "";
+        }
+        const line = `[workspace ${root.here}] ${cmd}`;
+        Hyprland.dispatch(Hypr.lua ? `hl.dsp.exec_cmd(${JSON.stringify(line)})` : `exec ${line}`);
+    }
 
     function bring(client) {
         const here = root.here;
@@ -118,10 +145,8 @@ Singleton {
                     root.waiting = null;
                 } else if (root.pending) {
                     // Not running: start it, then watch for its window.
-                    if (job.entry)
-                        job.entry.execute();
-                    else
-                        Quickshell.execDetached(["sh", "-c", job.name]);
+                    if (job.launch)
+                        root.start(job);
                     root.waiting = { name: job.name, entry: job.entry, tries: 0 };
                     watch.restart();
                 }
@@ -130,14 +155,32 @@ Singleton {
         }
     }
 
+    /*
+     * A window opening while one is awaited is looked for at once rather than
+     * on the next tick. An app already running in the background (a chat app
+     * closed to its tray) makes its window itself, so the launch's workspace
+     * never applies to it and a window rule may put it in a scratchpad; the
+     * sooner it is pulled out, the less of that is seen.
+     */
+    Connections {
+        target: Hyprland
+
+        function onRawEvent(event) {
+            if (event.name !== "openwindow" || !root.waiting || root.pending)
+                return;
+            monitors.running = false;
+            monitors.running = true;
+        }
+    }
+
     // Looks for the new window for a while after starting it.
     Timer {
         id: watch
 
-        interval: 500
+        interval: 250
         repeat: true
         onTriggered: {
-            if (!root.waiting || root.waiting.tries++ > 30) {
+            if (!root.waiting || root.waiting.tries++ > 80) {
                 root.waiting = null;
                 watch.stop();
                 return;

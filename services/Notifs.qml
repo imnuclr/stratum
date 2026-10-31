@@ -80,8 +80,9 @@ Singleton {
     /*
      * What clicking a notification does. The sender's default action if it
      * offered one — that is the action a desktop environment invokes when the
-     * body is clicked — and otherwise bring the application's own window forward,
-     * which is what someone reaching for the notification wanted either way.
+     * body is clicked — and then brings the application's own window to the
+     * workspace in front of you, which is what someone reaching for the
+     * notification wanted either way.
      */
     function activate(notification) {
         if (!notification)
@@ -90,12 +91,13 @@ Singleton {
         const actions = notification.actions ?? [];
         const fallback = actions.length === 1 ? actions[0] : null;
         const preferred = actions.find(a => a.identifier === "default") ?? fallback;
-        if (preferred) {
+        const app = notification.desktopEntry || notification.appName;
+        if (preferred)
             preferred.invoke();
-            return;
-        }
-
-        Hypr.focusApp(notification.desktopEntry || notification.appName);
+        // Either way the window is brought here as an ordinary one: the app's
+        // own activation shows it wherever a window rule left it, which for a
+        // chat app is a scratchpad.
+        Apps.open(app, false);
     }
 
     /*

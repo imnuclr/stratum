@@ -221,8 +221,7 @@ SettingsPage {
 
         Repeater {
             model: [
-                { id: "terminal", title: "Terminal", detail: "kitty and ghostty change at once; foot and alacritty from the next window." },
-                { id: "fetch", title: "Terminal greeting", detail: "fastfetch shows the Stratum mark and your colours. Off puts your own fastfetch config back." },
+                { id: "terminal", title: "Terminal", detail: "Open terminals change at once; new ones start in the colours." },
                 { id: "gtk", title: "GTK apps", detail: "Files, Text Editor and other GTK and libadwaita apps, from their next launch." },
                 { id: "spotify", title: "Spotify", detail: "Through Spicetify. Switching on restarts Spotify once to apply the theme." },
                 { id: "discord", title: "Vesktop / Discord", detail: "Through Vencord. Then pick Stratum under Vencord → Themes, once." }

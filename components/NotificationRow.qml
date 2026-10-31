@@ -24,14 +24,20 @@ Rectangle {
         .filter(a => a.identifier !== "default")
 
     /*
-     * The sending application's icon, wherever it can be found: what the
-     * notification names, a file it points at, the icon of its desktop entry,
-     * or an icon named after the app. Empty when there is none.
+     * What stands for the notification. A picture the sender attached comes
+     * first — a chat app sends the person's profile picture that way, and who
+     * a message is from matters more than which app carried it. Otherwise the
+     * application's icon, wherever it can be found: what the notification
+     * names, a file it points at, the icon of its desktop entry, or an icon
+     * named after the app. Empty when there is none.
      */
     readonly property string iconSource: {
         const n = root.notification;
         if (!n)
             return "";
+        const picture = n.image ?? "";
+        if (picture.length > 0)
+            return picture.startsWith("/") ? `file://${picture}` : picture;
         const named = n.appIcon ?? "";
         if (named.startsWith("/"))
             return `file://${named}`;
@@ -79,8 +85,8 @@ Rectangle {
         }
     }
 
-    // The app, as its own icon dithered into dots — the same treatment album art
-    // gets, so a Discord message reads as Discord at a glance.
+    // The sender's picture, or failing that the app's icon, dithered into dots —
+    // the same treatment album art gets.
     Rectangle {
         id: badge
 

@@ -134,7 +134,7 @@ Singleton {
 
     // Which apps can be themed, and what each one is called.
     readonly property var apps: ({
-        terminal: "Terminal", fetch: "Terminal greeting", gtk: "GTK apps",
+        terminal: "Terminal", gtk: "GTK apps",
         spotify: "Spotify", discord: "Vesktop / Discord"
     })
 
@@ -167,13 +167,30 @@ Singleton {
             root.put(`${root.cfg}/spicetify/Themes/Stratum/color.ini`, root.spicetify(p));
             root.put(`${root.cfg}/spicetify/Themes/Stratum/user.css`, "/* Stratum: colours only. */\n");
         }
-        if (root.on("fetch"))
-            root.put(`${root.cfg}/fastfetch/config.jsonc`, root.fetch(p));
+        // Not switchable: the greeting is part of Stratum. A fastfetch config of
+        // your own is kept beside it, once.
+        root.put(`${root.cfg}/fastfetch/config.jsonc`, root.fetch(p));
         if (root.on("discord")) {
             for (const dir of ["vesktop", "Vencord", "equibop"])
                 root.put(`${root.cfg}/${dir}/themes/stratum.theme.css`, root.discord(p));
         }
+        root.recolour = root.on("terminal") ? root.sequences(p) : "";
         hook.restart();
+    }
+
+    /*
+     * The palette as terminal escape codes (OSC 4 for the sixteen colours, 10 to
+     * 12 for text, background and cursor). Written to every open terminal so a
+     * change of accent shows up in windows that are already open — config files
+     * are only read when a terminal starts.
+     */
+    property string recolour: ""
+
+    function sequences(p) {
+        const esc = String.fromCharCode(27);
+        const st = esc + "\\";
+        return root.ansi(p).map((c, i) => `${esc}]4;${i};${c}${st}`).join("")
+            + `${esc}]10;${p.fg}${st}${esc}]11;${p.bg}${st}${esc}]12;${p.accent}${st}`;
     }
 
     // Written by a script so missing folders are made, and only where the app
@@ -201,13 +218,25 @@ Singleton {
                     path="$1"; text="$2"; shift 2
                     base="\${XDG_CONFIG_HOME:-$HOME/.config}"
                     app="\${path#"$base"/}"; app="\${app%%/*}"
-                    [ -d "$base/$app" ] || continue
+                    [ -d "$base/$app" ] || [ "$app" = fastfetch ] || continue
+                    # Someone's own fastfetch config is kept, once.
+                    if [ "$app" = fastfetch ] && [ -f "$path" ] && ! grep -q 'Written by Stratum' "$path" \
+                        && [ ! -f "$base/fastfetch/config.before-stratum.jsonc" ]; then
+                        cp "$path" "$base/fastfetch/config.before-stratum.jsonc"
+                    fi
                     mkdir -p "$(dirname "$path")" && printf '%s' "$text" > "$path"
                 done
                 # Tell what can be told to reload.
                 pkill -USR1 -x kitty 2>/dev/null
                 pkill -USR2 -x ghostty 2>/dev/null
+                # Every other terminal (foot, alacritty, ...) is told directly.
+                if [ -n "$RECOLOUR" ]; then
+                    for t in /dev/pts/[0-9]*; do
+                        [ -O "$t" ] && [ -w "$t" ] && printf '%s' "$RECOLOUR" > "$t" 2>/dev/null
+                    done
+                fi
                 true`, "sh", ...args];
+            writer.environment = { RECOLOUR: root.recolour };
             writer.running = true;
         }
     }
@@ -272,20 +301,11 @@ Singleton {
         if (app === "spotify")
             spicetifySetup.running = true;
         writeLater.force = true;
-        // fastfetch reads one config; yours is kept beside it, once.
-        if (app === "fetch")
-            Quickshell.execDetached(["sh", "-c", `d="${c}/fastfetch"; mkdir -p "$d"
-                [ -f "$d/config.jsonc" ] && ! grep -q 'Written by Stratum' "$d/config.jsonc" && [ ! -f "$d/config.before-stratum.jsonc" ] \
-                    && cp "$d/config.jsonc" "$d/config.before-stratum.jsonc"; true`]);
         writeLater.restart();
     }
 
     function disconnect(app) {
         Config.set(`apps.theme.${app}`, false);
-        // Your own fastfetch config back, as it was.
-        if (app === "fetch")
-            Quickshell.execDetached(["sh", "-c", `d="${root.cfg}/fastfetch"
-                [ -f "$d/config.before-stratum.jsonc" ] && mv "$d/config.before-stratum.jsonc" "$d/config.jsonc"; true`]);
     }
 
     Process {
@@ -363,54 +383,65 @@ Singleton {
     }
 
     /*
-     * The terminal greeting: the bar's mark — a ring of dots round an accent
-     * dot — beside a short, lowercase list, ending in the palette as a row of
-     * dots. fastfetch takes colours as SGR codes, so each is a truecolour one.
+     * Rows of "#" and "." as braille: each character is a 2 by 4 block of dots.
+     * The last column is the full stop, so it is the accent's; the rest are
+     * the text's.
+     */
+    function braille(rows) {
+        const bit = [[1, 8], [2, 16], [4, 32], [64, 128]];
+        const width = Math.ceil(rows[0].length / 2);
+        const lines = [];
+        for (let top = 0; top < rows.length; top += 4) {
+            let line = "";
+            for (let cell = 0; cell < width; cell++) {
+                let mask = 0;
+                for (let y = 0; y < 4; y++)
+                    for (let x = 0; x < 2; x++)
+                        if ((rows[top + y] ?? "")[cell * 2 + x] === "#")
+                            mask |= bit[y][x];
+                line += String.fromCharCode(0x2800 + mask);
+            }
+            lines.push(line);
+        }
+        return lines.map(l => "$1" + l.slice(0, -1) + "$3" + l.slice(-1)).join("\n");
+    }
+
+    /*
+     * The terminal greeting: STRATUM in dot-matrix, the way the display
+     * numerals are drawn, with the accent as its full stop, and nothing else.
+     * Lit dots are the text colour; the dots that are off stay on as a faint
+     * grid. fastfetch takes colours as SGR codes, so each is a truecolour one.
+     * The dots are packed into braille, two to a column and four to a line, so
+     * the mark is 22 columns wide and two lines tall and fits any window.
      */
     function fetch(p) {
         const sgr = hex => {
             const n = parseInt(hex.slice(1, 7), 16);
             return `38;2;${(n >> 16) & 255};${(n >> 8) & 255};${n & 255}`;
         };
-        const logo = [
-            "     $2·  ·  ·  ·",
-            "  $2·              ·",
-            " $2·                ·",
-            "$2·        $1●        $2·",
-            " $2·                ·",
-            "  $2·              ·",
-            "     $2·  ·  ·  ·"
-        ].join("\n");
-        const key = (type, name, extra) => Object.assign({ type: type, key: name }, extra ?? {});
+        // Seven rows of five dots a letter; # is lit.
+        const glyphs = {
+            S: [".###.", "#...#", "#....", ".###.", "....#", "#...#", ".###."],
+            T: ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
+            R: ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
+            A: [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+            U: ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
+            M: ["#...#", "##.##", "#.#.#", "#...#", "#...#", "#...#", "#...#"]
+        };
+        const word = "STRATUM";
+        const rows = [0, 1, 2, 3, 4, 5, 6];
+        const logo = root.braille(rows.map(r => word.split("").map(c => glyphs[c][r]).join(".") + (r === 6 ? ".#" : "..")));
         return "// Written by Stratum from the shell's colours. Changes are overwritten;\n"
-            + "// switch it off in Settings → Appearance → Apps to get your own back.\n"
+            + "// Your own, if you had one, is kept as config.before-stratum.jsonc.\n"
             + JSON.stringify({
                 $schema: "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
                 logo: {
                     type: "data",
                     source: logo,
-                    color: { "1": sgr(p.accent), "2": sgr(p.grey) },
-                    padding: { top: 1, left: 2, right: 4 }
+                    color: { "1": sgr(p.fg), "2": sgr(p.bgTop), "3": sgr(p.accent) },
+                    padding: { top: 1, left: 1, right: 0, bottom: 1 }
                 },
-                display: {
-                    separator: "  ",
-                    color: { keys: sgr(p.fgDim), title: sgr(p.accent), output: sgr(p.fg), separator: sgr(p.grey) },
-                    key: { width: 9 }
-                },
-                modules: [
-                    "break",
-                    { type: "title", format: "{user-name}{#" + sgr(p.grey) + "} · {#" + sgr(p.accent) + "}{host-name}" },
-                    { type: "custom", format: "{#" + sgr(p.grey) + "}· · · · · · · · · · · · · · · ·" },
-                    key("os", "system"),
-                    key("kernel", "kernel"),
-                    key("uptime", "up"),
-                    key("packages", "packages"),
-                    key("shell", "shell"),
-                    key("wm", "desktop", { format: "{pretty-name} · stratum" }),
-                    key("memory", "memory"),
-                    "break",
-                    { type: "colors", symbol: "circle", paddingLeft: 0 }
-                ]
+                modules: []
             }, null, 2) + "\n";
     }
 

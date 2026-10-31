@@ -271,6 +271,18 @@ link_shell() {
   done
   [ "$n" -gt 0 ] && ok "$n wallpapers added to $walls"
 
+  # The terminal greeting. A greeting of your own is kept beside it, once.
+  if command -v fish >/dev/null; then
+    local fdir="$CONFIG_HOME/fish/functions"
+    mkdir -p "$fdir"
+    if ! cmp -s "$ROOT/assets/fish/fish_greeting.fish" "$fdir/fish_greeting.fish"; then
+      [ -f "$fdir/fish_greeting.fish" ] && [ ! -f "$fdir/fish_greeting.before-stratum.fish.bak" ] \
+        && cp "$fdir/fish_greeting.fish" "$fdir/fish_greeting.before-stratum.fish.bak"
+      cp "$ROOT/assets/fish/fish_greeting.fish" "$fdir/fish_greeting.fish"
+      ok "fish greeting: the STRATUM mark (yours kept as fish_greeting.before-stratum.fish.bak)"
+    fi
+  fi
+
   case ":$PATH:" in
     *":$BIN_DIR:"*) ;;
     *) warn "$BIN_DIR is not on your PATH — add it in your shell's config" ;;
