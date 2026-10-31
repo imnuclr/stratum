@@ -66,6 +66,12 @@ doctor() {
   running && good "shell running" || poor "shell not running — stratum start"
 
   tool qs "quickshell, the runtime"
+  # Quickshell says this itself, at the top of every run, when Qt has been
+  # updated under it; it is the usual cause of crashes nothing else explains.
+  if grep -q "without rebuilding the package" "$LOG" 2>/dev/null && \
+     [ "$(grep -n "without rebuilding" "$LOG" | tail -n1 | cut -d: -f1)" -gt "$(( $(wc -l < "$LOG") - 400 ))" ]; then
+    poor "Quickshell was built for an older Qt than you now have — rebuild it: paru -S --rebuild quickshell"
+  fi
   tool grim "screenshots"; tool slurp "region select"; tool satty "screenshot annotation"
   tool wl-copy "clipboard (launcher calculator)"
   tool wpctl "volume (pipewire)"
