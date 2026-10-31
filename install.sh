@@ -262,6 +262,15 @@ link_shell() {
   fetch Geist  "https://github.com/google/fonts/raw/main/ofl/geist/Geist%5Bwght%5D.ttf" ui
   fetch Nunito "https://github.com/google/fonts/raw/main/ofl/nunito/Nunito%5Bwght%5D.ttf" rounded
 
+  # The wallpapers that come with it, into the folder the shell looks in.
+  local walls="$HOME/Pictures/Wallpapers"
+  mkdir -p "$walls"
+  local n=0 w
+  for w in "$ROOT"/assets/wallpapers/*.jpg; do
+    [ -f "$walls/stratum-$(basename "$w")" ] || { cp "$w" "$walls/stratum-$(basename "$w")"; n=$((n + 1)); }
+  done
+  [ "$n" -gt 0 ] && ok "$n wallpapers added to $walls"
+
   case ":$PATH:" in
     *":$BIN_DIR:"*) ;;
     *) warn "$BIN_DIR is not on your PATH — add it in your shell's config" ;;
