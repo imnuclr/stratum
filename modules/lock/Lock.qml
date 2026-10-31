@@ -51,6 +51,7 @@ Scope {
     }
 
     function lock() {
+        console.info(`[lock] asked to lock (secure=${session.secure})`);
         if (session.secure)
             return;
         Shell.close();
@@ -59,6 +60,7 @@ Scope {
     }
 
     function release() {
+        console.info("[lock] releasing");
         session.locked = false;
         root.preview = false;
         credentials.reset();
@@ -82,6 +84,10 @@ Scope {
 
     WlSessionLock {
         id: session
+
+        // Each step, in the log, so a lock that fails says how far it got.
+        onLockedChanged: console.info(`[lock] locked=${locked}`)
+        onSecureChanged: console.info(`[lock] compositor confirms secure=${secure}`)
 
         LockSurface {
             auth: credentials
