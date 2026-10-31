@@ -158,6 +158,7 @@ Variants {
                 opacity: 0
                 pixelWidth: win.modelData.width
                 pixelHeight: win.modelData.height
+                monitorName: win.modelData.name
                 look: win.look
                 mono: win.mono
                 dotSize: win.dotCell
@@ -179,6 +180,7 @@ Variants {
                 opacity: 0
                 pixelWidth: win.modelData.width
                 pixelHeight: win.modelData.height
+                monitorName: win.modelData.name
                 look: win.look
                 mono: win.mono
                 dotSize: win.dotCell

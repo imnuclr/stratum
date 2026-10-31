@@ -23,6 +23,19 @@ Singleton {
     // A config file written by hand says ~/Pictures, which no API expands.
     readonly property string dir: root.expand(Config.get("wallpaper.dir", "~/Pictures/Wallpapers"))
 
+    /*
+     * What each screen's wallpaper layer is actually doing, for
+     * `stratum ipc wallpaper state`. Reported by the layers themselves, since a
+     * wallpaper that draws nothing says nothing in a log.
+     */
+    property var views: ({})
+
+    function note(monitor, info) {
+        const next = Object.assign({}, root.views);
+        next[monitor] = info;
+        root.views = next;
+    }
+
     function expand(path) {
         const home = Quickshell.env("HOME");
         if (path === "~")

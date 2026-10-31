@@ -174,6 +174,18 @@ ShellRoot {
         function rescan(): void {
             Wallpaper.scan();
         }
+
+        // What each screen's wallpaper is doing, when it is not doing it.
+        function state(): string {
+            const views = Wallpaper.views ?? {};
+            const names = Object.keys(views);
+            const head = `look: ${Config.get("wallpaper.look", "original")}`
+                + ` · mono: ${Config.get("wallpaper.mono", false)}`
+                + ` · shader allowed: ${Config.get("wallpaper.shader", true)}`;
+            if (names.length === 0)
+                return `${head}\n(no wallpaper layer has reported — is the shell drawing a wallpaper?)`;
+            return [head, ...names.map(n => `${n}: ${views[n]}`)].join("\n");
+        }
     }
 
     // `stratum ipc palette status` — what the shell knows about matugen. Here
