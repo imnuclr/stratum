@@ -284,7 +284,7 @@ Item {
                 // picture stays the thing being looked at.
                 Rectangle {
                     anchors.fill: parent
-                    radius: parent.radius
+                    radius: Theme.rInner
                     color: "transparent"
                     border.width: cell.chosen ? 2 : 0
                     border.color: Theme.accent

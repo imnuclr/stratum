@@ -1,3 +1,4 @@
+import QtQuick
 import Quickshell.Wayland
 
 // One per screen, made by the session lock. The screen shows the shared auth
