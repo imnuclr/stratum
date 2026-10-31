@@ -154,6 +154,7 @@ Variants {
             WallLayer {
                 id: layerA
 
+                tag: "a"
                 anchors.fill: parent
                 opacity: 0
                 pixelWidth: win.modelData.width
@@ -176,6 +177,7 @@ Variants {
             WallLayer {
                 id: layerB
 
+                tag: "b"
                 anchors.fill: parent
                 opacity: 0
                 pixelWidth: win.modelData.width

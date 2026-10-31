@@ -82,6 +82,18 @@ doctor() {
   tool zenity "file chooser in settings"
   command -v rembg >/dev/null && good "rembg — wallpaper depth" || printf '  · rembg not installed (optional: wallpaper depth)\n'
 
+  # A wallpaper folder with nothing in it is a black desktop.
+  local walls
+  walls=$(qs -c "$CONFIG" ipc call config get wallpaper.dir 2>/dev/null | tr -d '"')
+  walls=${walls:-$HOME/Pictures/Wallpapers}
+  walls=${walls/#\~/$HOME}
+  if [ -d "$walls" ]; then
+    local n; n=$(find -L "$walls" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.bmp' \) 2>/dev/null | wc -l)
+    [ "$n" -gt 0 ] && good "$n wallpapers in $walls" || poor "no pictures in $walls — the desktop will be blank; run install.sh again for the ones Stratum ships"
+  else
+    poor "no wallpaper folder at $walls — the desktop will be blank"
+  fi
+
   # The keybinds only work if Hyprland loads the file Stratum writes.
   local hypr="${XDG_CONFIG_HOME:-$HOME/.config}/hypr" cfg file
   if [ -f "$hypr/hyprland.lua" ]; then cfg="$hypr/hyprland.lua"; file="$hypr/stratum-binds.lua"

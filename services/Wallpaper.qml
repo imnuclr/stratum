@@ -30,9 +30,11 @@ Singleton {
      */
     property var views: ({})
 
-    function note(monitor, info) {
+    // Keyed by screen and layer: each screen has two, and one is usually empty
+    // between crossfades, so a single key let the empty one speak for both.
+    function note(monitor, layer, info) {
         const next = Object.assign({}, root.views);
-        next[monitor] = info;
+        next[`${monitor} ${layer}`] = info;
         root.views = next;
     }
 
@@ -53,8 +55,16 @@ Singleton {
     // Monitors that have been given their own, by name.
     property var overrides: ({})
 
+    /*
+     * Nothing chosen yet, on a fresh install or a second machine: the first
+     * picture in the folder stands in, rather than a black screen that looks
+     * like the shell has failed. Choosing one replaces it.
+     */
+    readonly property string fallback: root.entries.length > 0 ? root.entries[0] : ""
+
     function forMonitor(name) {
-        return root.overrides[name] ?? root.current;
+        const chosen = root.overrides[name] ?? root.current;
+        return chosen && chosen.length > 0 ? chosen : root.fallback;
     }
 
     // Image.source wants a URL; everything else here keeps plain paths.

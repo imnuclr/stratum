@@ -19,8 +19,10 @@ Item {
     id: root
 
     property url source
-    // Which screen this is on, for the report; empty keeps it out of it.
+    // Which screen and which of its two layers this is, for the report; an
+    // empty name keeps it out of it.
     property string monitorName: ""
+    property string tag: ""
     property int pixelWidth: 1920
     property int pixelHeight: 1080
     property string look: "original"
@@ -123,7 +125,7 @@ Item {
                 + ` · cell ${dots.cell.toFixed(1)} light ${dots.light.toFixed(2)} tones ${root.lo.toFixed(2)}-${root.hi.toFixed(2)}`;
             Diag.log("wallpaper", info);
             if (root.monitorName.length > 0)
-                Wallpaper.note(root.monitorName, info);
+                Wallpaper.note(root.monitorName, root.tag, info);
         }
 
         onVisibleChanged: dots.report(dots.visible ? "shown" : "hidden")
