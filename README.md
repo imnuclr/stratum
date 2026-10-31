@@ -4,7 +4,7 @@
 
 <p align="center">
   <b>A desktop shell for Hyprland, in dots.</b><br>
-  Built on <a href="https://quickshell.org">Quickshell</a> · inspired by Nothing OS · five greys and one accent
+  Built on <a href="https://quickshell.org">Quickshell</a> · inspired by Nothing OS · your colours, or your wallpaper's
 </p>
 
 <p align="center">
