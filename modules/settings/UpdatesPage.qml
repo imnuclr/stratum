@@ -18,6 +18,10 @@ SettingsPage {
 
     Component.onCompleted: Updates.check()
 
+    // Showing the custom hours: on when chosen, or when the saved value is not
+    // one of the presets.
+    property bool custom: ![1, 6, 24].includes(Updates.everyHours)
+
     // What is happening, large enough to answer the question at a glance.
     Rectangle {
         height: 120
@@ -115,9 +119,32 @@ SettingsPage {
             Segmented {
                 readonly property var hours: [1, 6, 24]
 
-                model: ["every hour", "every 6 hours", "daily"]
-                current: Math.max(0, hours.indexOf(Updates.everyHours))
-                onPicked: index => Config.set("updates.everyHours", hours[index])
+                model: ["every hour", "every 6 hours", "daily", "custom"]
+                // Custom is lit for anything that is not one of the three.
+                current: page.custom ? 3 : Math.max(0, hours.indexOf(Updates.everyHours))
+                onPicked: index => {
+                    if (index === 3) {
+                        page.custom = true;
+                        return;
+                    }
+                    page.custom = false;
+                    Config.set("updates.everyHours", hours[index]);
+                }
+            }
+        }
+
+        SettingRow {
+            visible: Updates.automatic && page.custom
+            title: "Every"
+            detail: "Any number of hours, from one to a week."
+
+            Stepper {
+                value: Updates.everyHours
+                from: 1
+                to: 168
+                step: 1
+                suffix: Updates.everyHours === 1 ? " hour" : " hours"
+                onMoved: v => Config.set("updates.everyHours", v)
             }
         }
     }
