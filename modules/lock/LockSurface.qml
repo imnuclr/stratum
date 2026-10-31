@@ -7,6 +7,8 @@ WlSessionLockSurface {
     id: root
 
     required property var auth
+    // Passed through to the screen: see LockScreen's nudge.
+    property int nudge: 0
 
     color: "black"
 
@@ -16,5 +18,6 @@ WlSessionLockSurface {
     LockScreen {
         anchors.fill: parent
         auth: root.auth
+        nudge: root.nudge
     }
 }

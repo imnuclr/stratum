@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import qs.config
 import qs.services
 import qs.theme
 
@@ -66,11 +67,26 @@ Scope {
      * it unlocked.
      */
     function sleeping() {
-        if (!Config.get("lock.onSleep", true))
+        if (!Config.get("lock.onSleep", true)) {
+            sleepGuard.running = false;
             return;
+        }
         console.info("[lock] sleeping, locking first");
         root.lock();
+        root.sleepPending = true;
+        if (session.secure) {
+            root.nudge++;
+            letSleep.restart();
+        }
+        else
+            giveUp.restart();
     }
+
+    // Asleep is waiting on the lock: released once it is on screen.
+    property bool sleepPending: false
+    // Bumped going to sleep and on waking, for the lock screen to settle and
+    // redraw: see LockScreen's nudge.
+    property int nudge: 0
 
     /*
      * Awake again. Services that are polled on a timer have been frozen for as
@@ -80,6 +96,11 @@ Scope {
      */
     function woke() {
         console.info("[lock] awake");
+        root.sleepPending = false;
+        letSleep.stop();
+        giveUp.stop();
+        sleepGuard.running = true;
+        root.nudge++;
         Time.now = new Date();
         Netstat.reset();
     }
@@ -112,10 +133,17 @@ Scope {
 
         // Each step, in the log, so a lock that fails says how far it got.
         onLockedChanged: console.info(`[lock] locked=${locked}`)
-        onSecureChanged: console.info(`[lock] compositor confirms secure=${secure}`)
+        onSecureChanged: {
+            console.info(`[lock] compositor confirms secure=${secure}`);
+            if (secure && root.sleepPending) {
+                root.nudge++;
+                letSleep.restart();
+            }
+        }
 
         LockSurface {
             auth: credentials
+            nudge: root.nudge
         }
     }
 
@@ -197,6 +225,48 @@ Scope {
         // Without this a dropped monitor would leave `loginctl lock-session`
         // doing nothing until the shell was restarted.
         onRunningChanged: if (!running) revive.start()
+    }
+
+    /*
+     * Holds suspend back until the lock is on screen. PrepareForSleep alone is
+     * only a notice: the lid closed and the machine was asleep a fifth of a
+     * second later, before the lock surface had drawn, so it woke to the
+     * desktop and locked only afterwards. A delay inhibitor makes logind wait
+     * (up to its InhibitDelayMaxSec, 5s by default) until this lets go.
+     */
+    Process {
+        id: sleepGuard
+
+        running: true
+        // Held for as long as the shell lives, not past it: a child is not
+        // stopped when the shell exits, and a restart left the old inhibitor
+        // behind to hold up every sleep by the full delay.
+        command: ["sh", "-c", "exec systemd-inhibit --what=sleep --mode=delay --who=stratum "
+            + "'--why=Locking the screen first' tail --pid=\"$PPID\" -f /dev/null"]
+    }
+
+    // The compositor confirms the lock once its surfaces are committed; a
+    // moment more so a frame of it has reached the panel before it goes dark.
+    Timer {
+        id: letSleep
+
+        interval: 250
+        onTriggered: {
+            giveUp.stop();
+            console.info("[lock] locked, letting the machine sleep");
+            sleepGuard.running = false;
+        }
+    }
+
+    // A lock that never confirms must not keep the machine awake.
+    Timer {
+        id: giveUp
+
+        interval: 3000
+        onTriggered: {
+            console.warn("[lock] lock not confirmed in time, sleeping anyway");
+            sleepGuard.running = false;
+        }
     }
 
     Timer {

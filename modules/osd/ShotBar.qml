@@ -217,14 +217,17 @@ Variants {
             }
 
             // How long is left before it is thrown away. Measured against the
-            // bar it sits in, so it cannot reach past it however wide the bar is
-            // at that moment.
+            // flat run of the bar's bottom edge, between the rounded corners and
+            // inside the border: clipping is to the square bounds, so a line the
+            // full width ran out past the curve at both ends.
             Rectangle {
                 anchors.bottom: parent.bottom
-                anchors.left: parent.left
+                anchors.bottomMargin: bar.border.width
+                x: bar.radius
                 height: 2
+                radius: 1
                 color: Theme.accent
-                width: bar.width * Math.max(0, Math.min(1, Screenshot.remaining))
+                width: (bar.width - bar.radius * 2) * Math.max(0, Math.min(1, Screenshot.remaining))
                 opacity: win.inside
 
                 // The clock ticks in steps; this smooths them into a slide.

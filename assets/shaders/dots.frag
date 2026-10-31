@@ -7,7 +7,12 @@
 // is per-dot work on the CPU, so changing the grid, the dot size or the light is
 // only a change of numbers.
 //
-// Compiled with:  qsb --glsl "100 es,120,150,300 es,310 es,330,440" --hlsl 50 --msl 12 -o dots.frag.qsb dots.frag
+// Compiled with:  qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o dots.frag.qsb dots.frag
+//
+// Only those GLSL versions, the same ones Qt's own ShaderEffect vertex shader
+// ships. With 330 and 440 in the file as well, Qt paired a 440 fragment (inputs
+// at explicit locations) with its 150 vertex (none): NVIDIA links that anyway,
+// Mesa refuses it, and on Intel and AMD the dots drew nothing at all.
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
@@ -82,15 +87,19 @@ void main() {
          * every dot came out small and dim where mono was crisp.
          */
         v = clamp((luma - lo) / max(hi - lo, 0.12), 0.0, 1.0);
-        // A coloured dot has to be big enough to show its colour.
-        radius = v < 0.02 ? 0.0 : cell * dotScale * (0.34 + 0.66 * sqrt(v));
+        /*
+         * Sized as mono sizes them, from nothing: dark areas are a fine grain
+         * of small dots rather than a floor of mid-sized ones, which made the
+         * colour look a coarse, even grid where mono was crisp.
+         */
+        radius = cell * dotScale * sqrt(v);
         /*
          * The hue as it is, lifted to the brightness its stretched tone asks
-         * for: a dark but saturated area keeps its colour and still reads,
-         * instead of being a muddy speck.
+         * for: a small dot in a dark area still shows its colour instead of
+         * being a muddy speck.
          */
         float peak = max(max(c.r, c.g), c.b);
-        float want = mix(0.42, 1.0, v);
+        float want = mix(0.6, 1.0, v);
         colour = peak < 0.02 ? vec3(want) : c * (want / peak);
     }
 

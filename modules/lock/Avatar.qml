@@ -39,27 +39,56 @@ Item {
     }
 
     /*
-     * Drawn by DotImage, as the rest of the shell's pictures are, with dots
-     * fine enough to read as a photo. A masked MultiEffect looked cleaner but
-     * took the shell down on the session lock surface, which is the one place
-     * a crash locks you out. Framing on a detected subject is off: it is what
-     * pushed the face off the centre of its ring.
+     * The photo as it is, cropped square from its middle and cut to a circle,
+     * so the face sits in the centre of its ring. The dotted version read as
+     * off centre and muddier than the picture.
+     *
+     * Painted on a canvas rather than masked with MultiEffect: the effect took
+     * the shell down on the session lock surface, which is the one place a
+     * crash locks you out. (destination-in, the usual way to cut a circle on
+     * a canvas, is ignored here and left it square.)
      */
-    DotImage {
+    Canvas {
         id: photo
+
+        readonly property string url: Account.avatar.length > 0 ? `file://${Account.avatar}` : ""
 
         anchors.fill: parent
         anchors.margins: root.inset
         visible: Account.avatar.length > 0
-        source: Account.avatar.length > 0 ? `file://${Account.avatar}` : ""
-        circular: true
-        colored: true
-        // A colour halftone: round dots, each as big as the picture is bright
-        // there, about fifty across — plainly dots, still plainly a face.
-        halftone: true
-        frameSubject: false
-        dotScale: 0.5
-        cell: Math.max(2.2, (root.size - 2 * root.inset) / 50)
+
+        // The canvas loads the file itself: drawing from an Image item before
+        // it was drawable came back empty and left the ring with nothing in it.
+        onUrlChanged: if (url.length > 0) loadImage(url)
+        Component.onCompleted: if (url.length > 0) loadImage(url)
+        onImageLoaded: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+
+        onPaint: {
+            const ctx = getContext("2d");
+            ctx.reset();
+            if (!isImageLoaded(url) || width <= 0)
+                return;
+            const img = ctx.createImageData(url);
+            const iw = img.width;
+            const ih = img.height;
+            const side = Math.min(iw, ih);
+            const r = Math.min(width, height) / 2;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(width / 2, height / 2, r, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(url, (iw - side) / 2, (ih - side) / 2, side, side, 0, 0, width, height);
+            ctx.restore();
+            // A clip edge is not smoothed; a thin ring of the background over
+            // it is.
+            ctx.beginPath();
+            ctx.arc(width / 2, height / 2, r - 0.75, 0, Math.PI * 2);
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = Theme.bg;
+            ctx.stroke();
+        }
     }
 
     Rectangle {

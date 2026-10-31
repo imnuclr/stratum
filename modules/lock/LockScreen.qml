@@ -107,6 +107,24 @@ FocusScope {
         }
     }
 
+    /*
+     * Bumped by Lock.qml as the machine goes to sleep and again as it wakes.
+     *
+     * Going to sleep, the arrival is skipped to its end: the lock is drawn and
+     * the machine sleeps a quarter of a second later, so the frame left on the
+     * panel was the first of the fade, nearly all background. Waking, a frame
+     * is asked for, because the animation only advances when frames are drawn
+     * and nothing else on this screen moves by itself: it stayed black until a
+     * key was pressed.
+     */
+    property int nudge: 0
+
+    onNudgeChanged: {
+        if (arrive.running)
+            arrive.complete();
+        root.Window.window?.update();
+    }
+
     focus: true
     Component.onCompleted: {
         root.forceActiveFocus();
