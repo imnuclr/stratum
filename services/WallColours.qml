@@ -46,6 +46,7 @@ Singleton {
     property bool pickFlag: true
 
     onModeChanged: root.refresh()
+    onMonoChanged: root.refresh()
     onImageChanged: root.refresh()
     Connections {
         target: Theme
@@ -62,9 +63,16 @@ Singleton {
      * text, primary, secondary, tertiary — rather than one colour on grey.
      */
     property var scheme: null
-    readonly property string key: root.mode !== "off" && root.image.length > 0
+    /*
+     * A wallpaper drawn without colour (Wallpaper → mono) gives a white accent
+     * and a neutral scheme rather than the picture's hue, which the screen no
+     * longer shows anywhere.
+     */
+    readonly property bool mono: Config.get("wallpaper.mono", false)
+    readonly property bool fromWall: root.mode !== "off" && root.image.length > 0 && !root.mono
+    readonly property string key: root.fromWall
         ? root.image
-        : `accent:${Theme.user?.color?.accent ?? Theme.preset?.color?.accent ?? "#E5252B"}`
+        : `accent:${root.mode !== "off" && root.mono ? "#FFFFFF" : (Theme.user?.color?.accent ?? Theme.preset?.color?.accent ?? "#E5252B")}`
 
     onKeyChanged: root.refresh()
 
@@ -74,8 +82,10 @@ Singleton {
     }
 
     function refresh() {
-        const fromWall = root.mode !== "off" && root.image.length > 0;
-        if (!fromWall)
+        const fromWall = root.fromWall;
+        if (root.mode !== "off" && root.mono)
+            Theme.generated = { color: { accent: Theme.dark ? "#F2F2F2" : "#1A1A1A" } };
+        else if (!fromWall)
             Theme.generated = ({});
         const known = root.cache[root.key];
         if (known) {
@@ -229,7 +239,7 @@ Singleton {
                 next[root.running] = scheme;
                 root.cache = next;
                 root.scheme = scheme;
-                if (root.mode !== "off" && root.image.length > 0)
+                if (root.fromWall)
                     Theme.generated = root.tokensFrom(scheme);
             }
         }
