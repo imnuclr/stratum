@@ -155,6 +155,27 @@ read, and any error. Then:
 - **`image: (no wallpaper)`** — Stratum isn't drawing a wallpaper on your first screen;
   set one in Settings → Wallpaper.
 
+### The dotted wallpaper is black
+
+The dots are drawn by a small GPU program, and some drivers refuse it. Stratum now
+falls back to the plain picture when that happens, so a black desktop means an older
+version: run `stratum update`, then `stratum restart`.
+
+If it is still black after updating, find out what the driver said:
+
+```bash
+stratum ipc config set debug.trace true
+stratum restart
+stratum log 200 | grep -i wallpaper
+```
+
+Send that line. To use the plain picture in the meantime, either pick **original**
+in Settings → Wallpaper, or:
+
+```bash
+stratum ipc config set wallpaper.shader false
+```
+
 ### The wallpaper depth effect does nothing
 
 - It needs **rembg** (`pipx install 'rembg[cli,cpu]'`) and the drift set to **depth**
