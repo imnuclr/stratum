@@ -54,10 +54,12 @@ Item {
         source: Account.avatar.length > 0 ? `file://${Account.avatar}` : ""
         circular: true
         colored: true
-        halftone: false
+        // A colour halftone: round dots, each as big as the picture is bright
+        // there, about fifty across — plainly dots, still plainly a face.
+        halftone: true
         frameSubject: false
         dotScale: 0.5
-        cell: Math.max(1.4, (root.size - 2 * root.inset) / 90)
+        cell: Math.max(2.2, (root.size - 2 * root.inset) / 50)
     }
 
     Rectangle {
