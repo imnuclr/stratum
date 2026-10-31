@@ -44,21 +44,30 @@ Item {
         saturation: -1
     }
 
-    // The ground the dots are drawn on. Opaque, so a layer fading in covers the one
-    // beneath completely and the crossfade has no see-through gaps.
+    /*
+     * The ground the dots are drawn on. Opaque, so a layer fading in covers the
+     * one beneath completely and the crossfade has no see-through gaps.
+     *
+     * Above the picture rather than instead of it: the picture stays on screen
+     * and is simply covered, because an item that is never drawn need not hand
+     * the shader a texture, and on one machine it did not — every dot read as
+     * nothing and the wallpaper came out black.
+     */
     Rectangle {
         anchors.fill: parent
         color: Theme.wall
         visible: root.dotsDrawn
+        z: 1
     }
 
     Image {
         id: picture
 
         anchors.fill: parent
-        // Read by the shader too, which works whether or not it is shown; shown
-        // itself when the dots cannot be drawn.
-        visible: root.look === "original" || (root.look === "dots" && !root.dotsDrawn)
+        // Always drawn, and covered by the ground above when the dots are what
+        // is wanted: see the ground's note.
+        visible: true
+        z: 0
         fillMode: Image.PreserveAspectCrop
         // Cropped to this monitor rather than scaled to a common size: the
         // 3440x1440 and the 1920x1080 want different parts of the same file.
@@ -96,9 +105,21 @@ Item {
 
         anchors.fill: parent
         visible: root.dotsDrawn
+        z: 2
         fragmentShader: Qt.resolvedUrl("../../assets/shaders/dots.frag.qsb")
 
+        // What the dots know about themselves, for when they draw nothing: with
+        // tracing on this is the difference between a clue and an empty grep.
+        function report(why) {
+            Diag.log("wallpaper", `dots ${why}: shader=${dots.status} picture=${picture.status}`
+                + ` ${picture.implicitWidth}x${picture.implicitHeight} cell=${dots.cell.toFixed(1)}`
+                + ` light=${dots.light.toFixed(2)} mono=${dots.mono} lo=${root.lo.toFixed(3)} hi=${root.hi.toFixed(3)}`);
+        }
+
+        onVisibleChanged: if (dots.visible) dots.report("shown")
+
         onStatusChanged: {
+            dots.report("status changed");
             if (dots.status === ShaderEffect.Error) {
                 root.shaderBroken = true;
                 Diag.log("wallpaper", `dots shader refused: ${dots.log}`);
