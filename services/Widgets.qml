@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.config
+import qs.services
 
 /*
  * The widgets on the desktop: which ones, where, and how big.
@@ -20,6 +21,21 @@ Singleton {
 
     // Edit mode: the grid shows and widgets can be moved, resized, added, removed.
     property bool editing: false
+
+    /*
+     * Arranging happens on the display you are looking at, so moving to another
+     * one ends it: the gallery and the grid are not on the screen you have just
+     * gone to, and leaving them behind on the old one is a mode you cannot see.
+     */
+    readonly property string focusedMonitor: Hypr.focusedWorkspace?.monitor?.name ?? ""
+    property string editingOn: ""
+
+    onEditingChanged: root.editingOn = root.editing ? root.focusedMonitor : ""
+
+    onFocusedMonitorChanged: {
+        if (root.editing && root.editingOn.length > 0 && root.focusedMonitor !== root.editingOn)
+            root.editing = false;
+    }
 
     // One grid cell, in pixels. Fine enough to place things where they look right,
     // coarse enough that snapping does something.
@@ -50,6 +66,8 @@ Singleton {
         "battery": { label: "battery", icon: "battery-vertical", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "disk": { label: "disk", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "network": { label: "network", icon: "wifi", w: 24, h: 11, minW: 16, minH: 8, shape: "square", style: "tile", options: [] },
+        "power": { label: "power draw", icon: "bolt", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
+        "uptime": { label: "uptime", icon: "scan", w: 18, h: 11, minW: 12, minH: 7, shape: "square", style: "shadow", options: [] },
         "photo": { label: "photo", icon: "scan", w: 20, h: 15, minW: 8, minH: 8, shape: "square", style: "tile",
             options: [{ key: "look", label: "look", values: ["dots", "plain"] }, { key: "every", label: "change", values: ["hour", "day", "never"] }] }
     })
