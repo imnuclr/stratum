@@ -111,6 +111,52 @@ Singleton {
         ["advanced", "Profile picture", "avatar face photo picture profile account user image"]
     ]
 
+    // The pages themselves, as [label, name, icon, words], for the launcher to
+    // offer a whole page when that is what was asked for.
+    readonly property var pages: [
+        ["wallpaper", "Wallpaper", "image", "background picture photo"],
+        ["appearance", "Appearance", "contrast", "dark light theme colour color accent clock 24 hour"],
+        ["motion", "Motion", "motion", "animation speed reduce fade"],
+        ["bar", "Bar", "sidebar", "panel edge column strip workspaces"],
+        ["widgets", "Widgets", "grid", "desktop clock weather"],
+        ["launcher", "Launcher", "search", "spotlight search apps files calculator web"],
+        ["weather", "Weather", "cloud-sun", "weather location city town map forecast temperature units celsius fahrenheit"],
+        ["notifications", "Notifications", "bell", "toasts do not disturb dnd"],
+        ["displays", "Displays", "monitor", "display monitors screens brightness night light resolution refresh rate hz scale arrange position"],
+        ["sound", "Sound", "volume-2", "volume audio speakers headphones microphone mic output input"],
+        ["network", "Network", "wifi", "wifi wi-fi ethernet wired vpn airplane internet"],
+        ["bluetooth", "Bluetooth", "bluetooth", "devices pair headphones"],
+        ["power", "Power", "bolt", "battery profile eco performance sleep caffeine awake"],
+        ["keybinds", "Keybinds", "keyboard", "keyboard shortcuts keys hotkeys"],
+        ["updates", "Updates", "arrow-down", "update upgrade version new release git pull"],
+        ["about", "About", "info", "version system computer hardware"],
+        ["advanced", "Advanced", "sliders", "debug config files folder"]
+    ]
+
+    // Pages matching a query, best first, as { page, name, icon, score }.
+    function searchPages(query, limit) {
+        const qs = root.tokens(query);
+        if (qs.length === 0)
+            return [];
+        const out = [];
+        for (const [page, name, icon, words] of root.pages) {
+            const all = root.tokens(`${name} ${words}`);
+            let total = 0;
+            let every = true;
+            for (const q of qs) {
+                const best = Math.max(0, ...all.map(w => root.wordScore(q, w)));
+                if (best === 0) {
+                    every = false;
+                    break;
+                }
+                total += best;
+            }
+            if (every)
+                out.push({ page: page, name: name, icon: icon, score: total / qs.length });
+        }
+        return out.sort((a, b) => b.score - a.score).slice(0, limit ?? 4);
+    }
+
     // Letters apart, with a swap of two neighbours counting as one.
     function distance(a, b) {
         if (Math.abs(a.length - b.length) > 2)

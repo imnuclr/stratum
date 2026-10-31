@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.config
+import qs.services
 
 /*
  * Whether a newer Stratum is waiting, and getting it.
@@ -37,6 +38,30 @@ Singleton {
         root.state = "checking";
         root.error = "";
         probe.running = true;
+    }
+
+    /*
+     * The notification, with Stratum's own update mark as its icon, and
+     * clicking it opening Settings on Updates. notify-send waits for the click
+     * and prints the action, which is how the click gets back here.
+     */
+    function announce(body) {
+        notifier.command = ["notify-send", "-a", "Stratum", "-i", Quickshell.shellPath("assets/icons/update.svg"),
+            "--action=default=Open updates", "Stratum update ready", body];
+        notifier.running = true;
+    }
+
+    Process {
+        id: notifier
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim() === "default") {
+                    Shell.settingsPage = "updates";
+                    Shell.open("settings");
+                }
+            }
+        }
     }
 
     function update() {
@@ -87,9 +112,7 @@ Singleton {
                 const told = Config.get("updates.told", "");
                 if (commits.length > 0 && commits[0].hash !== told && commits.length > before) {
                     Config.set("updates.told", commits[0].hash);
-                    Quickshell.execDetached(["notify-send", "-a", "Stratum", "-i", "system-software-update",
-                        "Stratum update ready",
-                        commits.length === 1 ? commits[0].title : `${commits.length} changes, newest: ${commits[0].title}`]);
+                    root.announce(commits.length === 1 ? commits[0].title : `${commits.length} changes, newest: ${commits[0].title}`);
                 }
             }
         }
