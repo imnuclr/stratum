@@ -30,6 +30,7 @@ Singleton {
         ["appearance", "Vesktop / Discord", "discord vesktop vencord theme colours apps"],
         ["appearance", "GTK apps", "gtk libadwaita gnome apps accent theme"],
         ["appearance", "Borders and glow", "window border outline glow shadow colour active hyprland"],
+        ["appearance", "Glow", "glow halo shadow window border light accent amount strength"],
         ["appearance", "Blur", "blur frosted glass transparency windows hyprland intensity strength effects"],
         ["appearance", "24-hour time", "clock time format 12 hour 24 hour am pm military"],
         // motion
@@ -65,6 +66,7 @@ Singleton {
         ["notifications", "Do not disturb", "dnd silence quiet mute focus notifications"],
         ["notifications", "Toast duration", "popup notification time seconds how long timeout"],
         ["notifications", "Try it", "test notification preview send"],
+        ["notifications", "Ask before saving", "screenshot save ask bar capture keep discard"],
         ["notifications", "Clear everything", "clear dismiss all notifications"],
         // displays
         ["displays", "Resolution", "resolution pixels size screen display monitor 4k 1080p 1440p"],

@@ -150,5 +150,12 @@
     },
     "osd": {
         "enabled": true
+    },
+    "screenshot": {
+        "autoSave": false,
+        "offerMs": 9000
+    },
+    "windows": {
+        "glow": 40
     }
 }

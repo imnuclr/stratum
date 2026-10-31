@@ -56,7 +56,21 @@ Singleton {
      * everything inside it. "config" leaves your own border colours alone.
      */
     readonly property string borders: Config.get("windows.borders", "accent")
+
+    /*
+     * How much glow sits around a window, as a percentage: 0 is none, 100 a
+     * wide, bright halo. Strength spreads it and deepens its colour at once,
+     * which is what reads as "more glow"; past about 70 it also lifts off the
+     * window a little, the way a light source would.
+     */
+    readonly property int glow: Math.max(0, Math.min(100, Config.get("windows.glow", 40)))
+    readonly property int glowSize: Math.round(2 + root.glow * 0.38)
+    readonly property int glowRange: Math.round(2 + root.glow * 0.18)
+    // 00 to about dd, as two hex digits.
+    readonly property string glowAlpha: Math.round(Math.min(221, root.glow * 2.2)).toString(16).padStart(2, "0")
     readonly property var colours: AppTheme.palette
+
+    onGlowChanged: paint.restart()
 
     onBordersChanged: {
         if (root.borders === "config")
@@ -84,7 +98,8 @@ Singleton {
         const c = root.colours;
         const active = `${root.rgba(c.accent, "ff")} ${root.rgba(c.tertiary, "ff")} 45deg`;
         const inactive = root.rgba(c.bgTop, "aa");
-        const glow = root.rgba(c.accent, "55");
+        const glow = root.rgba(c.accent, root.glowAlpha);
+        const on = root.glow > 0;
         if (Hypr.lua) {
             /*
              * The glow took and the borders did not: a gradient written as one
@@ -94,7 +109,7 @@ Singleton {
              */
             const solid = root.rgba(c.accent, "ff");
             Hypr.runLua([
-                `hl.config({ decoration = { shadow = { color = "${glow}" } } })`,
+                `hl.config({ decoration = { shadow = { enabled = ${on}, color = "${glow}", size = ${root.glowSize}, range = ${root.glowRange}, render_power = 3, offset = "0 0" } } })`,
                 `hl.config({ general = { col = { active_border = "${solid}", inactive_border = "${inactive}" } } })`,
                 // The gradient as a table (a "a b 45deg" string is refused in
                 // Lua); the solid colour above stays if this is refused too.
@@ -102,7 +117,9 @@ Singleton {
             ]);
         } else {
             Quickshell.execDetached(["hyprctl", "--batch",
-                `keyword general:col.active_border ${active} ; keyword general:col.inactive_border ${inactive} ; keyword decoration:shadow:color ${glow}`]);
+                `keyword general:col.active_border ${active} ; keyword general:col.inactive_border ${inactive}`
+                + ` ; keyword decoration:shadow:enabled ${on ? 1 : 0} ; keyword decoration:shadow:color ${glow}`
+                + ` ; keyword decoration:shadow:size ${root.glowSize} ; keyword decoration:shadow:range ${root.glowRange}`]);
         }
     }
 
