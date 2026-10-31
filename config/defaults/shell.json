@@ -157,5 +157,9 @@
     },
     "windows": {
         "glow": 40
+    },
+    "updates": {
+        "everyMinutes": 360,
+        "check": true
     }
 }
