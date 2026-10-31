@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Effects
+import qs.config
+import qs.services
 import qs.theme
 
 /*
@@ -47,15 +49,16 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: Theme.wall
-        visible: root.look === "dots"
+        visible: root.dotsDrawn
     }
 
     Image {
         id: picture
 
         anchors.fill: parent
-        // Read by the shader too, which works whether or not it is shown.
-        visible: root.look === "original"
+        // Read by the shader too, which works whether or not it is shown; shown
+        // itself when the dots cannot be drawn.
+        visible: root.look === "original" || (root.look === "dots" && !root.dotsDrawn)
         fillMode: Image.PreserveAspectCrop
         // Cropped to this monitor rather than scaled to a common size: the
         // 3440x1440 and the 1920x1080 want different parts of the same file.
@@ -77,10 +80,32 @@ Item {
         }
     }
 
+    /*
+     * The dots, drawn on the GPU. Where that fails — a driver with no shader
+     * dialect in common with the compiled file, or a card that refuses it — the
+     * picture itself is shown instead: a wallpaper that is not dotted is a
+     * disappointment, a black screen is a fault. `wallpaper.shader: false`
+     * forces the plain picture everywhere.
+     */
+    property bool shaderBroken: false
+    readonly property bool dotsDrawn: root.look === "dots" && !root.shaderBroken
+        && Config.get("wallpaper.shader", true)
+
     ShaderEffect {
+        id: dots
+
         anchors.fill: parent
-        visible: root.look === "dots"
+        visible: root.dotsDrawn
         fragmentShader: Qt.resolvedUrl("../../assets/shaders/dots.frag.qsb")
+
+        onStatusChanged: {
+            if (dots.status === ShaderEffect.Error) {
+                root.shaderBroken = true;
+                Diag.log("wallpaper", `dots shader refused: ${dots.log}`);
+            } else if (dots.status === ShaderEffect.Compiled) {
+                root.shaderBroken = false;
+            }
+        }
 
         property variant source: picture
         property vector2d size: Qt.vector2d(width, height)
