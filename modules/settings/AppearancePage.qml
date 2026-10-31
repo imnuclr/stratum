@@ -260,6 +260,37 @@ SettingsPage {
         }
 
         SettingRow {
+            visible: Decor.borders !== "config"
+            title: "Glow"
+            detail: Decor.glow === 0 ? "No glow around windows." : `${Decor.glow}% — the halo around a window, in the accent.`
+
+            Row {
+                spacing: Theme.space(3)
+
+                LevelSlider {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 240
+                    count: 25
+                    step: 0.05
+                    value: Decor.glow / 100
+                    onMoved: v => Config.set("windows.glow", Math.round(v * 100))
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 40
+                    horizontalAlignment: Text.AlignRight
+                    text: `${Decor.glow}%`
+                    color: Theme.fg
+                    font.family: Theme.fontUi
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                    renderType: Text.NativeRendering
+                }
+            }
+        }
+
+        SettingRow {
             title: "Blur"
             detail: "How strongly see-through windows blur what is behind them."
 

@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.config
 import qs.services
 
 /*
@@ -26,6 +27,104 @@ Singleton {
     property string lastPath: ""
 
     /*
+     * Nothing is saved until you say so.
+     *
+     * A capture lands in a temporary file and is put on the clipboard, and the
+     * bar at the foot of the screen (modules/osd/ShotBar.qml) offers to save or
+     * edit it. Left alone it fades, and the temporary file goes with it — a
+     * screenshots folder full of pictures nobody wanted is the thing this
+     * avoids. `screenshot.autoSave` puts the old behaviour back.
+     */
+    property string pending: ""
+    property string pendingKind: ""
+    property string saved: ""
+    readonly property bool offering: root.pending.length > 0
+    readonly property string tempDir: Quickshell.env("XDG_RUNTIME_DIR") ?? "/tmp"
+
+    function tempFor(kind) {
+        return `${root.tempDir}/stratum-shot-${kind}-${root.stamp()}.png`;
+    }
+
+    function offer(path, kind) {
+        if (Config.get("screenshot.autoSave", false)) {
+            root.keep(path, kind);
+            return;
+        }
+        root.saved = "";
+        root.pendingKind = kind;
+        root.pending = path;
+        linger.restart();
+    }
+
+    // Into the screenshots folder, under its own name.
+    function keep(path, kind) {
+        const dest = `${root.directory}/${kind}-${root.stamp()}.png`;
+        root.saved = dest;
+        root.lastPath = dest;
+        keeper.command = ["sh", "-c", `mkdir -p '${root.directory}' && mv -f "$1" '${dest}'`, "sh", path];
+        keeper.running = true;
+        root.pending = "";
+        linger.stop();
+    }
+
+    function keepPending() {
+        if (root.offering)
+            root.keep(root.pending, root.pendingKind);
+    }
+
+    // Into satty, which owns saving from there.
+    function editPending() {
+        if (!root.offering)
+            return;
+        const dest = `${root.directory}/edit-${root.stamp()}.png`;
+        editor.command = ["sh", "-c",
+            `mkdir -p '${root.directory}'; satty --filename "$1" --copy-command '${root.copy}' --output-filename '${dest}'; rm -f "$1"`,
+            "sh", root.pending];
+        editor.running = true;
+        root.pending = "";
+        linger.stop();
+    }
+
+    // Left alone, or waved away: the temporary file goes too.
+    function dropPending() {
+        if (!root.offering)
+            return;
+        dropper.command = ["rm", "-f", root.pending];
+        dropper.running = true;
+        root.pending = "";
+        linger.stop();
+    }
+
+    // Held open while the pointer is on the bar.
+    property bool held: false
+
+    onHeldChanged: {
+        if (root.held)
+            linger.stop();
+        else if (root.offering)
+            linger.restart();
+    }
+
+    Timer {
+        id: linger
+
+        interval: Config.get("screenshot.offerMs", 9000)
+        onTriggered: root.dropPending()
+    }
+
+    Process {
+        id: keeper
+    }
+
+    Process {
+        id: editor
+    }
+
+    Process {
+        id: dropper
+    }
+
+    /*
      * Held for the lifetime of the capture, so a second press cannot start a
      * second selector while one is already waiting. Releasing it after a moment
      * instead — which is what it did before — let two presses stack two slurps,
@@ -38,6 +137,9 @@ Singleton {
      * selection legitimately waits as long as the person takes.
      */
     property bool busy: false
+
+    // What the capture in flight is: screen, region or window.
+    property string kind: "screen"
 
     /*
      * Pasted as well as saved. A screenshot is usually wanted somewhere else
@@ -183,19 +285,22 @@ Singleton {
     // Whole output under the pointer, not every output: a capture spanning two
     // monitors is rarely what is wanted and is always enormous.
     function screen() {
-        const path = `${root.directory}/screen-${root.stamp()}.png`;
-        root.run(`grim -o "$(hyprctl -j activeworkspace | sed -n 's/.*\\"monitor\\": \\"\\([^\\"]*\\)\\".*/\\1/p')" '${path}' && ${root.copy} <'${path}'`, path);
+        const path = root.tempFor("screen");
+        root.kind = "screen";
+        root.run(`grim -o "$(hyprctl -j activeworkspace | sed -n 's/.*\\"monitor\\": \\"\\([^\\"]*\\)\\".*/\\1/p')" '${path}' && ${root.copy} <'${path}' && echo READY`, path);
     }
 
     function region() {
-        const path = `${root.directory}/region-${root.stamp()}.png`;
+        const path = root.tempFor("region");
+        root.kind = "region";
         // slurp exits non-zero when cancelled, which must not leave an empty file.
-        root.runFrozen(`geom=$(slurp -d </dev/null) || exit 0; sleep 0.08; grim -g "$geom" '${path}' && ${root.copy} <'${path}'`, path);
+        root.runFrozen(`geom=$(slurp -d </dev/null) || exit 0; sleep 0.08; grim -g "$geom" '${path}' && ${root.copy} <'${path}' && echo READY`, path);
     }
 
     function window() {
-        const path = `${root.directory}/window-${root.stamp()}.png`;
-        root.run(`geom=$(hyprctl -j activewindow | python3 -c 'import json,sys; w=json.load(sys.stdin); print(f"{w[\\"at\\"][0]},{w[\\"at\\"][1]} {w[\\"size\\"][0]}x{w[\\"size\\"][1]}")'); grim -g "$geom" '${path}' && ${root.copy} <'${path}'`, path);
+        const path = root.tempFor("window");
+        root.kind = "window";
+        root.run(`geom=$(hyprctl -j activewindow | python3 -c 'import json,sys; w=json.load(sys.stdin); print(f"{w[\\"at\\"][0]},{w[\\"at\\"][1]} {w[\\"size\\"][0]}x{w[\\"size\\"][1]}")'); grim -g "$geom" '${path}' && ${root.copy} <'${path}' && echo READY`, path);
     }
 
     // Straight to the annotator; satty owns saving from there.
@@ -206,6 +311,13 @@ Singleton {
 
     Process {
         id: capture
+
+        // READY, printed by the script once the file is written and copied.
+        property bool ready: false
+
+        stdout: StdioCollector {
+            onStreamFinished: capture.ready = text.includes("READY")
+        }
 
         // Anything the tools complain about, in the trace. Without this a capture
         // that started and did nothing gave no reason at all.
@@ -221,6 +333,9 @@ Singleton {
             watchdog.stop();
             root.busy = false;
             root.endFreeze();
+            if (code === 0 && capture.ready && root.lastPath.startsWith(root.tempDir))
+                root.offer(root.lastPath, root.kind);
+            capture.ready = false;
         }
     }
 

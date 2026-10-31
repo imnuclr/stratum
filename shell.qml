@@ -105,6 +105,7 @@ ShellRoot {
     HotZones {}
     Toasts {}
     OsdOverlay {}
+    ShotBar {}
     Session {}
     Lock {}
     Settings {}

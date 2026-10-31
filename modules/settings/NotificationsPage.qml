@@ -72,4 +72,36 @@ SettingsPage {
             }
         }
     }
+
+    // The bar that offers a fresh screenshot, which is a passing on-screen
+    // message like the rest of this page.
+    SettingCard {
+        title: "screenshots"
+        footnote: `Saved ones go to ${Screenshot.directory.replace(Quickshell.env("HOME"), "~")}.`
+
+        SettingRow {
+            title: "Ask before saving"
+            detail: "A bar at the foot of the screen offers to save or edit. Off saves every screenshot straight away."
+
+            Switch {
+                checked: !Config.get("screenshot.autoSave", false)
+                onToggled: value => Config.set("screenshot.autoSave", !value)
+            }
+        }
+
+        SettingRow {
+            visible: !Config.get("screenshot.autoSave", false)
+            title: "How long it waits"
+            detail: "Pointing at the bar stops the clock."
+
+            Stepper {
+                value: Math.round(Config.get("screenshot.offerMs", 9000) / 1000)
+                from: 3
+                to: 60
+                step: 1
+                suffix: "s"
+                onMoved: v => Config.set("screenshot.offerMs", v * 1000)
+            }
+        }
+    }
 }
