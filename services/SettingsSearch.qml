@@ -58,6 +58,9 @@ Singleton {
         ["launcher", "Search engine", "duckduckgo google brave startpage engine"],
         ["launcher", "Rank by use", "frequency ranking learning forget history apps"],
         ["launcher", "Shortcut", "launcher spotlight key shortcut super space open"],
+        // weather
+        ["weather", "Location", "weather location city town map where forecast place ip"],
+        ["weather", "Units", "celsius fahrenheit temperature units metric imperial"],
         // notifications
         ["notifications", "Do not disturb", "dnd silence quiet mute focus notifications"],
         ["notifications", "Toast duration", "popup notification time seconds how long timeout"],

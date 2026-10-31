@@ -64,6 +64,7 @@ FloatingWindow {
         { label: "bar", name: "Bar", icon: "sidebar", group: "desktop", words: "panel edge column strip workspaces", component: barPage },
         { label: "widgets", name: "Widgets", icon: "grid", group: "desktop", words: "desktop clock weather", component: widgetsPage },
         { label: "launcher", name: "Launcher", icon: "search", group: "desktop", words: "spotlight search apps files calculator web", component: launcherPage },
+        { label: "weather", name: "Weather", icon: "cloud-sun", group: "desktop", words: "weather location city town map forecast temperature units celsius fahrenheit", component: weatherPage },
         { label: "notifications", name: "Notifications", icon: "bell", group: "desktop", words: "toasts do not disturb dnd", component: notificationsPage },
         { label: "displays", name: "Displays", icon: "monitor", group: "system", words: "display monitors screens brightness night light resolution refresh rate hz scale arrange position", component: displaysPage },
         { label: "sound", name: "Sound", icon: "volume-2", group: "system", words: "volume audio speakers headphones microphone mic output input", component: soundPage },
@@ -592,6 +593,12 @@ FloatingWindow {
         id: powerPage
 
         PowerPage {}
+    }
+
+    Component {
+        id: weatherPage
+
+        WeatherPage {}
     }
 
     Component {
