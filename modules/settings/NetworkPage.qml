@@ -47,13 +47,24 @@ SettingsPage {
         }
 
         SettingRow {
-            visible: Toggles.hasVpn
             title: "VPN"
-            detail: Toggles.vpnConnections.map(c => c.name).join(", ")
+            detail: Toggles.hasVpn ? Toggles.vpnConnections.map(c => c.name).join(", ") : "None set up yet."
 
-            Switch {
-                checked: Toggles.vpnUp
-                onToggled: Toggles.toggleVpn()
+            Row {
+                spacing: Theme.space(2)
+
+                LinkButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Toggles.hasVpn ? "manage" : "set up"
+                    onClicked: Shell.settingsPage = "vpn"
+                }
+
+                Switch {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Toggles.hasVpn
+                    checked: Toggles.vpnUp
+                    onToggled: Toggles.toggleVpn()
+                }
             }
         }
     }

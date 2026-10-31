@@ -87,7 +87,8 @@ Singleton {
         // network
         ["network", "Wi-Fi", "wifi wireless wlan internet network password connect join ssid"],
         ["network", "Airplane mode", "airplane flight mode radios offline"],
-        ["network", "VPN", "vpn wireguard tunnel private"],
+        ["vpn", "your vpns", "vpn connect wireguard openvpn warp tailscale mullvad"],
+        ["vpn", "From a config file", "add vpn import wireguard conf openvpn ovpn file"],
         ["network", "Wired", "ethernet cable wired lan"],
         ["network", "Status", "ip address connection online internet status"],
         // bluetooth
@@ -127,6 +128,7 @@ Singleton {
         ["displays", "Displays", "monitor", "display monitors screens brightness night light resolution refresh rate hz scale arrange position"],
         ["sound", "Sound", "volume-2", "volume audio speakers headphones microphone mic output input"],
         ["network", "Network", "wifi", "wifi wi-fi ethernet wired vpn airplane internet"],
+        ["vpn", "VPN", "shield", "vpn wireguard openvpn warp cloudflare tailscale mullvad tunnel private"],
         ["bluetooth", "Bluetooth", "bluetooth", "devices pair headphones"],
         ["power", "Power", "bolt", "battery profile eco performance sleep caffeine awake"],
         ["keybinds", "Keybinds", "keyboard", "keyboard shortcuts keys hotkeys"],
