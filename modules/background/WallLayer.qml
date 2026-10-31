@@ -19,6 +19,8 @@ Item {
     id: root
 
     property url source
+    // Which screen this is on, for the report; empty keeps it out of it.
+    property string monitorName: ""
     property int pixelWidth: 1920
     property int pixelHeight: 1080
     property string look: "original"
@@ -110,13 +112,22 @@ Item {
 
         // What the dots know about themselves, for when they draw nothing: with
         // tracing on this is the difference between a clue and an empty grep.
+        readonly property var names: ["uncompiled", "compiled", "error"]
+
         function report(why) {
-            Diag.log("wallpaper", `dots ${why}: shader=${dots.status} picture=${picture.status}`
-                + ` ${picture.implicitWidth}x${picture.implicitHeight} cell=${dots.cell.toFixed(1)}`
-                + ` light=${dots.light.toFixed(2)} mono=${dots.mono} lo=${root.lo.toFixed(3)} hi=${root.hi.toFixed(3)}`);
+            const info = `${why} · look ${root.look}${root.mono ? " mono" : ""}`
+                + ` · shader ${dots.names[dots.status] ?? dots.status}${dots.log.length > 0 ? ` (${dots.log.split("\n")[0]})` : ""}`
+                + ` · picture ${["null", "ready", "loading", "error"][picture.status] ?? picture.status}`
+                + ` ${picture.implicitWidth}x${picture.implicitHeight} from ${String(root.source).split("/").pop() || "(none)"}`
+                + ` · layer ${Math.round(root.width)}x${Math.round(root.height)}`
+                + ` · cell ${dots.cell.toFixed(1)} light ${dots.light.toFixed(2)} tones ${root.lo.toFixed(2)}-${root.hi.toFixed(2)}`;
+            Diag.log("wallpaper", info);
+            if (root.monitorName.length > 0)
+                Wallpaper.note(root.monitorName, info);
         }
 
-        onVisibleChanged: if (dots.visible) dots.report("shown")
+        onVisibleChanged: dots.report(dots.visible ? "shown" : "hidden")
+        onLogChanged: dots.report("said something")
 
         onStatusChanged: {
             dots.report("status changed");
