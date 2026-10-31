@@ -14,9 +14,10 @@ import qs.theme
  * animated, so the row opens up to make room for each character and closes behind
  * each deletion, and the others slide to follow.
  *
- * One dim dot rests in the middle. The first character fills it and each one
- * after opens the row outward from the centre, so the box grows from where the
- * eye already is rather than starting at the left edge and re-centring.
+ * Empty, it says what it wants — "type your password" — with a caret blinking
+ * where typing will start; a lone dot sitting there read as a glitch. Each
+ * character is a dot, the row opening outward from the centre, and the caret
+ * rides at its end.
  */
 Item {
     id: root
@@ -24,7 +25,7 @@ Item {
     required property var auth
     property real u: 1
 
-    readonly property int resting: 1
+    readonly property int resting: 0
     readonly property int slots: 40
     readonly property real pitch: 26 * root.u
     readonly property real dot: 11 * root.u
@@ -72,6 +73,61 @@ Item {
                 duration: Theme.standard
                 easing.type: Easing.Bezier
                 easing.bezierCurve: Theme.smooth
+            }
+        }
+
+        // Empty: what to do, said once, quietly.
+        Text {
+            id: hint
+
+            anchors.centerIn: parent
+            anchors.horizontalCenterOffset: 8 * root.u
+            text: root.checking ? "checking…" : "type your password"
+            color: Theme.fgFaint
+            font.family: Theme.fontRounded
+            font.pixelSize: 17 * root.u
+            font.variableAxes: ({ "wght": 450 })
+            renderType: Text.NativeRendering
+            opacity: root.auth.length === 0 ? 1 : 0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.standard
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+        }
+
+        // Where the next character goes: before the hint when empty, after the
+        // last dot once there are some.
+        Rectangle {
+            x: root.auth.length === 0
+                ? hint.x - 10 * root.u
+                : dots.x + dots.width + 4 * root.u
+            anchors.verticalCenter: parent.verticalCenter
+            width: Math.max(2, 2 * root.u)
+            height: 22 * root.u
+            radius: width / 2
+            color: root.bad ? Theme.danger : Theme.accent
+            visible: !root.checking
+
+            Behavior on x {
+                NumberAnimation {
+                    duration: Theme.standard + 40
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
+                }
+            }
+
+            SequentialAnimation on opacity {
+                loops: Animation.Infinite
+                running: true
+
+                PauseAnimation { duration: 450 }
+                NumberAnimation { to: 0; duration: 180; easing.type: Easing.InOutSine }
+                PauseAnimation { duration: 300 }
+                NumberAnimation { to: 1; duration: 180; easing.type: Easing.InOutSine }
             }
         }
 
