@@ -238,7 +238,37 @@ PanelWindow {
         return Launcher.rankApps(q, n).map(e => root.appRow(e, "apps"));
     }
 
+    /*
+     * Settings itself when asked for by name, then whole pages, then single
+     * settings: "settings" opens the window, "sound" the Sound page, "hz" the
+     * refresh rate on Displays.
+     */
     function settingsFor(q, n) {
+        const rows = [];
+        if (Launcher.score("settings", q) >= 60 || Launcher.score("preferences", q) >= 60) {
+            rows.push({
+                group: "settings", title: "Settings", sub: "Stratum", icon: "settings", kind: "settings",
+                score: 96, hint: "open settings", about: "Every setting the shell has, with search.",
+                act: () => Shell.open("settings"), keep: true
+            });
+        }
+        for (const pg of SettingsSearch.searchPages(q, 3).filter(r => r.score >= 60)) {
+            rows.push({
+                group: "settings", title: pg.name, sub: "settings page", icon: pg.icon, kind: "settings",
+                score: Math.min(94, pg.score), hint: "open this page",
+                act: () => {
+                    Shell.settingsPage = pg.page;
+                    Shell.open("settings");
+                },
+                keep: true
+            });
+        }
+        // A setting named like its page ("Bluetooth") is the page; listed once.
+        const singles = root.singleSettings(q, n).filter(r => !rows.some(p => p.title === r.title));
+        return [...rows, ...singles].slice(0, Math.max(n, rows.length + 2));
+    }
+
+    function singleSettings(q, n) {
         return SettingsSearch.search(q, n)
             .filter(r => r.score >= 50)
             .map(r => ({
