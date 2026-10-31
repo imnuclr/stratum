@@ -62,7 +62,8 @@ Scope {
     Timer {
         id: letGo
 
-        interval: Theme.sheetMs + 60
+        // The ring filling, then the screen drawing in (LockScreen's depart).
+        interval: Math.max(60, Theme.speed * 680)
         onTriggered: root.release()
     }
 

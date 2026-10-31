@@ -44,13 +44,72 @@ FocusScope {
         return parts.join(" · ");
     }
 
-    // Fades in when it appears, and out when it is let through.
-    property bool shown: false
+    /*
+     * Arriving, the parts settle into place one after another — date, clock,
+     * weather, then the way in — each dropping or rising a little as it fades
+     * up, so locking reads as the screen composing itself rather than a cut.
+     *
+     * Leaving, the ring round the picture fills with the accent, and then the
+     * whole screen draws in toward the middle and fades: the top lifts, the
+     * bottom sinks, everything shrinks a touch. Lock.qml waits for it.
+     */
+    property real appear: 0
+    property real leave: 0
+    property real ringFill: 0
+    // Kept for anything still reading it.
+    readonly property bool shown: root.appear > 0
+
+    // How far along one part is, starting `delay` into the arrival.
+    function part(delay) {
+        return Math.max(0, Math.min(1, (root.appear - delay) / 0.45));
+    }
+
+    NumberAnimation {
+        id: arrive
+
+        target: root
+        property: "appear"
+        from: 0
+        to: 1
+        duration: Math.max(1, Theme.speed * 1100)
+        easing.type: Easing.Bezier
+        easing.bezierCurve: Theme.soft
+    }
+
+    SequentialAnimation {
+        id: depart
+
+        NumberAnimation {
+            target: root
+            property: "ringFill"
+            to: 1
+            duration: Math.max(1, Theme.speed * 260)
+            easing.type: Easing.OutCubic
+        }
+
+        NumberAnimation {
+            target: root
+            property: "leave"
+            to: 1
+            duration: Math.max(1, Theme.speed * 380)
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.soft
+        }
+    }
+
+    Connections {
+        target: root.auth
+
+        function onPhaseChanged() {
+            if (root.auth.phase === "success")
+                depart.start();
+        }
+    }
 
     focus: true
     Component.onCompleted: {
         root.forceActiveFocus();
-        root.shown = true;
+        arrive.start();
     }
 
     Keys.onPressed: event => {
@@ -69,26 +128,11 @@ FocusScope {
         id: stage
 
         anchors.fill: parent
-        opacity: root.shown && root.auth.phase !== "success" ? 1 : 0
-        scale: root.auth.phase === "success" ? 1.015 : 1
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: root.auth.phase === "success" ? Theme.sheetMs : 600
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.soft
-            }
-        }
-
-        Behavior on scale {
-            NumberAnimation {
-                duration: Theme.sheetMs
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.soft
-            }
-        }
+        opacity: 1 - root.leave
+        scale: 1 - 0.05 * root.leave
 
         StatusCorner {
+            opacity: root.part(0.45)
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.topMargin: 40 * root.u
@@ -99,19 +143,23 @@ FocusScope {
         // Date, time, weather: one centred stack in the upper half.
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
-            y: parent.height * 0.16
+            y: parent.height * 0.16 - root.leave * 40 * root.u
             spacing: 22 * root.u
 
             LockLabel {
                 anchors.horizontalCenter: parent.horizontalCenter
                 u: root.u * 1.15
                 text: Qt.formatDate(Time.now, "dddd · d MMMM")
+                opacity: root.part(0)
+                transform: Translate { y: (1 - root.part(0)) * -18 * root.u }
             }
 
             ClockFace {
                 anchors.horizontalCenter: parent.horizontalCenter
                 time: Time.now
                 size: 250 * root.u
+                opacity: root.part(0.1)
+                transform: Translate { y: (1 - root.part(0.1)) * -28 * root.u }
             }
 
             LockLabel {
@@ -120,10 +168,13 @@ FocusScope {
                 dim: true
                 text: root.weatherLine
                 visible: text.length > 0
+                opacity: root.part(0.22)
+                transform: Translate { y: (1 - root.part(0.22)) * -14 * root.u }
             }
         }
 
         Row {
+            opacity: root.part(0.45)
             anchors.left: parent.left
             anchors.bottom: parent.bottom
             anchors.leftMargin: 56 * root.u
@@ -149,12 +200,15 @@ FocusScope {
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: parent.height * 0.1
+            anchors.bottomMargin: parent.height * 0.1 - root.leave * 40 * root.u
             spacing: 14 * root.u
+            opacity: root.part(0.32)
+            transform: Translate { y: (1 - root.part(0.32)) * 36 * root.u }
 
             Avatar {
                 anchors.horizontalCenter: parent.horizontalCenter
                 size: 156 * root.u
+                fill: root.ringFill
             }
 
             Text {
