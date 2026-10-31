@@ -108,7 +108,7 @@ Singleton {
     Timer {
         id: linger
 
-        interval: Config.get("screenshot.offerMs", 9000)
+        interval: Config.get("screenshot.offerMs", 3000)
         onTriggered: root.dropPending()
     }
 

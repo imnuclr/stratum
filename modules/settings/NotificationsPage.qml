@@ -95,7 +95,7 @@ SettingsPage {
             detail: "Pointing at the bar stops the clock."
 
             Stepper {
-                value: Math.round(Config.get("screenshot.offerMs", 9000) / 1000)
+                value: Math.round(Config.get("screenshot.offerMs", 3000) / 1000)
                 from: 3
                 to: 60
                 step: 1
