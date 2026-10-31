@@ -105,6 +105,7 @@ Singleton {
         ["about", "About", "system information version hardware specs computer hostname"],
         // updates
         ["updates", "Check automatically", "update upgrade version new release automatic"],
+        ["updates", "How often", "update check frequency hourly daily interval"],
         // advanced
         ["advanced", "Diagnostic tracing", "debug logging trace logs"],
         ["advanced", "Settings folder", "config configuration files folder"],

@@ -99,11 +99,25 @@ SettingsPage {
 
         SettingRow {
             title: "Check automatically"
-            detail: "Every six hours, and tells you when something new is ready."
+            detail: "Tells you when something new is ready, once per new version."
 
             Switch {
                 checked: Updates.automatic
                 onToggled: value => Config.set("updates.check", value)
+            }
+        }
+
+        SettingRow {
+            visible: Updates.automatic
+            title: "How often"
+            detail: "Also checked a minute or so after Stratum starts, and whenever this page opens."
+
+            Segmented {
+                readonly property var hours: [1, 6, 24]
+
+                model: ["every hour", "every 6 hours", "daily"]
+                current: Math.max(0, hours.indexOf(Updates.everyHours))
+                onPicked: index => Config.set("updates.everyHours", hours[index])
             }
         }
     }
