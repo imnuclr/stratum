@@ -115,7 +115,13 @@ case "${1:-help}" in
       exit 1
     fi
     ;;
-  log)     mkdir -p "$(dirname "$LOG")"; touch "$LOG"; tail -n "${2:-60}" -f "$LOG" ;;
+  # The last lines and back to the prompt; -f (or --follow) keeps watching.
+  log)
+    mkdir -p "$(dirname "$LOG")"; touch "$LOG"
+    case "${2:-}" in
+      -f|--follow) tail -n "${3:-60}" -f "$LOG" ;;
+      *)           tail -n "${2:-60}" "$LOG" ;;
+    esac ;;
   # Only the shell's own trace lines, from the live instance rather than the
   # start-up log. `stratum log` drowns these in compositor warnings, which is
   # what made the first attempt at reading them useless.
@@ -133,7 +139,8 @@ case "${1:-help}" in
     stratum stop
     stratum restart
     stratum status             exit 0 if running
-    stratum log [N]            follow the log
+    stratum log [N]            the last N lines of the log (default 60)
+    stratum log -f             keep watching it
     stratum trace [N]          just the shell's trace lines
     stratum ipc ...            raw IPC, e.g. stratum ipc panel toggle control
     stratum doctor             check everything it needs, and say what is wrong
