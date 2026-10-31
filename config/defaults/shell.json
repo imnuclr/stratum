@@ -153,7 +153,7 @@
     },
     "screenshot": {
         "autoSave": false,
-        "offerMs": 9000
+        "offerMs": 3000
     },
     "windows": {
         "glow": 40
