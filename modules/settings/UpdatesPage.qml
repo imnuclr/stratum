@@ -20,7 +20,11 @@ SettingsPage {
 
     // Showing the custom hours: on when chosen, or when the saved value is not
     // one of the presets.
-    property bool custom: ![1, 6, 24].includes(Updates.everyHours)
+    property bool custom: ![60, 360, 1440].includes(Updates.everyMinutes)
+
+    // The unit the custom number is shown in: the largest that divides it.
+    readonly property var units: [["minutes", 1], ["hours", 60], ["days", 1440]]
+    readonly property int unit: Updates.everyMinutes % 1440 === 0 ? 2 : (Updates.everyMinutes % 60 === 0 ? 1 : 0)
 
     // What is happening, large enough to answer the question at a glance.
     Rectangle {
@@ -117,18 +121,18 @@ SettingsPage {
             detail: "Also checked a minute or so after Stratum starts, and whenever this page opens."
 
             Segmented {
-                readonly property var hours: [1, 6, 24]
+                readonly property var minutes: [60, 360, 1440]
 
                 model: ["every hour", "every 6 hours", "daily", "custom"]
                 // Custom is lit for anything that is not one of the three.
-                current: page.custom ? 3 : Math.max(0, hours.indexOf(Updates.everyHours))
+                current: page.custom ? 3 : Math.max(0, minutes.indexOf(Updates.everyMinutes))
                 onPicked: index => {
                     if (index === 3) {
                         page.custom = true;
                         return;
                     }
                     page.custom = false;
-                    Config.set("updates.everyHours", hours[index]);
+                    Config.set("updates.everyMinutes", minutes[index]);
                 }
             }
         }
@@ -136,15 +140,36 @@ SettingsPage {
         SettingRow {
             visible: Updates.automatic && page.custom
             title: "Every"
-            detail: "Any number of hours, from one to a week."
+            detail: "From a minute to a month. Checking is one small request, so often is cheap."
 
-            Stepper {
-                value: Updates.everyHours
-                from: 1
-                to: 168
-                step: 1
-                suffix: Updates.everyHours === 1 ? " hour" : " hours"
-                onMoved: v => Config.set("updates.everyHours", v)
+            Row {
+                spacing: Theme.space(3)
+
+                Stepper {
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    readonly property int size: page.units[page.unit][1]
+
+                    value: Math.max(1, Math.round(Updates.everyMinutes / size))
+                    from: 1
+                    to: page.unit === 0 ? 59 : (page.unit === 1 ? 23 : 31)
+                    step: 1
+                    onMoved: v => Config.set("updates.everyMinutes", Math.round(v) * size)
+                }
+
+                Segmented {
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    model: page.units.map(u => u[0])
+                    current: page.unit
+                    // Keeping the number and changing the unit: 6 hours becomes
+                    // 6 minutes, which is what picking "minutes" means.
+                    onPicked: index => {
+                        const now = Math.max(1, Math.round(Updates.everyMinutes / page.units[page.unit][1]));
+                        const cap = index === 0 ? 59 : (index === 1 ? 23 : 31);
+                        Config.set("updates.everyMinutes", Math.min(now, cap) * page.units[index][1]);
+                    }
+                }
             }
         }
     }

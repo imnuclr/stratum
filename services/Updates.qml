@@ -31,8 +31,13 @@ Singleton {
 
     readonly property int count: root.waiting.length
     readonly property bool automatic: Config.get("updates.check", true)
-    // Hours between checks: Settings → Updates.
-    readonly property real everyHours: Config.get("updates.everyHours", 6)
+    /*
+     * Minutes between checks: Settings → Updates. Kept in minutes so it can go
+     * below an hour; `updates.everyHours` from older versions still counts.
+     */
+    readonly property int everyMinutes: Math.max(1, Math.round(Config.get("updates.everyMinutes", null)
+        ?? Config.get("updates.everyHours", 6) * 60))
+    readonly property real everyHours: root.everyMinutes / 60
 
     function check() {
         if (root.state === "checking" || root.state === "updating")
@@ -145,7 +150,7 @@ Singleton {
         running: root.automatic
         repeat: true
         triggeredOnStart: false
-        interval: root.checkedAt.length === 0 ? 90000 : Math.max(0.25, root.everyHours) * 3600000
+        interval: root.checkedAt.length === 0 ? 90000 : root.everyMinutes * 60000
         onTriggered: root.check()
     }
 
