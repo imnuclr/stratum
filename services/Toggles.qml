@@ -140,7 +140,7 @@ Singleton {
         const target = up ?? root.vpnConnections.find(c => c.name === prefer) ?? root.vpnConnections[0];
         const on = !up;
         const commands = {
-            nm: ["nmcli", "connection", on ? "up" : "down", "id", target.name],
+            nm: ["nmcli", "connection", on ? "up" : "down", "uuid", target.id],
             warp: ["warp-cli", "--accept-tos", on ? "connect" : "disconnect"],
             tailscale: ["tailscale", on ? "up" : "down"],
             mullvad: ["mullvad", on ? "connect" : "disconnect"]
@@ -149,6 +149,82 @@ Singleton {
         vpn.running = true;
         // Shown as changed at once; the next read confirms it.
         root.vpnConnections = root.vpnConnections.map(c => Object.assign({}, c, { active: c === target ? on : (on ? c.active : false) }));
+    }
+
+    // --- managing them (Settings → VPN) ----------------------------------------
+
+    property bool canOpenVpn: false
+    // The last thing a VPN command said, for the VPN page to show.
+    property string vpnMessage: ""
+
+    function vpnRun(command, okMessage) {
+        vpnTask.okMessage = okMessage ?? "";
+        vpnTask.command = command;
+        vpnTask.running = true;
+    }
+
+    function setVpn(c, on) {
+        const commands = {
+            nm: ["nmcli", "connection", on ? "up" : "down", "uuid", c.id],
+            warp: ["warp-cli", "--accept-tos", on ? "connect" : "disconnect"],
+            tailscale: ["tailscale", on ? "up" : "down"],
+            mullvad: ["mullvad", on ? "connect" : "disconnect"]
+        };
+        root.vpnRun(commands[c.kind], on ? `connecting ${c.name}…` : `${c.name} disconnected`);
+        root.vpnConnections = root.vpnConnections.map(x => Object.assign({}, x, x.id === c.id ? { active: on, busy: on } : {}));
+    }
+
+    function setVpnAutoconnect(c, on) {
+        if (c.kind === "nm")
+            root.vpnRun(["nmcli", "connection", "modify", "uuid", c.id, "connection.autoconnect", on ? "yes" : "no"]);
+    }
+
+    function removeVpn(c) {
+        if (c.kind === "nm")
+            root.vpnRun(["nmcli", "connection", "delete", "uuid", c.id], `${c.name} removed`);
+    }
+
+    /*
+     * Adds a VPN from a config file you were given: WireGuard (.conf) or
+     * OpenVPN (.ovpn), into NetworkManager, where the toggle and this page can
+     * reach it.
+     */
+    function importVpn(path) {
+        const type = /\.ovpn$/i.test(path) ? "openvpn" : "wireguard";
+        root.vpnRun(["nmcli", "connection", "import", "type", type, "file", path],
+            `added ${path.split("/").pop().replace(/\.(conf|ovpn)$/i, "")}`);
+    }
+
+    // First-time set-ups for the apps that need one.
+    function warpRegister() {
+        root.vpnRun(["warp-cli", "--accept-tos", "registration", "new"], "WARP registered — you can connect now");
+    }
+
+    function tailscaleSignIn() {
+        // Prints a sign-in link; it is opened in the browser.
+        root.vpnRun(["sh", "-c", "tailscale up --timeout=3s 2>&1 | grep -o 'https://[^ ]*' | head -n1 | xargs -r xdg-open; true"],
+            "finish signing in in your browser");
+    }
+
+    Process {
+        id: vpnTask
+
+        property string okMessage: ""
+
+        stdout: StdioCollector {
+            id: vpnOut
+        }
+
+        stderr: StdioCollector {
+            id: vpnErr
+        }
+
+        onExited: code => {
+            root.vpnMessage = code === 0
+                ? (vpnTask.okMessage || "done")
+                : (vpnErr.text.trim().split("\n").pop() || vpnOut.text.trim().split("\n").pop() || `failed (${code})`);
+            settleVpn.restart();
+        }
     }
 
     function readVpn() {
@@ -243,30 +319,52 @@ Singleton {
 
         running: true
         command: ["sh", "-c", `
-            nmcli -t -f NAME,TYPE,STATE connection show 2>/dev/null | while IFS=: read -r name type state; do
-                case "$type" in *vpn*|*wireguard*) echo "nm|$name|$state" ;; esac
+            # kind|name|state|detail|autoconnect|id — the name is last from
+            # nmcli so a colon in it cannot shift the other fields.
+            nmcli -t --escape no -f UUID,TYPE,STATE,AUTOCONNECT,NAME connection show 2>/dev/null | while IFS=: read -r uuid type state auto name; do
+                case "$type" in
+                    *wireguard*) echo "nm|$name|$state|WireGuard|$auto|$uuid" ;;
+                    *vpn*) echo "nm|$name|$state|$(nmcli -g vpn.service-type connection show "$uuid" 2>/dev/null | awk -F. '{print $NF}' | sed 's/openvpn/OpenVPN/; s/^$/VPN/')|$auto|$uuid" ;;
+                esac
             done
             if command -v warp-cli >/dev/null 2>&1; then
+                reg=yes; warp-cli --accept-tos registration show >/dev/null 2>&1 || reg=no
                 st=$(warp-cli --accept-tos status 2>/dev/null)
-                case "$st" in *Connected*) echo "warp|Cloudflare WARP|activated" ;; *) echo "warp|Cloudflare WARP|off" ;; esac
+                case "$st" in *Connected*) s=activated ;; *) s=off ;; esac
+                echo "warp|Cloudflare WARP|$s|$( [ $reg = yes ] && echo registered || echo not registered )|no|warp"
             fi
             if command -v tailscale >/dev/null 2>&1; then
-                tailscale status >/dev/null 2>&1 && echo "tailscale|Tailscale|activated" || echo "tailscale|Tailscale|off"
+                if tailscale status >/dev/null 2>&1; then echo "tailscale|Tailscale|activated|signed in|no|tailscale"
+                else echo "tailscale|Tailscale|off|$(tailscale status 2>&1 | grep -qi 'logged out' && echo 'not signed in' || echo 'stopped')|no|tailscale"; fi
             fi
             if command -v mullvad >/dev/null 2>&1; then
-                case "$(mullvad status 2>/dev/null)" in Connected*) echo "mullvad|Mullvad|activated" ;; *) echo "mullvad|Mullvad|off" ;; esac
-            fi`]
+                case "$(mullvad status 2>/dev/null)" in Connected*) s=activated ;; *) s=off ;; esac
+                echo "mullvad|Mullvad|$s|$(mullvad account get >/dev/null 2>&1 && echo 'signed in' || echo 'not signed in')|no|mullvad"
+            fi
+            # What can be added: the OpenVPN plugin for NetworkManager.
+            ls /usr/lib/NetworkManager/VPN/nm-openvpn-service.name >/dev/null 2>&1 && echo "can|openvpn"
+            true`]
 
         stdout: StdioCollector {
             onStreamFinished: {
                 const found = [];
+                let openvpn = false;
                 for (const line of text.split("\n")) {
                     const parts = line.split("|");
+                    if (parts[0] === "can") {
+                        openvpn = openvpn || parts[1] === "openvpn";
+                        continue;
+                    }
                     if (parts.length < 3)
                         continue;
-                    found.push({ kind: parts[0], name: parts[1], active: parts[2] === "activated" });
+                    found.push({
+                        kind: parts[0], name: parts[1],
+                        active: parts[2] === "activated", busy: parts[2] === "activating",
+                        detail: parts[3] ?? "", autoconnect: parts[4] === "yes", id: parts[5] ?? parts[1]
+                    });
                 }
                 root.vpnConnections = found;
+                root.canOpenVpn = openvpn;
             }
         }
     }

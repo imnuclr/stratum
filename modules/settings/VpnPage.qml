@@ -1,0 +1,206 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import qs.components
+import qs.config
+import qs.services
+import qs.theme
+
+/*
+ * Every VPN on this machine in one list — WireGuard and OpenVPN connections in
+ * NetworkManager, Cloudflare WARP, Tailscale, Mullvad — each with its switch,
+ * and the ways to add one: a config file you were given, or signing in to a
+ * service you have installed.
+ */
+SettingsPage {
+    id: page
+
+    icon: "shield"
+    title: "VPN"
+    detail: "Connect, add and remove VPNs. The control centre's VPN toggle uses the one picked here."
+
+    readonly property var list: Toggles.vpnConnections
+    readonly property string prefer: Config.get("vpn.prefer", "")
+
+    Component.onCompleted: Toggles.readVpn()
+
+    function kindName(c) {
+        return ({ nm: c.detail || "VPN", warp: "Cloudflare WARP", tailscale: "Tailscale", mullvad: "Mullvad" })[c.kind] ?? c.kind;
+    }
+
+    // What the last action said, when it said something.
+    Rectangle {
+        visible: Toggles.vpnMessage.length > 0
+        height: visible ? 44 : 0
+        radius: Theme.rInner
+        color: Theme.surfaceHi
+        border.width: 1
+        border.color: Theme.line
+
+        Text {
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.space(4)
+            anchors.right: dismissMsg.left
+            anchors.verticalCenter: parent.verticalCenter
+            elide: Text.ElideRight
+            text: Toggles.vpnMessage
+            color: Theme.fg
+            font.family: Theme.fontUi
+            font.pixelSize: 13
+            renderType: Text.NativeRendering
+        }
+
+        Glyph {
+            id: dismissMsg
+
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.space(3)
+            anchors.verticalCenter: parent.verticalCenter
+            name: "close"
+            size: 13
+            color: Theme.fgDim
+
+            TapHandler {
+                onTapped: Toggles.vpnMessage = ""
+            }
+        }
+    }
+
+    SettingCard {
+        title: "your vpns"
+        footnote: page.list.length === 0 ? "None yet. Add one below." : "The ring marks the one the control centre's toggle switches. Click a name to make it that one."
+
+        Repeater {
+            model: page.list
+
+            Item {
+                id: vpn
+
+                required property var modelData
+
+                readonly property bool chosen: page.prefer.length > 0 ? page.prefer === vpn.modelData.name : vpn.modelData === page.list[0]
+
+                width: parent.width
+                height: 64
+
+                ChoiceRow {
+                    anchors.left: parent.left
+                    anchors.right: controls.left
+                    anchors.rightMargin: Theme.space(3)
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "shield"
+                    title: vpn.modelData.name
+                    sub: [page.kindName(vpn.modelData), vpn.modelData.active ? "connected" : (vpn.modelData.busy ? "connecting…" : ""),
+                        vpn.modelData.kind !== "nm" && vpn.modelData.detail !== "signed in" && vpn.modelData.detail !== "registered" ? vpn.modelData.detail : ""]
+                        .filter(s => s.length > 0).join(" · ")
+                    chosen: vpn.chosen
+                    divider: false
+                    onClicked: Config.set("vpn.prefer", vpn.modelData.name)
+                }
+
+                Row {
+                    id: controls
+
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.space(2)
+
+                    // First-time set-ups, where the service needs one.
+                    LinkButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: vpn.modelData.kind === "warp" && vpn.modelData.detail === "not registered"
+                        text: "register"
+                        onClicked: Toggles.warpRegister()
+                    }
+
+                    LinkButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: vpn.modelData.kind === "tailscale" && vpn.modelData.detail === "not signed in"
+                        text: "sign in"
+                        onClicked: Toggles.tailscaleSignIn()
+                    }
+
+                    LinkButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: vpn.modelData.kind === "nm"
+                        text: "remove"
+                        danger: true
+                        onClicked: Toggles.removeVpn(vpn.modelData)
+                    }
+
+                    Switch {
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: vpn.modelData.active || vpn.modelData.busy
+                        onToggled: value => Toggles.setVpn(vpn.modelData, value)
+                    }
+                }
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    height: 1
+                    color: Theme.line
+                }
+            }
+        }
+    }
+
+    SettingCard {
+        title: "connect on its own"
+        visible: page.list.some(c => c.kind === "nm")
+
+        Repeater {
+            model: page.list.filter(c => c.kind === "nm")
+
+            SettingRow {
+                id: auto
+
+                required property var modelData
+
+                title: auto.modelData.name
+                detail: "Comes up by itself whenever you are online."
+
+                Switch {
+                    checked: auto.modelData.autoconnect
+                    onToggled: value => Toggles.setVpnAutoconnect(auto.modelData, value)
+                }
+            }
+        }
+    }
+
+    SettingCard {
+        title: "add a vpn"
+
+        SettingRow {
+            title: "From a config file"
+            detail: Toggles.canOpenVpn
+                ? "A WireGuard .conf or OpenVPN .ovpn file from your VPN provider or your router."
+                : "A WireGuard .conf file from your VPN provider or your router. For .ovpn files, install networkmanager-openvpn."
+
+            LinkButton {
+                icon: "file"
+                text: "choose file"
+                onClicked: Picker.file("A WireGuard (.conf) or OpenVPN (.ovpn) file", false, path => Toggles.importVpn(path))
+            }
+        }
+
+        SettingRow {
+            visible: !page.list.some(c => c.kind === "warp")
+            title: "Cloudflare WARP"
+            detail: "Free. Install it with: paru -S cloudflare-warp-bin, then sudo systemctl enable --now warp-svc. It appears here after."
+        }
+
+        SettingRow {
+            visible: !page.list.some(c => c.kind === "tailscale")
+            title: "Tailscale"
+            detail: "Your own devices, privately. Install with: sudo pacman -S tailscale, then sudo systemctl enable --now tailscaled."
+        }
+
+        SettingRow {
+            visible: !page.list.some(c => c.kind === "mullvad")
+            title: "Mullvad"
+            detail: "Install the Mullvad app (paru -S mullvad-vpn-bin) and sign in once; it appears here after."
+        }
+    }
+}
