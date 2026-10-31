@@ -9,6 +9,9 @@ WlSessionLockSurface {
 
     color: "black"
 
+    Component.onCompleted: console.info(`[lock] surface made for ${screen?.name ?? "a screen"}`)
+    Component.onDestruction: console.info(`[lock] surface gone for ${screen?.name ?? "a screen"}`)
+
     LockScreen {
         anchors.fill: parent
         auth: root.auth
