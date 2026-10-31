@@ -51,6 +51,7 @@ Sheet {
 
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
+                color: Theme.fgBright
                 text: Notifs.any ? `notifications · ${Notifs.count}` : "notifications"
             }
 
@@ -131,6 +132,8 @@ Sheet {
                     from: 0
                     to: 1
                     duration: Theme.standard
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
                 }
 
                 NumberAnimation {
@@ -157,6 +160,8 @@ Sheet {
                     property: "opacity"
                     to: 0
                     duration: Theme.micro
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
                 }
             }
 

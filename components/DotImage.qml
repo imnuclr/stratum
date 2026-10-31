@@ -44,6 +44,9 @@ Canvas {
     // Scales brightness before it sets a dot's size. Thin strokes average out to
     // a faint grey at this resolution and need lifting to stay visible.
     property real gain: 1
+    // How bright the dots are drawn, 0 to 1. Separate from `gain`, which scales the
+    // brightness that decides a halftone dot's radius and so changes its size.
+    property real dotAlpha: 1
     /*
      * Crops to the subject when the picture has a plain ground around it. Avatars
      * drawn on a white square are mostly white square, and at a few dozen dots
@@ -51,6 +54,21 @@ Canvas {
      * corners, so a photograph — which has no such ground — is left whole.
      */
     property bool frameSubject: false
+    /*
+     * How the picture meets the grid. "stretch" squeezes it to fill, which is right
+     * for a square avatar and wrong for a wallpaper: a 16:9 picture on a 16:10
+     * screen comes out taller and narrower than it is, and everything in it moves.
+     * "crop" fills the grid from the middle of the picture and cuts the overflow,
+     * as the plain wallpaper does.
+     */
+    property string fit: "stretch"
+    /*
+     * Stretches the picture's own tones to fill the range before they become dot
+     * sizes. Without colour a saturated picture — a blue, say — is nearly black by
+     * luma and draws almost no dots, while a pale one draws dots so large they
+     * merge into a solid sheet.
+     */
+    property bool autoLevels: false
 
     // 4x4 Bayer matrix, normalised. Ordered dithering keeps the dot grid regular,
     // which is the point — error diffusion would scatter it.
@@ -77,6 +95,8 @@ Canvas {
      * retried until the pixels are really there, up to about two seconds.
      */
     property int attempts: 0
+    // True once dots for the current source are on the canvas.
+    property bool drawn: false
 
     Timer {
         id: retry
@@ -86,6 +106,7 @@ Canvas {
     }
 
     onSourceChanged: {
+        root.drawn = false;
         root.attempts = 0;
         requestPaint();
     }
@@ -93,11 +114,15 @@ Canvas {
     onRowsChanged: requestPaint()
     onDotColorChanged: requestPaint()
     onCellChanged: requestPaint()
+    onDotScaleChanged: requestPaint()
+    onFitChanged: requestPaint()
+    onAutoLevelsChanged: requestPaint()
     onHalftoneChanged: requestPaint()
     onCircularChanged: requestPaint()
     onColoredChanged: requestPaint()
     onInvertChanged: requestPaint()
     onGainChanged: requestPaint()
+    onDotAlphaChanged: requestPaint()
 
     Image {
         id: sampler
@@ -208,7 +233,24 @@ Canvas {
             ctx.reset();
         }
 
-        ctx.drawImage(sampler, ox, oy, dw, dh);
+        if (fit === "crop" && !frameSubject && sampler.implicitWidth > 0 && sampler.implicitHeight > 0) {
+            // Only the picture's proportions are used, never its size in pixels:
+            // that is reported in logical units and the bitmap is decoded in device
+            // ones, so a source rectangle built from it covers the wrong part of
+            // the picture on a scaled display — which showed as a wallpaper zoomed
+            // in by the display scale. Drawn instead to a rectangle that covers the
+            // grid, centred, with the overflow falling outside it.
+            const aspect = sampler.implicitWidth / sampler.implicitHeight;
+            let w = cols;
+            let h = cols / aspect;
+            if (h < rows) {
+                h = rows;
+                w = rows * aspect;
+            }
+            ctx.drawImage(sampler, (cols - w) / 2, (rows - h) / 2, w, h);
+        } else {
+            ctx.drawImage(sampler, ox, oy, dw, dh);
+        }
         let data = ctx.getImageData(0, 0, cols, rows).data;
         if (!root.anyDrawn(data)) {
             root.again();
@@ -251,7 +293,37 @@ Canvas {
             flip = n > 0 && sum / n > 0.62;
         }
 
+        // Where the picture's tones start and end, so mono can use the whole range.
+        let lo = 0;
+        let hi = 1;
+        if (autoLevels) {
+            const bins = new Array(64).fill(0);
+            let total = 0;
+            for (let k = 0; k < rows * cols; k++) {
+                const j = k * 4;
+                const l = (0.299 * data[j] + 0.587 * data[j + 1] + 0.114 * data[j + 2]) / 255 * (data[j + 3] / 255);
+                bins[Math.min(63, Math.floor(l * 64))]++;
+                total++;
+            }
+            let run = 0;
+            let found = false;
+            for (let b = 0; b < 64; b++) {
+                run += bins[b];
+                if (!found && run > total * 0.02) {
+                    lo = b / 64;
+                    found = true;
+                }
+                if (run > total * 0.98) {
+                    hi = (b + 1) / 64;
+                    break;
+                }
+            }
+        }
+
         ctx.fillStyle = dotColor;
+        ctx.globalAlpha = Math.max(0.05, Math.min(1, dotAlpha));
+        const groups = new Map();
+        ctx.beginPath();
 
         for (let y = 0; y < rows; y++) {
             for (let x = 0; x < cols; x++) {
@@ -260,7 +332,9 @@ Canvas {
 
                 const i = (y * cols + x) * 4;
                 // Rec. 601 luma, matching how the rest of the shell weighs colour.
-                const luma = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+                let luma = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+                if (autoLevels)
+                    luma = Math.max(0, Math.min(1, (luma - lo) / Math.max(0.12, hi - lo)));
                 const alpha = data[i + 3] / 255;
                 // Inverted, an empty (transparent) pixel stays empty rather than lighting up.
                 const v = Math.min(1, (flip ? (1 - luma) * alpha : luma * alpha) * gain);
@@ -282,17 +356,45 @@ Canvas {
                     r = radius;
                 }
 
+                const cxp = x * cell + cell / 2;
+                const cyp = y * cell + cell / 2;
+
                 if (colored) {
                     // Dark ink on a light ground has no colour worth showing — it is
                     // black — so it takes the dot colour; coloured areas keep theirs.
+                    // Colours are rounded to a coarse step so the dots fall into a
+                    // few hundred groups rather than one each.
                     const dark = flip && Math.max(data[i], data[i + 1], data[i + 2]) < 70;
-                    ctx.fillStyle = dark ? dotColor : root.lifted(data[i], data[i + 1], data[i + 2], 0.62);
+                    const style = dark ? dotColor : root.lifted(data[i] & 0xF0, data[i + 1] & 0xF0, data[i + 2] & 0xF0, 0.62);
+                    let group = groups.get(style);
+                    if (!group) {
+                        group = [];
+                        groups.set(style, group);
+                    }
+                    group.push(cxp, cyp, r);
+                } else {
+                    ctx.moveTo(cxp + r, cyp);
+                    ctx.arc(cxp, cyp, r, 0, 2 * Math.PI);
                 }
-
-                ctx.beginPath();
-                ctx.arc(x * cell + cell / 2, y * cell + cell / 2, r, 0, 2 * Math.PI);
-                ctx.fill();
             }
         }
+
+        // One fill per colour instead of one per dot. A wallpaper is tens of
+        // thousands of dots, and a fill each made repainting it — which the rings
+        // ask for continuously as they turn — take long enough to stall the shell.
+        if (colored) {
+            for (const [style, group] of groups) {
+                ctx.fillStyle = style;
+                ctx.beginPath();
+                for (let k = 0; k < group.length; k += 3) {
+                    ctx.moveTo(group[k] + group[k + 2], group[k + 1]);
+                    ctx.arc(group[k], group[k + 1], group[k + 2], 0, 2 * Math.PI);
+                }
+                ctx.fill();
+            }
+        } else {
+            ctx.fill();
+        }
+        root.drawn = true;
     }
 }

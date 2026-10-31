@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.services
 import qs.theme
 
@@ -22,24 +23,107 @@ Rectangle {
     readonly property var extraActions: (root.notification?.actions ?? [])
         .filter(a => a.identifier !== "default")
 
-    implicitHeight: content.implicitHeight + Theme.space(3) * 2
+    /*
+     * The sending application's icon, wherever it can be found: what the
+     * notification names, a file it points at, the icon of its desktop entry,
+     * or an icon named after the app. Empty when there is none.
+     */
+    readonly property string iconSource: {
+        const n = root.notification;
+        if (!n)
+            return "";
+        const named = n.appIcon ?? "";
+        if (named.startsWith("/"))
+            return `file://${named}`;
+        if (named.startsWith("file://") || named.startsWith("image://"))
+            return named;
+        const tries = [named];
+        const entry = n.desktopEntry ? DesktopEntries.byId(n.desktopEntry) : null;
+        if (entry?.icon)
+            tries.push(entry.icon);
+        if (n.desktopEntry)
+            tries.push(n.desktopEntry);
+        if (n.appName)
+            tries.push(n.appName.toLowerCase(), n.appName.toLowerCase().replace(/\s+/g, "-"));
+        for (const t of tries) {
+            if (!t)
+                continue;
+            const p = Quickshell.iconPath(t, true);
+            if (p && p.length > 0)
+                return p;
+        }
+        return "";
+    }
+
+    implicitHeight: Math.max(content.implicitHeight, badge.height) + Theme.space(3) * 2
 
     radius: Theme.rTile
+    opacity: 1 - Math.min(0.9, Math.abs(root.slide) / Math.max(1, root.width))
     color: hover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+    border.width: 1
+    border.color: hover.hovered ? Theme.fg : Theme.outline
 
     Behavior on color {
         ColorAnimation {
             duration: Theme.micro
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.smooth
+        }
+    }
+
+    Behavior on border.color {
+        ColorAnimation {
+            duration: Theme.micro
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.smooth
+        }
+    }
+
+    // The app, as its own icon dithered into dots — the same treatment album art
+    // gets, so a Discord message reads as Discord at a glance.
+    Rectangle {
+        id: badge
+
+        // Level with the middle of the notification, however many lines it has.
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.space(3)
+        anchors.verticalCenter: parent.verticalCenter
+        width: 40
+        height: 40
+        radius: 12
+        color: Theme.surfaceTop
+
+        DotImage {
+            anchors.centerIn: parent
+            width: 34
+            height: 34
+            visible: root.iconSource.length > 0
+            source: root.iconSource
+            // Finer than album art: an app icon is small and its shape is the point.
+            cell: 1.6
+            dotScale: 0.5
+            halftone: true
+            colored: true
+        }
+
+        DotIcon {
+            anchors.centerIn: parent
+            width: 26
+            height: 26
+            visible: root.iconSource.length === 0
+            name: "bell"
+            color: Theme.fgBright
         }
     }
 
     Column {
         id: content
 
-        anchors.left: parent.left
+        anchors.left: badge.right
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: Theme.space(3)
+        anchors.topMargin: Math.max(Theme.space(3), (root.height - implicitHeight) / 2)
         spacing: Theme.space(1)
 
         Item {
@@ -53,6 +137,7 @@ Rectangle {
                 anchors.right: dismiss.left
                 anchors.rightMargin: Theme.space(2)
                 elide: Text.ElideRight
+                color: Theme.fgBright
                 text: `${root.notification?.appName ?? "system"} · ${Notifs.age(root.notification)}`
             }
 
@@ -70,11 +155,13 @@ Rectangle {
                     anchors.centerIn: parent
                     name: "close"
                     size: 14
-                    color: closeHover.hovered ? Theme.fg : Theme.fgFaint
+                    color: closeHover.hovered ? Theme.fg : Theme.fgDim
 
                     Behavior on color {
                         ColorAnimation {
                             duration: Theme.micro
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
                         }
                     }
                 }
@@ -98,7 +185,7 @@ Rectangle {
             visible: text.length > 0
             color: Theme.fg
             font.family: Theme.fontUi
-            font.pixelSize: 15
+            font.pixelSize: 16
             font.weight: Font.Medium
             renderType: Text.NativeRendering
         }
@@ -113,9 +200,9 @@ Rectangle {
             textFormat: Text.StyledText
             text: root.notification?.body ?? ""
             visible: text.length > 0
-            color: Theme.fgDim
+            color: Theme.fgBright
             font.family: Theme.fontUi
-            font.pixelSize: 13
+            font.pixelSize: 14
             renderType: Text.NativeRendering
         }
 
@@ -156,5 +243,64 @@ Rectangle {
     // Below the dismiss target and the action labels in the stack, so those win.
     TapHandler {
         onTapped: Notifs.activate(root.notification)
+    }
+
+    // A middle click dismisses, as it closes a tab.
+    TapHandler {
+        acceptedButtons: Qt.MiddleButton
+        onTapped: Notifs.dismiss(root.notification)
+    }
+
+    /*
+     * Flicked sideways, it follows the pointer and fades; let go past a third
+     * of its width, or with a quick flick, and it is dismissed. Short of that
+     * it settles back.
+     */
+    property real slide: 0
+
+    transform: Translate {
+        x: root.slide
+    }
+
+    Behavior on slide {
+        enabled: !swipe.active
+
+        NumberAnimation {
+            duration: Theme.sheetMs
+            easing.type: Easing.Bezier
+            easing.bezierCurve: Theme.smooth
+        }
+    }
+
+    DragHandler {
+        id: swipe
+
+        target: null
+        yAxis.enabled: false
+        cursorShape: active ? Qt.ClosedHandCursor : undefined
+
+        onTranslationChanged: {
+            if (active)
+                root.slide = translation.x;
+        }
+
+        onActiveChanged: {
+            if (active)
+                return;
+            const fast = Math.abs(centroid.velocity.x) > 900;
+            if (Math.abs(root.slide) > root.width / 3 || fast) {
+                root.slide = (root.slide >= 0 ? 1 : -1) * (root.width + 40);
+                gone.restart();
+            } else {
+                root.slide = 0;
+            }
+        }
+    }
+
+    Timer {
+        id: gone
+
+        interval: Theme.sheetMs
+        onTriggered: Notifs.dismiss(root.notification)
     }
 }

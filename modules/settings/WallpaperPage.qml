@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Widgets
 import qs.components
+import qs.config
 import qs.services
 import qs.theme
 
@@ -13,6 +14,8 @@ import qs.theme
  */
 Item {
     id: page
+
+    Component.onCompleted: Cutout.find()
 
     // Empty means the whole desktop; otherwise one monitor by name.
     property string target: ""
@@ -33,20 +36,44 @@ Item {
         anchors.right: parent.right
         spacing: Theme.space(3)
 
+        // Where the pictures come from, and the way to point it elsewhere.
         Item {
             width: parent.width
-            height: heading.implicitHeight
+            height: 34
 
             SectionLabel {
                 id: heading
 
+                anchors.verticalCenter: parent.verticalCenter
                 text: "wallpaper"
             }
 
-            SectionLabel {
+            Row {
                 anchors.right: parent.right
-                text: `${Wallpaper.entries.length} images`
-                dim: true
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.space(2)
+
+                SectionLabel {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: `${Wallpaper.dir.replace(Quickshell.env("HOME"), "~")} · ${Wallpaper.entries.length} images`
+                    dim: true
+                }
+
+                LinkButton {
+                    text: "change folder"
+                    icon: "folder"
+                    onClicked: Picker.folder("Wallpaper folder", path => Config.set("wallpaper.dir", path))
+                }
+
+                LinkButton {
+                    text: "open"
+                    onClicked: Quickshell.execDetached(["xdg-open", Wallpaper.dir])
+                }
+
+                LinkButton {
+                    text: "rescan"
+                    onClicked: Wallpaper.scan()
+                }
             }
         }
 
@@ -132,6 +159,56 @@ Item {
                 }
             }
         }
+
+        /*
+         * How the picture is drawn on the desktop. Dots are the shell's own
+         * rendering of it; mono takes the colour out of either. The sliders only
+         * mean something for dots, so they only show for dots.
+         */
+        Row {
+            spacing: Theme.space(3)
+
+            Segmented {
+                model: ["original", "dots"]
+                current: Config.get("wallpaper.look", "original") === "dots" ? 1 : 0
+                onPicked: index => Config.set("wallpaper.look", index === 1 ? "dots" : "original")
+            }
+
+            Segmented {
+                model: ["colour", "mono"]
+                current: Config.get("wallpaper.mono", false) ? 1 : 0
+                onPicked: index => Config.set("wallpaper.mono", index === 1)
+            }
+
+            // The picture drifts with the workspace and, where a cutout has been
+            // made, the subject drifts further than the ground behind it.
+            Segmented {
+                model: ["flat", "depth"]
+                current: Config.get("wallpaper.parallax", true) ? 1 : 0
+                onPicked: index => Config.set("wallpaper.parallax", index === 1)
+            }
+        }
+
+        SectionLabel {
+            dim: true
+            visible: Config.get("wallpaper.parallax", true)
+            text: `cutout · ${Cutout.status}`
+        }
+
+        ActionButton {
+            width: 160
+            height: 36
+            text: "browse on desktop"
+            onClicked: Shell.open("picker", Shell.openScreen)
+        }
+
+        ActionButton {
+            visible: Config.get("wallpaper.look", "original") === "dots"
+            height: visible ? 36 : 0
+            width: 160
+            text: "shape the dots"
+            onClicked: Shell.open("wallpaper", Shell.openScreen)
+        }
     }
 
     GridView {
@@ -197,6 +274,8 @@ Item {
                     Behavior on opacity {
                         NumberAnimation {
                             duration: Theme.standard
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
                         }
                     }
                 }
@@ -205,7 +284,7 @@ Item {
                 // picture stays the thing being looked at.
                 Rectangle {
                     anchors.fill: parent
-                    radius: parent.radius
+                    radius: Theme.rInner
                     color: "transparent"
                     border.width: cell.chosen ? 2 : 0
                     border.color: Theme.accent

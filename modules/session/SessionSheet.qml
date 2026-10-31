@@ -18,8 +18,14 @@ Sheet {
     id: root
 
     name: "session"
-    originX: 1
+    // Beside whatever opened it: the bar's edge when asked for from the bar, the
+    // control centre's corner otherwise.
+    originX: Shell.openFrom === "bar" ? (barRight ? 1 : 0) : 1
     originY: 1
+    clickDismiss: true
+    // Once the pointer has been on it, leaving it closes it.
+    hoverDismiss: true
+    adoptOnOpen: false
     sheetWidth: Config.get("session.width", 300)
     sheetHeight: body.implicitHeight + Theme.space(4) * 2
 
@@ -60,6 +66,8 @@ Sheet {
                 Behavior on color {
                     ColorAnimation {
                         duration: Theme.micro
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
                     }
                 }
 

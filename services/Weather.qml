@@ -8,10 +8,12 @@ import qs.config
 /*
  * Current conditions from open-meteo, which needs no API key.
  *
- * Location comes from config when set. If it isn't, the service asks ip-api.com,
- * which means one outbound request that reveals this machine's IP to a third
- * party — so it is opt-out by setting weather.latitude and weather.longitude,
- * and nothing is requested at all when weather.enabled is false.
+ * Location comes from config when set — chosen on the map in Settings →
+ * Weather, or typed as weather.latitude and weather.longitude. If it isn't, the
+ * service asks ip-api.com, which means one outbound request that reveals this
+ * machine's IP to a third party and is only as precise as your provider's
+ * routing (often the wrong town). Nothing is requested at all when
+ * weather.enabled is false.
  */
 Singleton {
     id: root
@@ -19,15 +21,53 @@ Singleton {
     readonly property bool enabled: Config.get("weather.enabled", true)
     readonly property bool metric: Config.get("weather.units", "metric") === "metric"
 
-    property real latitude: Config.get("weather.latitude", null) ?? NaN
-    property real longitude: Config.get("weather.longitude", null) ?? NaN
-    property string place: Config.get("weather.place", "")
+    // Chosen, from config; or guessed from the IP address when nothing is.
+    readonly property real chosenLat: Config.get("weather.latitude", null) ?? NaN
+    readonly property real chosenLon: Config.get("weather.longitude", null) ?? NaN
+    readonly property bool chosen: !isNaN(root.chosenLat) && !isNaN(root.chosenLon)
+    property real guessedLat: NaN
+    property real guessedLon: NaN
+    property string guessedPlace: ""
+
+    readonly property real latitude: root.chosen ? root.chosenLat : root.guessedLat
+    readonly property real longitude: root.chosen ? root.chosenLon : root.guessedLon
+    readonly property string place: root.chosen ? Config.get("weather.place", "") : root.guessedPlace
+
+    // Where the location came from, for Settings: "chosen" or "from your IP".
+    readonly property string source: root.chosen ? "chosen" : (isNaN(root.guessedLat) ? "unknown" : "from your IP")
+
+    function choose(lat, lon, name) {
+        Config.set("weather.latitude", Math.round(lat * 1e4) / 1e4);
+        Config.set("weather.longitude", Math.round(lon * 1e4) / 1e4);
+        Config.set("weather.place", name ?? "");
+    }
+
+    // Back to guessing from the IP address.
+    function forget() {
+        Config.unset("weather.latitude");
+        Config.unset("weather.longitude");
+        Config.unset("weather.place");
+    }
+
+    onLatitudeChanged: refreshSoon.restart()
+    onLongitudeChanged: refreshSoon.restart()
+    onMetricChanged: refreshSoon.restart()
+
+    Timer {
+        id: refreshSoon
+
+        interval: 300
+        onTriggered: root.refresh()
+    }
 
     readonly property bool located: !isNaN(latitude) && !isNaN(longitude)
 
     // Tomorrow onward: { day, code, max, min }. Index 0 of the API's daily
     // arrays is today, which the current conditions already cover.
     property var daily: []
+    // Today's range, which `daily` (tomorrow onward) does not carry.
+    property real todayMax: NaN
+    property real todayMin: NaN
     property string sunrise: ""
     property string sunset: ""
 
@@ -115,10 +155,9 @@ Singleton {
                         root.error = "location lookup failed";
                         return;
                     }
-                    root.latitude = d.lat;
-                    root.longitude = d.lon;
-                    if (!root.place)
-                        root.place = d.city ?? "";
+                    root.guessedLat = d.lat;
+                    root.guessedLon = d.lon;
+                    root.guessedPlace = d.city ?? "";
                     root.error = "";
                 } catch (e) {
                     root.error = "location lookup unreadable";
@@ -151,6 +190,8 @@ Singleton {
                         // rather than parsed as UTC and shifted.
                         root.sunrise = (d.sunrise?.[0] ?? "").slice(11);
                         root.sunset = (d.sunset?.[0] ?? "").slice(11);
+                        root.todayMax = d.temperature_2m_max?.[0] ?? NaN;
+                        root.todayMin = d.temperature_2m_min?.[0] ?? NaN;
 
                         const names = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
                         const days = [];

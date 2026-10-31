@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.services
 
 /*
  * Hover popouts for bar items.
@@ -33,6 +34,9 @@ Singleton {
     property real anchorY: 0
 
     readonly property bool open: current.length > 0
+
+    // The tray item a "tray:…" popout is about.
+    property var trayItem: null
 
     // Initialised from current rather than empty: the handler below only fires on
     // a change, so a popout already open across a config reload would render an

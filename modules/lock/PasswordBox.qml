@@ -14,7 +14,9 @@ import qs.theme
  * animated, so the row opens up to make room for each character and closes behind
  * each deletion, and the others slide to follow.
  *
- * Six dim dots are always there as the resting state, and typing fills them in.
+ * Empty, it says what it wants — "password"; a lone dot sitting there
+ * read as a glitch. Each character is a dot, the row opening outward from the
+ * centre.
  */
 Item {
     id: root
@@ -22,8 +24,14 @@ Item {
     required property var auth
     property real u: 1
 
-    readonly property int resting: 6
+    readonly property int resting: 0
     readonly property int slots: 40
+    // As many dots as the pill holds; a longer password keeps typing, it just
+    // stops drawing more, so the row never runs out of the box.
+    // Room is kept at the right for the overflow count.
+    readonly property int fits: Math.max(1, Math.floor((root.width - 96 * root.u) / root.pitch))
+    // Characters past what the row shows.
+    readonly property int extra: Math.max(0, root.auth.length - root.fits)
     readonly property real pitch: 26 * root.u
     readonly property real dot: 11 * root.u
 
@@ -47,11 +55,11 @@ Item {
     SequentialAnimation {
         id: shaking
 
-        NumberAnimation { target: root; property: "shake"; to: -14 * root.u; duration: 55; easing.type: Easing.OutQuad }
-        NumberAnimation { target: root; property: "shake"; to: 12 * root.u; duration: 90; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: root; property: "shake"; to: -8 * root.u; duration: 90; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: root; property: "shake"; to: 4 * root.u; duration: 80; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: root; property: "shake"; to: 0; duration: 90; easing.type: Easing.OutQuad }
+        NumberAnimation { target: root; property: "shake"; to: -14 * root.u; duration: 40; easing.type: Easing.OutQuad }
+        NumberAnimation { target: root; property: "shake"; to: 12 * root.u; duration: 65; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: root; property: "shake"; to: -8 * root.u; duration: 65; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: root; property: "shake"; to: 4 * root.u; duration: 60; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: root; property: "shake"; to: 0; duration: 65; easing.type: Easing.OutQuad }
     }
 
     Rectangle {
@@ -68,6 +76,50 @@ Item {
         Behavior on border.color {
             ColorAnimation {
                 duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
+            }
+        }
+
+        // Empty: what to do, said once, quietly.
+        Text {
+            id: hint
+
+            anchors.centerIn: parent
+            text: root.checking ? "checking…" : "password"
+            color: Theme.fgFaint
+            font.family: Theme.fontRounded
+            font.pixelSize: 17 * root.u
+            font.variableAxes: ({ "wght": 450 })
+            renderType: Text.NativeRendering
+            opacity: root.auth.length === 0 ? 1 : 0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.standard
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+        }
+
+        // How many more there are than dots, at the right end of the pill.
+        Text {
+            anchors.right: parent.right
+            anchors.rightMargin: 20 * root.u
+            anchors.verticalCenter: parent.verticalCenter
+            text: `+${root.extra}`
+            color: root.bad ? Theme.danger : Theme.fgDim
+            font.family: Theme.fontRounded
+            font.pixelSize: 15 * root.u
+            font.variableAxes: ({ "wght": 600 })
+            renderType: Text.NativeRendering
+            opacity: root.extra > 0 ? 1 : 0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.standard
+                }
             }
         }
 
@@ -85,8 +137,8 @@ Item {
                 loops: Animation.Infinite
                 alwaysRunToEnd: true
 
-                NumberAnimation { to: 0.35; duration: 420; easing.type: Easing.InOutSine }
-                NumberAnimation { to: 1; duration: 420; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 0.35; duration: 320; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1; duration: 320; easing.type: Easing.InOutSine }
             }
 
             Repeater {
@@ -98,7 +150,7 @@ Item {
                     required property int index
 
                     readonly property bool typed: slot.index < root.auth.length
-                    readonly property bool present: slot.index < Math.max(root.resting, root.auth.length)
+                    readonly property bool present: slot.index < Math.min(root.fits, Math.max(root.resting, root.auth.length))
 
                     width: slot.present ? root.pitch : 0
                     height: root.dot
@@ -113,8 +165,14 @@ Item {
                     }
 
                     Rectangle {
+                        id: mark
+
+                        // Past the end of the row, the last dot pops on every
+                        // keystroke, so typing still visibly lands somewhere.
+                        property real pop: 1
+
                         anchors.centerIn: parent
-                        width: root.dot
+                        width: root.dot * mark.pop
                         height: width
                         radius: width / 2
                         color: root.bad ? Theme.danger : (slot.typed ? Theme.fg : Theme.fgFaint)
@@ -134,12 +192,32 @@ Item {
                         Behavior on opacity {
                             NumberAnimation {
                                 duration: Theme.standard
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.smooth
+                            }
+                        }
+
+                        SequentialAnimation {
+                            id: popping
+
+                            NumberAnimation { target: mark; property: "pop"; to: 1.45; duration: 60; easing.type: Easing.OutQuad }
+                            NumberAnimation { target: mark; property: "pop"; to: 1; duration: 160; easing.type: Easing.OutCubic }
+                        }
+
+                        Connections {
+                            target: root.auth
+
+                            function onLengthChanged() {
+                                if (root.extra > 0 && slot.index === root.fits - 1)
+                                    popping.restart();
                             }
                         }
 
                         Behavior on color {
                             ColorAnimation {
                                 duration: Theme.standard
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.smooth
                             }
                         }
                     }

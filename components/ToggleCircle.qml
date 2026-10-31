@@ -13,8 +13,11 @@ Item {
     property string label: ""
     property bool active: false
     property bool available: true
+    // Off while the toggles are being arranged, so a tap or hover does not act.
+    property bool interactive: true
 
     signal toggled
+    signal held
 
     implicitWidth: 64
     implicitHeight: circle.height + caption.implicitHeight + Theme.space(2)
@@ -27,7 +30,7 @@ Item {
         width: 54
         height: 54
         radius: width / 2
-        color: root.active ? Theme.fg : (hover.hovered && root.available ? Theme.surfaceTop : Theme.surfaceHi)
+        color: root.active ? Theme.fg : (hover.hovered && root.available && root.interactive ? Theme.surfaceTop : Theme.surfaceHi)
         opacity: root.available ? 1 : 0.45
 
         /*
@@ -36,7 +39,7 @@ Item {
          * so a toggle that takes a moment to actually take effect still feels
          * like it registered the click.
          */
-        scale: press.pressed ? 0.92 : (hover.hovered && root.available ? 1.04 : 1)
+        scale: press.pressed ? 0.92 : (hover.hovered && root.available && root.interactive ? 1.04 : 1)
 
         Behavior on scale {
             NumberAnimation {
@@ -49,6 +52,8 @@ Item {
         Behavior on color {
             ColorAnimation {
                 duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
 
@@ -64,6 +69,8 @@ Item {
             Behavior on color {
                 ColorAnimation {
                     duration: Theme.standard
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
                 }
             }
         }
@@ -81,6 +88,8 @@ Item {
         Behavior on color {
             ColorAnimation {
                 duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
     }
@@ -88,14 +97,16 @@ Item {
     HoverHandler {
         id: hover
 
-        enabled: root.available
+        enabled: root.available && root.interactive
         cursorShape: Qt.PointingHandCursor
     }
 
     TapHandler {
         id: press
 
-        enabled: root.available
+        // Holding is how arranging starts; releasing sooner is a tap.
+        enabled: root.available && root.interactive
         onTapped: root.toggled()
+        onLongPressed: root.held()
     }
 }

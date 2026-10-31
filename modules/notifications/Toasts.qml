@@ -112,6 +112,20 @@ Variants {
                 }
             }
 
+            /*
+             * Arrives as a small pill at the top, widens and drops into the full
+             * card, and only then fills in; leaves by the same road backwards —
+             * the words go first, then the card closes back into the pill.
+             *
+             * One number, `p`, runs the whole thing: 0 is the pill, 1 the card.
+             * Size follows it directly, the content fades in over its last
+             * third, and the slot in the list opens just ahead of the pill so
+             * the toasts below are already moving aside as it appears.
+             *
+             * `p` is animated explicitly rather than through Behaviors because a
+             * fresh toast is born already live: Behaviors enabled only after
+             * creation never saw the change and it simply popped in.
+             */
             delegate: Item {
                 id: toast
 
@@ -129,59 +143,79 @@ Variants {
                  * bring every expired toast back at once.
                  */
                 property bool live: false
-                property bool settled: false
+                // 0: the pill. 1: the card.
+                property real p: 0
 
-                Component.onCompleted: {
-                    toast.live = Notifs.fresh(toast.modelData, toast.timeout);
-                    // Only animate changes from here on: the first height is the
-                    // height it should already have, not something to grow into.
-                    Qt.callLater(() => toast.settled = true);
+                readonly property real pillWidth: 64
+                readonly property real pillHeight: 34
+                readonly property real fullHeight: row.implicitHeight
+                // The slot opens in the first stretch, so a small p already has room.
+                readonly property real slot: Math.min(1, toast.p * 8)
+
+                Component.onCompleted: toast.live = Notifs.fresh(toast.modelData, toast.timeout)
+
+                onLiveChanged: {
+                    grow.to = toast.live ? 1 : 0;
+                    grow.duration = toast.live ? Math.round(Theme.popoutMs * 0.75) : Math.round(Theme.popoutExitMs * 0.8);
+                    grow.restart();
+                }
+
+                NumberAnimation {
+                    id: grow
+
+                    target: toast
+                    property: "p"
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
                 }
 
                 width: list.width
-                height: toast.live ? row.implicitHeight + Theme.space(2) : 0
-                opacity: toast.live ? 1 : 0
-                // Leaves the way it came, towards its own edge of the screen.
-                x: toast.live ? 0 : width * 0.3
+                height: Math.round((card.height + Theme.space(2)) * toast.slot)
 
-                Behavior on height {
-                    enabled: toast.settled
+                Rectangle {
+                    id: card
 
-                    NumberAnimation {
-                        duration: Theme.popoutMs
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.soft
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    width: toast.pillWidth + (toast.width - toast.pillWidth) * toast.p
+                    height: toast.pillHeight + (toast.fullHeight - toast.pillHeight) * toast.p
+                    radius: Math.min(height / 2, Theme.rTile)
+                    color: linger.hovered ? Theme.surfaceHi : Theme.surface
+                    border.width: 1
+                    border.color: linger.hovered ? Theme.fg : Theme.outline
+                    opacity: toast.slot
+                    clip: true
+                    visible: toast.p > 0.001
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Theme.micro
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
+                        }
                     }
-                }
 
-                Behavior on opacity {
-                    enabled: toast.settled
-
-                    NumberAnimation {
-                        duration: Theme.popoutMs
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.soft
+                    Behavior on border.color {
+                        ColorAnimation {
+                            duration: Theme.micro
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
+                        }
                     }
-                }
 
-                Behavior on x {
-                    enabled: toast.settled
+                    NotificationRow {
+                        id: row
 
-                    NumberAnimation {
-                        duration: Theme.popoutMs
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.soft
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        width: toast.width
+                        notification: toast.modelData
+                        // The card behind it is the surface, and it is what changes
+                        // shape; this only carries the words.
+                        color: "transparent"
+                        border.width: 0
+                        opacity: Math.max(0, Math.min(1, (toast.p - 0.45) / 0.4)) * (1 - Math.min(0.9, Math.abs(row.slide) / Math.max(1, row.width)))
                     }
-                }
-
-                NotificationRow {
-                    id: row
-
-                    width: parent.width
-                    notification: toast.modelData
-                    // Clipped to nothing while the row collapses, so the text
-                    // does not spill past the shrinking edge.
-                    visible: toast.height > 1
                 }
 
                 HoverHandler {

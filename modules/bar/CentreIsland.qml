@@ -25,7 +25,7 @@ Pill {
 
         DotText {
             anchors.verticalCenter: parent.verticalCenter
-            text: Time.format("HH:mm")
+            text: Time.clock
             size: Math.round(root.height * 0.5)
             color: Theme.fg
         }

@@ -48,7 +48,36 @@ Sheet {
      * that had just clicked — so it closed. Above the panel, the panel never
      * moves.
      */
-    satelliteHeight: Shell.expandedChip.length > 0 ? Math.round(listLoader.implicitHeight + Theme.space(4) * 2) : 0
+    /*
+     * The list stays in place while it folds away. Its height and its content
+     * used to drop to nothing the instant a chip was collapsed, which cut the
+     * card off mid-fade: it disappeared instead of closing.
+     */
+    property string lastChip: ""
+    property bool satelliteShown: false
+
+    Connections {
+        target: Shell
+
+        function onExpandedChipChanged() {
+            if (Shell.expandedChip.length > 0) {
+                root.lastChip = Shell.expandedChip;
+                fold.stop();
+                root.satelliteShown = true;
+            } else {
+                fold.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: fold
+
+        interval: Theme.sheetMs + 40
+        onTriggered: root.satelliteShown = false
+    }
+
+    satelliteHeight: root.satelliteShown ? Math.round(listLoader.implicitHeight + Theme.space(4) * 2) : 0
 
     satellite: Rectangle {
         id: listCard
@@ -56,6 +85,8 @@ Sheet {
         anchors.fill: parent
         radius: Theme.rSheet
         color: Theme.surface
+        border.width: 1
+        border.color: Theme.outline
         opacity: Shell.expandedChip.length > 0 ? 1 : 0
 
         /*
@@ -89,8 +120,8 @@ Sheet {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.margins: Theme.space(4)
-            active: Shell.expandedChip.length > 0
-            sourceComponent: Shell.expandedChip === "network" ? networkList : deviceList
+            active: root.satelliteShown
+            sourceComponent: root.lastChip === "network" ? networkList : deviceList
         }
     }
 
@@ -201,50 +232,71 @@ Sheet {
             visible: Media.available
         }
 
-        Item {
-            width: parent.width
-            height: header.implicitHeight + Theme.space(1)
-
-            SectionLabel {
-                id: header
-
-                anchors.left: parent.left
-                anchors.bottom: parent.bottom
-                text: Notifs.any ? `notifications · ${Notifs.count}` : "notifications"
-            }
-
-            SectionLabel {
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                text: "clear all"
-                color: clearHover.hovered ? Theme.fg : Theme.fgBright
-                visible: Notifs.any
-
-                HoverHandler {
-                    id: clearHover
-
-                    cursorShape: Qt.PointingHandCursor
-                }
-
-                TapHandler {
-                    onTapped: Notifs.clearAll()
-                }
-            }
-        }
-
         /*
-         * The notifications themselves live on their own page. An unbounded list
-         * at the bottom of a fixed panel was always the part that got cut, and a
-         * panel you open to change a setting is not where you want to be reading.
-         * This is the way across.
+         * Only how many, and clearly. The notifications themselves live on their
+         * own page: an unbounded list at the bottom of a fixed panel was always
+         * the part that got cut, and a panel you open to change a setting is not
+         * where you want to be reading. This is the way across.
          */
-        SectionLabel {
-            dim: !Notifs.any
-            text: Notifs.any ? "open page" : "nothing to show"
-            color: Notifs.any && openHover.hovered ? Theme.fg : (Notifs.any ? Theme.fgDim : Theme.fgFaint)
+        Rectangle {
+            width: parent.width
+            height: 56
+            radius: height / 2
+            color: Notifs.any && countHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Theme.micro
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.space(4)
+                spacing: Theme.space(3)
+
+                Glyph {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: Notifs.any ? "bell" : "bell-off"
+                    size: 20
+                    color: Notifs.any ? Theme.fg : Theme.fgDim
+                }
+
+                DotText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: Notifs.any
+                    text: `${Notifs.count}`
+                    size: 24
+                    plain: true
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: !Notifs.any ? "No notifications" : (Notifs.count === 1 ? "notification" : "notifications")
+                    color: Notifs.any ? Theme.fg : Theme.fgBright
+                    font.family: Theme.fontUi
+                    font.pixelSize: 15
+                    font.weight: Font.Medium
+                    renderType: Text.NativeRendering
+                }
+            }
+
+            Glyph {
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.space(4)
+                name: "chevron-left"
+                size: 16
+                rotation: 180
+                color: Theme.fgBright
+                visible: Notifs.any
+            }
 
             HoverHandler {
-                id: openHover
+                id: countHover
 
                 cursorShape: Notifs.any ? Qt.PointingHandCursor : Qt.ArrowCursor
             }

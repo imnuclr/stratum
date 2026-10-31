@@ -1,4 +1,7 @@
 import QtQuick
+import Quickshell
+import Quickshell.Services.SystemTray
+import qs.modules.bar
 import qs.components
 import qs.config
 import qs.services
@@ -18,6 +21,115 @@ Column {
     required property string monitorName
 
     spacing: Theme.space(3)
+
+    /*
+     * The tray, as a column of its icons above the status group. Their menus open
+     * away from the screen's edge, into the room beside the bar.
+     */
+    /*
+     * Settings → Bar → Tray: "show" keeps every icon out, "hover" folds them
+     * behind a chevron until the pointer comes near, "hide" leaves the tray off.
+     */
+    readonly property string trayMode: Config.get("bar.tray", "show")
+
+    Column {
+        id: trayColumn
+
+        readonly property bool open: root.trayMode === "show" || trayHover.hovered || trayGrace.running
+            || (Popouts.open && Popouts.current.startsWith("tray:") && Popouts.monitorName === root.monitorName)
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: Theme.space(2)
+        visible: root.trayMode !== "hide" && (SystemTray.items?.values?.length ?? 0) > 0
+        bottomPadding: Theme.space(1)
+
+        HoverHandler {
+            id: trayHover
+
+            margin: Theme.space(2)
+            onHoveredChanged: {
+                if (!hovered)
+                    trayGrace.restart();
+            }
+        }
+
+        Timer {
+            id: trayGrace
+
+            interval: 260
+        }
+
+        Glyph {
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: root.trayMode === "hover"
+            name: "chevron-down"
+            size: 14
+            color: trayColumn.open ? Theme.fg : Theme.fgDim
+            rotation: trayColumn.open ? 180 : 0
+
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: Theme.standard * 1.6
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+        }
+
+        Item {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: icons.implicitWidth
+            height: trayColumn.open ? icons.implicitHeight : 0
+            clip: true
+            opacity: trayColumn.open ? 1 : 0
+
+            Behavior on height {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
+                }
+            }
+
+            Column {
+                id: icons
+
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: Theme.space(3)
+                topPadding: root.trayMode === "hover" ? Theme.space(1) : 0
+
+                Repeater {
+                    model: SystemTray.items?.values ?? []
+
+                    TrayIcon {
+                        required property var modelData
+
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        item: modelData
+                        size: 17
+                        monitorName: root.monitorName
+                        vertical: true
+                        edge: Config.forMonitor(root.monitorName, "bar.edge", "left") === "right" ? Edges.Left : Edges.Right
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 14
+            height: 1
+            color: Theme.line
+        }
+    }
 
     SectionLabel {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -42,8 +154,7 @@ Column {
             { kind: "bluetooth", popout: "bluetooth" },
             { kind: "audio", popout: "audio" },
             { kind: "dnd", popout: "" },
-            { kind: "profile", popout: "" },
-            { kind: "battery", popout: "" },
+            { kind: "battery", popout: "battery" },
             { kind: "power", popout: "" }
         ]
 
@@ -54,6 +165,10 @@ Column {
 
             readonly property bool hovered: hover.hovered
             readonly property bool lit: hovered || (modelData.popout.length > 0 && Popouts.current === modelData.popout && Popouts.open)
+
+            // Battery has nothing to show on a machine without one. Hiding the glyph inside left its slot behind as a gap, so
+            // the slot itself goes and the column closes up.
+            visible: modelData.kind !== "battery" || Power.hasBattery
 
             anchors.horizontalCenter: parent.horizontalCenter
             width: 24
@@ -107,27 +222,14 @@ Column {
                     color: Notifs.dnd ? Theme.accent : (item.lit ? Theme.fg : Theme.fgBright)
                 }
 
-                /*
-                 * A reading, not a control: the profile is set in the control
-                 * centre, where the four levels are named and the consequence of
-                 * each is legible. A click target that silently cycles through
-                 * them is how you end up on power-saver without knowing.
-                 */
-                ProfileGlyph {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    visible: item.modelData.kind === "profile" && Power.hasBattery
-                    size: 17
-                    level: Math.max(1, Math.round((Power.profiles.indexOf(Power.profile) + 1)
-                        / Math.max(1, Power.profiles.length) * 4))
-                    color: Theme.fgBright
-                }
-
-                Glyph {
+                BatteryGlyph {
                     anchors.horizontalCenter: parent.horizontalCenter
                     visible: item.modelData.kind === "battery" && Power.hasBattery
-                    name: Power.charging ? "battery-charging" : "battery-vertical"
-                    size: 17
-                    color: Power.critical ? Theme.accent : (item.lit ? Theme.fg : Theme.fgDim)
+                    vertical: true
+                    size: 24
+                    level: Power.percentage
+                    charging: Power.charging
+                    color: Power.critical ? Theme.accent : (item.lit ? Theme.fg : Theme.fgBright)
                 }
 
                 DotText {
@@ -151,8 +253,15 @@ Column {
                 id: hover
 
                 onHoveredChanged: {
-                    if (item.modelData.popout.length === 0)
+                    // An icon with no popout of its own still ends the previous
+                    // icon's: the group hover keeps a popout alive across the
+                    // gaps, which also kept it open on the way to a neighbour
+                    // that has nothing to show.
+                    if (item.modelData.popout.length === 0) {
+                        if (hovered)
+                            Popouts.hide();
                         return;
+                    }
                     if (hovered) {
                         const centre = item.mapToItem(null, 0, item.height / 2);
                         Popouts.showAtY(item.modelData.popout, centre.y, root.monitorName);
@@ -167,7 +276,7 @@ Column {
                     if (item.modelData.kind === "dnd")
                         Notifs.toggleDnd();
                     else if (item.modelData.kind === "power")
-                        Shell.toggle("session");
+                        Shell.toggle("session", root.monitorName, "bar");
                 }
             }
         }

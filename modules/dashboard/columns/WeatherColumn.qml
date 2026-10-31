@@ -22,11 +22,11 @@ Item {
         Row {
             spacing: Theme.space(2)
 
-            DotMatrix {
+            DotIcon {
                 anchors.verticalCenter: parent.verticalCenter
-                pattern: WeatherGlyphs.forCode(Weather.code, Weather.day)
-                cell: 7
-                dotSize: 5
+                width: 60
+                height: 60
+                name: Icons.weather(Weather.code, Weather.day)
             }
 
             Row {
@@ -81,14 +81,14 @@ Item {
                         text: modelData.day
                     }
 
-                    DotMatrix {
+                    DotIcon {
                         anchors.horizontalCenter: parent.horizontalCenter
+                        width: 36
+                        height: 36
                         // Always the daytime variant: a row of crescent moons
                         // for four consecutive days reads as a bug.
-                        pattern: WeatherGlyphs.forCode(modelData.code, true)
-                        cell: 4.2
-                        dotSize: 3
-                        color: Theme.fgDim
+                        name: Icons.weather(modelData.code, true)
+                        color: Theme.fgBright
                     }
 
                     DotText {

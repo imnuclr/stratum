@@ -38,5 +38,23 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.global("stratum:brightnessDown"), repeat
 
 -- Shift + Print emits SysRq rather than Print, so the third one uses Ctrl.
 hl.bind("Print", hl.dsp.global("stratum:screenshotRegion"), locked)
+-- The key most people reach for. If another config already owns it Hyprland
+-- discards this duplicate, in which case Print above still works.
+pcall(hl.unbind, "SUPER + SHIFT + S")
+hl.bind("SUPER + SHIFT + S", hl.dsp.global("stratum:screenshotRegion"))
 hl.bind("SUPER + Print", hl.dsp.global("stratum:screenshot"), locked)
 hl.bind("CTRL + Print", hl.dsp.global("stratum:screenshotEdit"), locked)
+
+-- The launcher: apps, files, settings and sums.
+hl.bind("SUPER + SPACE", hl.dsp.global("stratum:launcher"))
+
+-- Lock the session. Not "locked": it should not fire while already locked.
+hl.bind("SUPER + L", hl.dsp.global("stratum:lock"))
+
+-- Record: Alt + Print picks a region (press again to stop), Super + Alt + Print
+-- records the whole screen.
+hl.bind("ALT + Print", hl.dsp.global("stratum:recordRegion"), locked)
+hl.bind("SUPER + ALT + Print", hl.dsp.global("stratum:record"), locked)
+
+-- Arrange the desktop widgets (press again, or Esc, to finish).
+hl.bind("SUPER + SHIFT + W", hl.dsp.global("stratum:widgetsEdit"))

@@ -21,7 +21,7 @@ Item {
         }
 
         DotText {
-            text: Time.format("HH:mm")
+            text: Time.clock
             size: 60
         }
 
@@ -33,7 +33,6 @@ Item {
         DotBar {
             readonly property real pitch: dotSize * 2
             count: Math.max(8, Math.floor((parent.width + dotSize) / pitch))
-            dotSize: 3
             litScale: 1.5
             value: Time.dayProgress
         }

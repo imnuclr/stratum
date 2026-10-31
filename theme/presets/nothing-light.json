@@ -2,23 +2,26 @@
   "name": "nothing-light",
   "mode": "light",
   "color": {
-    "bg": "#DBDBD8",
-    "panel": "#E6E6E3",
-    "surface": "#FAFAF8",
-    "surfaceHi": "#ECECE8",
-    "surfaceTop": "#E0E0DC",
+    "bg": "#DCDCDC",
+    "wall": "#F4F4F2",
+    "panel": "#E6E6E6",
+    "surface": "#FAFAFA",
+    "surfaceHi": "#EDEDED",
+    "surfaceTop": "#E1E1E1",
     "line": "#14000000",
     "lineHi": "#26000000",
-    "fg": "#17171A",
-    "fgDim": "#6B6B72",
-    "fgFaint": "#A6A6AC",
-    "dotOn": "#17171A",
+    "fg": "#171717",
+    "fgDim": "#6B6B6B",
+    "fgFaint": "#A8A8A8",
+    "dotOn": "#171717",
     "dotOff": "#24000000",
     "accent": "#E5252B",
     "ok": "#16A34A",
     "warn": "#CA8A04",
     "crit": "#DC2626",
-    "fgBright": "#2E2E34"
+    "fgBright": "#2E2E2E",
+    "deep": "#FFFFFF",
+    "outline": "#B3171717"
   },
   "radius": {
     "tile": 20,
@@ -45,10 +48,10 @@
     "mono": "JetBrainsMono Nerd Font"
   },
   "motion": {
-    "micro": 120,
-    "standard": 200,
+    "micro": 70,
+    "standard": 100,
     "ambient": 500,
-    "dotStagger": 8,
+    "dotStagger": 5,
     "expressive": [
       0.34,
       1.26,
@@ -57,7 +60,7 @@
       1,
       1
     ],
-    "expressiveMs": 420,
+    "expressiveMs": 220,
     "smooth": [
       0.4,
       0,

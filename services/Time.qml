@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.config
 
 /*
  * One clock for the whole shell. Ticks per minute by default; a consumer that
@@ -13,6 +14,30 @@ Singleton {
 
     property date now: new Date()
     property int secondConsumers: 0
+
+    // Hours and minutes as you like them read: Settings → Appearance → Clock.
+    readonly property bool twelveHour: Config.get("clock.twelveHour", false)
+    readonly property string hm: root.twelveHour ? "h:mm" : "HH:mm"
+
+    /*
+     * The hour, worked out here rather than by a format pattern. Qt only
+     * counts to twelve when the pattern also asks for AM/PM — "h:mm" alone is
+     * still 15:41 — which is why the switch appeared to do nothing.
+     */
+    function hourOf(d, twelve, padded) {
+        const h = d.getHours();
+        const v = twelve ? (h % 12 || 12) : h;
+        return padded || !twelve ? String(v).padStart(2, "0") : String(v);
+    }
+
+    function clockOf(d, twelve) {
+        return `${root.hourOf(d, twelve, false)}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+
+    // The time as the bar and panels show it: 3:41 or 15:41.
+    readonly property string clock: root.clockOf(root.now, root.twelveHour)
+    // Always two digits, for faces drawn digit by digit: 03 or 15.
+    readonly property string hour2: root.hourOf(root.now, root.twelveHour, true)
 
     readonly property int hours: now.getHours()
     readonly property int minutes: now.getMinutes()

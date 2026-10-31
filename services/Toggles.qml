@@ -3,7 +3,9 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.config
 import qs.theme
+import qs.services
 
 /*
  * The quick toggles that do not belong to a service of their own.
@@ -104,6 +106,13 @@ Singleton {
         root.recording = true;
     }
 
+    function toggleRecordRegion() {
+        if (root.recording)
+            root.stopRecording();
+        else
+            root.recordRegion();
+    }
+
     function setDark(value) {
         if (root.dark === value)
             return;
@@ -117,12 +126,43 @@ Singleton {
         root.setDark(!root.dark);
     }
 
+    /*
+     * The VPN toggle works with whichever VPN you have: a NetworkManager VPN or
+     * WireGuard connection, Cloudflare WARP (warp-cli), Tailscale or Mullvad.
+     * On: the first one found is brought up (Config vpn.prefer picks another by
+     * name). Off: whichever is up goes down.
+     */
     function toggleVpn() {
         if (!root.hasVpn)
             return;
-        const target = root.vpnConnections[0];
-        vpn.command = ["nmcli", "connection", root.vpnUp ? "down" : "up", "id", target.name];
+        const up = root.vpnConnections.find(c => c.active);
+        const prefer = Config.get("vpn.prefer", "");
+        const target = up ?? root.vpnConnections.find(c => c.name === prefer) ?? root.vpnConnections[0];
+        const on = !up;
+        const commands = {
+            nm: ["nmcli", "connection", on ? "up" : "down", "id", target.name],
+            warp: ["warp-cli", "--accept-tos", on ? "connect" : "disconnect"],
+            tailscale: ["tailscale", on ? "up" : "down"],
+            mullvad: ["mullvad", on ? "connect" : "disconnect"]
+        };
+        vpn.command = commands[target.kind];
         vpn.running = true;
+        // Shown as changed at once; the next read confirms it.
+        root.vpnConnections = root.vpnConnections.map(c => Object.assign({}, c, { active: c === target ? on : (on ? c.active : false) }));
+    }
+
+    function readVpn() {
+        vpnList.running = false;
+        vpnList.running = true;
+    }
+
+    Timer {
+        // Connections also change outside the shell (and take a moment to come
+        // up), so the state is read again now and then rather than only once.
+        interval: 8000
+        running: true
+        repeat: true
+        onTriggered: root.readVpn()
     }
 
     Process {
@@ -135,6 +175,15 @@ Singleton {
 
     Process {
         id: vpn
+
+        onExited: settleVpn.restart()
+    }
+
+    Timer {
+        id: settleVpn
+
+        interval: 1500
+        onTriggered: root.readVpn()
     }
 
     Process {
@@ -143,6 +192,10 @@ Singleton {
 
     Process {
         id: recorder
+
+        // Cancelling the selection, or the recorder dying, must not leave the
+        // toggle claiming something is still being recorded.
+        onExited: root.recording = false
     }
 
     /*
@@ -159,6 +212,7 @@ Singleton {
     Process {
         running: true
         command: ["sh", "-c",
+            'PATH="$PATH:$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin"; ' +
             "command -v hyprsunset >/dev/null && echo night; " +
             "command -v gpu-screen-recorder >/dev/null && echo recorder"]
 
@@ -183,20 +237,34 @@ Singleton {
         }
     }
 
+    // Every VPN this machine has, as kind|name|state lines.
     Process {
+        id: vpnList
+
         running: true
-        command: ["nmcli", "-t", "-f", "NAME,TYPE,STATE", "connection", "show"]
+        command: ["sh", "-c", `
+            nmcli -t -f NAME,TYPE,STATE connection show 2>/dev/null | while IFS=: read -r name type state; do
+                case "$type" in *vpn*|*wireguard*) echo "nm|$name|$state" ;; esac
+            done
+            if command -v warp-cli >/dev/null 2>&1; then
+                st=$(warp-cli --accept-tos status 2>/dev/null)
+                case "$st" in *Connected*) echo "warp|Cloudflare WARP|activated" ;; *) echo "warp|Cloudflare WARP|off" ;; esac
+            fi
+            if command -v tailscale >/dev/null 2>&1; then
+                tailscale status >/dev/null 2>&1 && echo "tailscale|Tailscale|activated" || echo "tailscale|Tailscale|off"
+            fi
+            if command -v mullvad >/dev/null 2>&1; then
+                case "$(mullvad status 2>/dev/null)" in Connected*) echo "mullvad|Mullvad|activated" ;; *) echo "mullvad|Mullvad|off" ;; esac
+            fi`]
 
         stdout: StdioCollector {
             onStreamFinished: {
                 const found = [];
                 for (const line of text.split("\n")) {
-                    const parts = line.split(":");
+                    const parts = line.split("|");
                     if (parts.length < 3)
                         continue;
-                    if (!/vpn|wireguard/i.test(parts[1]))
-                        continue;
-                    found.push({ name: parts[0], active: parts[2] === "activated" });
+                    found.push({ kind: parts[0], name: parts[1], active: parts[2] === "activated" });
                 }
                 root.vpnConnections = found;
             }

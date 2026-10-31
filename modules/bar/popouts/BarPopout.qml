@@ -31,11 +31,21 @@ Item {
      */
     property bool vertical: false
     property real barEdge: 0
+    // A bar on the right edge opens its popouts to its left.
+    property bool opensLeft: false
 
     // The bar window masks input to this rect, so it must be empty when closed.
     readonly property alias maskItem: maskRect
     readonly property bool mine: Popouts.monitorName === monitorName
     readonly property bool shown: Popouts.open && mine
+
+    property bool settled: false
+
+    Timer {
+        running: true
+        interval: 600
+        onTriggered: root.settled = true
+    }
 
     anchors.fill: parent
 
@@ -50,7 +60,7 @@ Item {
 
         // The mask reaches back over the gap to the bar, so the pointer can cross
         // from the trigger to the panel without leaving the surface.
-        x: root.vertical ? frame.x - root.bridge : frame.x
+        x: root.vertical ? (root.opensLeft ? frame.x : frame.x - root.bridge) : frame.x
         y: root.vertical ? frame.y : frame.y - root.bridge
         width: root.shown ? frame.width + (root.vertical ? root.bridge : 0) : 0
         height: root.shown ? frame.height + (root.vertical ? 0 : root.bridge) : 0
@@ -73,7 +83,7 @@ Item {
 
         // Clamped so a popout under an item near the edge stays on screen.
         x: root.vertical
-            ? root.barEdge + Theme.space(1)
+            ? (root.opensLeft ? root.barEdge - targetWidth - Theme.space(1) : root.barEdge + Theme.space(1))
             : Math.max(Theme.space(1), Math.min(root.width - targetWidth - Theme.space(1),
                 Popouts.anchorX - targetWidth / 2))
         /*
@@ -89,6 +99,26 @@ Item {
 
         function relatch() {
             frame.latchedTop = Popouts.anchorY - frame.targetHeight / 2;
+            following.restart();
+        }
+
+        /*
+         * Content that settles its size after the trigger changes is centred
+         * again once it has. A tray menu arrives over D-Bus a moment after the
+         * hover, so the panel was centred using the previous item's height: a
+         * short Spotify menu opened far above its icon because Warp's tall one
+         * had been measured instead. Only for a moment after a move, so content
+         * growing later (a list expanding) still grows downward in place.
+         */
+        Timer {
+            id: following
+
+            interval: 450
+        }
+
+        onTargetHeightChanged: {
+            if (following.running)
+                frame.latchedTop = Popouts.anchorY - frame.targetHeight / 2;
         }
 
         onVisibleChanged: if (visible) frame.relatch()
@@ -121,7 +151,7 @@ Item {
         scale: 1
         // Grows out of the edge it hangs off, so the motion reads as the panel
         // emerging from the bar rather than appearing in place.
-        transformOrigin: root.vertical ? Item.Left : Item.Top
+        transformOrigin: root.vertical ? (root.opensLeft ? Item.Right : Item.Left) : Item.Top
         visible: opacity > 0.001
         // Content is laid out at full size while the frame is still animating to
         // it, so without this it spills above and below the panel for a frame or
@@ -220,6 +250,9 @@ Item {
             Transition {
                 from: ""
                 to: "hidden"
+                // Not as the shell starts, when it is born shown and drops to
+                // hidden at once; that drop flashed an empty popout.
+                enabled: root.settled
 
                 NumberAnimation {
                     properties: "opacity,scale"
@@ -300,6 +333,12 @@ Item {
 
                 onWantChanged: adopt.restart()
 
+                // The panel is centred on its trigger using its own height, and
+                // that height is the new content's only once it has loaded. It
+                // was latched at hover time, against whatever was loaded before,
+                // so a popout could open noticeably off its icon.
+                onLoaded: frame.relatch()
+
                 source: {
                     switch (loader.have) {
                     case "network":
@@ -308,8 +347,12 @@ Item {
                         return "BluetoothPopout.qml";
                     case "audio":
                         return "AudioPopout.qml";
+                    case "battery":
+                        return "BatteryPopout.qml";
                     default:
-                        return "";
+                        // One per tray item, so moving between icons is a
+                        // change of trigger; all of them share one panel.
+                        return loader.have.startsWith("tray:") ? "TrayPopout.qml" : "";
                     }
                 }
 

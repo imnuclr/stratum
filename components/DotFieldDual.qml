@@ -17,8 +17,8 @@ Row {
     property var upper: []
     property var lower: []
     property int rows: 8
-    property real cell: 7
-    property real dotSize: 4.2
+    property real cell: Theme.dotPitch
+    property real dotSize: Theme.dot
     property color onColor: Theme.dotOn
     property color offColor: Theme.dotOff
 
@@ -65,6 +65,8 @@ Row {
                     Behavior on color {
                         ColorAnimation {
                             duration: Theme.micro
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
                         }
                     }
                 }

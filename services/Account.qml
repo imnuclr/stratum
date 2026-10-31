@@ -8,9 +8,8 @@ import qs.config
 /*
  * Who is signed in: the name to greet them by and the picture to show.
  *
- * The greeting uses the first word of the real name, not the login — "Good
- * morning Charlie" reads as a greeting and "Good morning imnuclr" reads as a
- * username. Both can be overridden in config under lock.name and lock.avatar.
+ * The greeting uses your username unless you give another name in Settings →
+ * Advanced (lock.name); the picture is lock.avatar, else ~/.face.
  */
 Singleton {
     id: root
@@ -23,8 +22,8 @@ Singleton {
         const configured = Config.get("lock.name", "");
         if (configured.length > 0)
             return configured;
-        const first = root.fullName.split(" ")[0];
-        return first.length > 0 ? first : root.user;
+        // Your username unless you set another in Settings → Advanced.
+        return root.user;
     }
 
     // The first of these that exists is used: configured, then ~/.face (what
@@ -36,6 +35,11 @@ Singleton {
     ].filter(p => p.length > 0)
 
     property string avatar: ""
+
+    onAvatarCandidatesChanged: {
+        finder.running = false;
+        finder.running = true;
+    }
 
     Component.onCompleted: {
         names.running = true;

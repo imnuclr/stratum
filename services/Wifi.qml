@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Networking
+import qs.services
 
 /*
  * Wi-Fi management: the radio, the networks in range, and connecting to them.

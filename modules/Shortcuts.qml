@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import qs.config
 import qs.services
 
 /*
@@ -16,7 +17,33 @@ import qs.services
 Item {
     id: root
 
-    readonly property real volumeStep: 0.05
+    readonly property real volumeStep: Config.get("audio.step", 2) / 100
+
+    /*
+     * Where the volume is going, while keys are being held. The real volume comes
+     * back from the audio server a moment after it is set, so a held key that read
+     * it each time would keep working from a stale value: several presses landing
+     * on the same target, or stepping from where it was rather than where it is
+     * going. The pending target carries on from itself until the presses stop.
+     */
+    property real volumeTarget: 0
+    property bool volumeHeld: false
+
+    function nudgeVolume(delta) {
+        const base = root.volumeHeld ? root.volumeTarget : Audio.volume;
+        root.volumeTarget = Math.max(0, Math.min(1, base + delta));
+        root.volumeHeld = true;
+        volumeRest.restart();
+        Audio.setVolume(root.volumeTarget);
+        Osd.volume(root.volumeTarget, false);
+    }
+
+    Timer {
+        id: volumeRest
+
+        interval: 450
+        onTriggered: root.volumeHeld = false
+    }
     readonly property real brightnessStep: 0.05
 
     GlobalShortcut {
@@ -45,38 +72,50 @@ Item {
         onPressed: {
             if (Audio.muted)
                 Audio.setMuted(false);
-            Audio.setVolume(Audio.volume + root.volumeStep);
+            root.nudgeVolume(root.volumeStep);
         }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "volumeDown"
-        onPressed: Audio.setVolume(Audio.volume - root.volumeStep)
+        onPressed: root.nudgeVolume(-root.volumeStep)
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "volumeMute"
-        onPressed: Audio.toggleMuted()
+        onPressed: {
+            Osd.volume(Audio.volume, !Audio.muted);
+            Audio.toggleMuted();
+        }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "micMute"
-        onPressed: Audio.toggleSourceMuted()
+        onPressed: {
+            Osd.mic(!Audio.sourceMuted);
+            Audio.toggleSourceMuted();
+        }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "brightnessUp"
-        onPressed: Brightness.step(root.brightnessStep)
+        onPressed: {
+            Brightness.step(root.brightnessStep);
+            Osd.brightness(Brightness.value);
+        }
     }
 
     GlobalShortcut {
         appid: "stratum"
         name: "brightnessDown"
-        onPressed: Brightness.step(-root.brightnessStep)
+        onPressed: {
+            Brightness.step(-root.brightnessStep);
+            Osd.brightness(Brightness.value);
+        }
     }
 
     GlobalShortcut {

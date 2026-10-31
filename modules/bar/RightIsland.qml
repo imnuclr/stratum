@@ -27,8 +27,9 @@ Pill {
         Tray {
             id: tray
 
+            monitorName: root.monitorName
             anchors.verticalCenter: parent.verticalCenter
-            visible: root.modules.includes("tray") && hasItems
+            visible: root.modules.includes("tray") && hasItems && Config.get("bar.tray", "hover") !== "hide"
         }
 
         Rectangle {
@@ -73,11 +74,13 @@ Pill {
                         width: 3
                         height: 3
                         radius: 1.5
-                        color: gridMouse.containsMouse || Shell.openPanel === "controlCentre" ? Theme.fg : Theme.fgDim
+                        color: gridMouse.containsMouse || Shell.openPanel === "control" ? Theme.fg : Theme.fgDim
 
                         Behavior on color {
                             ColorAnimation {
                                 duration: Theme.micro
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.smooth
                             }
                         }
                     }
@@ -91,7 +94,7 @@ Pill {
                 anchors.margins: -6
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Shell.toggle("controlCentre")
+                onClicked: Shell.toggle("control")
             }
         }
     }

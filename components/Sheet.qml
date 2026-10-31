@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.config
 import qs.services
@@ -73,6 +74,8 @@ PanelWindow {
      * underneath.
      */
     property bool centered: false
+    // Black with a pale outline, as the notification cards are.
+    property bool deep: false
     property int sheetWidth: 400
     property int sheetHeight: 500
 
@@ -88,6 +91,36 @@ PanelWindow {
     // Panels opened by hover keep themselves alive while hovered; Shell counts
     // the holds and closes once nothing is holding.
     property bool hoverDismiss: false
+    /*
+     * Whether a hover-dismissed sheet opened by a click closes on its own if the
+     * pointer never reaches it. Off, it waits for the pointer: closing starts only
+     * once it has been over the sheet and left.
+     */
+    property bool adoptOnOpen: true
+
+    /*
+     * Closes on a click anywhere outside the card, for a sheet that was opened by
+     * a click and so has nothing like hover-out to close it. The compositor's
+     * focus grab does the work: a press on any other surface ends the grab, and
+     * that is the signal.
+     */
+    property bool clickDismiss: false
+
+    // False for the first moments after the shell starts, while every panel is
+    // finding out that it is closed; nothing is drawn or animated until then.
+    property bool settled: false
+
+    Timer {
+        running: true
+        interval: 600
+        onTriggered: root.settled = true
+    }
+
+    HyprlandFocusGrab {
+        windows: [root]
+        active: root.open && root.clickDismiss
+        onCleared: Shell.close()
+    }
 
     /*
      * One hold per sheet, taken when the pointer arrives and given back only
@@ -136,7 +169,7 @@ PanelWindow {
     visible: true
 
     onOpenChanged: {
-        if (open && root.hoverDismiss)
+        if (open && root.hoverDismiss && root.adoptOnOpen)
             Shell.armDismiss();
         if (!open) {
             verify.stop();
@@ -182,11 +215,17 @@ PanelWindow {
         ? Config.get("bar.width", 56) + Config.get("bar.margin", 10) + Theme.space(1)
         : 0
 
+    // Which side the column bar is on, so a sheet keeps clear of it there.
+    readonly property bool barRight: Config.get("bar.orientation", "vertical") === "vertical"
+        && Config.get("bar.edge", "left") === "right"
+    readonly property real insetLeft: root.barRight ? 0 : root.barOffset
+    readonly property real insetRight: root.barRight ? root.barOffset : 0
+
     // Clamped so a sheet growing from an item near the far edge stays on screen
-    // rather than hanging off it.
-    readonly property real cardX: Math.round(Math.max(root.barOffset + Theme.space(1),
-        Math.min(monitor.width - root.sheetWidth - Theme.space(1),
-            root.barOffset + (monitor.width - root.barOffset) * root.originX - root.sheetWidth / 2)))
+    // rather than hanging off it, and clear of the bar on either side.
+    readonly property real cardX: Math.round(Math.max(root.insetLeft + Theme.space(1),
+        Math.min(monitor.width - root.insetRight - root.sheetWidth - Theme.space(1),
+            root.insetLeft + (monitor.width - root.insetLeft - root.insetRight) * root.originX - root.sheetWidth / 2)))
 
     /*
      * A sheet anchored to the bottom pins its bottom edge, full stop. Deriving y
@@ -394,9 +433,9 @@ PanelWindow {
                     width: parent.width
                     height: parent.height
                     radius: Theme.rSheet
-                    color: Theme.surface
+                    color: root.deep ? Theme.deep : Theme.surface
                     border.width: 1
-                    border.color: Theme.lineHi
+                    border.color: Theme.outline
 
                     transformOrigin: {
                         if (root.centered)
@@ -407,6 +446,7 @@ PanelWindow {
                     }
 
                     opacity: 1
+                    visible: root.settled || root.open
                     // A hint, not the motion: the slide says where it came from.
                     scale: 1
 
@@ -449,6 +489,10 @@ PanelWindow {
                         Transition {
                             from: ""
                             to: "closed"
+                            // Not on the way in: every panel is born open and
+                            // drops to closed at once, and animating that showed
+                            // every panel in the shell at once on each start.
+                            enabled: root.settled
 
                             NumberAnimation {
                                 properties: "slide,opacity,scale"
@@ -458,36 +502,6 @@ PanelWindow {
                             }
                         }
                     ]
-
-                    /*
-                     * Dismiss affordance at the bottom edge. Clicking outside already
-                     * closes the sheet, but nothing on the sheet itself said so.
-                     */
-                    Rectangle {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: Theme.space(2)
-                        width: 9
-                        height: 9
-                        radius: width / 2
-                        color: grip.containsMouse ? Theme.fg : Theme.fgFaint
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: Theme.micro
-                            }
-                        }
-
-                        MouseArea {
-                            id: grip
-
-                            anchors.fill: parent
-                            anchors.margins: -8
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Shell.close()
-                        }
-                    }
                 }
             }
         }

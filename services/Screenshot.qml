@@ -49,6 +49,124 @@ Singleton {
         return Qt.formatDateTime(new Date(), "yyyyMMdd-HHmmss");
     }
 
+    /*
+     * Freeze, then select.
+     *
+     * A region is picked on a still image of the screen rather than on the live
+     * one, so what is captured is what was on screen when the key was pressed —
+     * a video frame or a notification that would be gone by the time the
+     * selection is finished is still there to be picked.
+     *
+     * The screen is grabbed first and shown in an overlay (modules/Freeze.qml),
+     * slurp then runs on top of it, and grim captures through it: the overlay is
+     * part of what the compositor draws, so the crop comes out of the frozen
+     * frame. No extra tool needed. If the grab fails the selection simply runs on
+     * the live screen as it did before.
+     */
+    property string freezeOutput: ""
+    property url freezeSource: ""
+    property string pendingScript: ""
+    readonly property string freezeFile: `${Quickshell.env("XDG_RUNTIME_DIR") ?? "/tmp"}/stratum-freeze.png`
+
+    /*
+     * From a button in a panel: the panel has to be gone before the screen is
+     * grabbed, or its closing fade is in the picture.
+     */
+    function regionSoon() {
+        Shell.close();
+        soon.restart();
+    }
+
+    Timer {
+        id: soon
+
+        interval: 380
+        onTriggered: root.region()
+    }
+
+    function runFrozen(script, path) {
+        if (root.busy) {
+            Diag.log("screenshot", "ignored: a capture is already waiting");
+            return;
+        }
+        const output = Hypr.focusedWorkspace?.monitor?.name ?? "";
+        if (output.length === 0) {
+            root.run(script, path);
+            return;
+        }
+        root.busy = true;
+        watchdog.restart();
+        root.lastPath = path;
+        // Let the key release and the compositor settle before the selector is up.
+        root.pendingScript = `mkdir -p '${root.directory}'; sleep 0.05; ${script}`;
+        grabber.output = output;
+        grabber.command = ["grim", "-o", output, root.freezeFile];
+        grabber.running = true;
+    }
+
+    // The overlay reports the frozen image is on screen; give the compositor a
+    // moment to present it before the selector appears above it.
+    function freezeShown() {
+        settle.restart();
+    }
+
+    function startPending() {
+        if (root.pendingScript.length === 0)
+            return;
+        capture.command = ["sh", "-c", root.pendingScript];
+        root.pendingScript = "";
+        Diag.log("screenshot", `running frozen: ${capture.command[2]}`);
+        capture.running = true;
+    }
+
+    function endFreeze() {
+        root.freezeOutput = "";
+        root.freezeSource = "";
+        settle.stop();
+        cleanup.running = true;
+    }
+
+    Process {
+        id: grabber
+
+        property string output: ""
+
+        onExited: (code, status) => {
+            if (code === 0) {
+                root.freezeSource = `file://${root.freezeFile}`;
+                root.freezeOutput = grabber.output;
+                // If the overlay never reports in, select on the live screen.
+                giveUp.restart();
+            } else {
+                Diag.log("screenshot", `freeze grab failed code=${code}; selecting live`);
+                root.startPending();
+            }
+        }
+    }
+
+    Timer {
+        id: settle
+
+        interval: 140
+        onTriggered: {
+            giveUp.stop();
+            root.startPending();
+        }
+    }
+
+    Timer {
+        id: giveUp
+
+        interval: 2000
+        onTriggered: root.startPending()
+    }
+
+    Process {
+        id: cleanup
+
+        command: ["rm", "-f", root.freezeFile]
+    }
+
     function run(script, path) {
         if (root.busy) {
             Diag.log("screenshot", "ignored: a capture is already waiting");
@@ -72,7 +190,7 @@ Singleton {
     function region() {
         const path = `${root.directory}/region-${root.stamp()}.png`;
         // slurp exits non-zero when cancelled, which must not leave an empty file.
-        root.run(`geom=$(slurp -d </dev/null) || exit 0; grim -g "$geom" '${path}' && ${root.copy} <'${path}'`, path);
+        root.runFrozen(`geom=$(slurp -d </dev/null) || exit 0; sleep 0.08; grim -g "$geom" '${path}' && ${root.copy} <'${path}'`, path);
     }
 
     function window() {
@@ -83,7 +201,7 @@ Singleton {
     // Straight to the annotator; satty owns saving from there.
     function annotate() {
         const path = `${root.directory}/edit-${root.stamp()}.png`;
-        root.run(`geom=$(slurp -d </dev/null) || exit 0; grim -g "$geom" - | satty --filename - --copy-command '${root.copy}' --output-filename '${path}'`, path);
+        root.runFrozen(`geom=$(slurp -d </dev/null) || exit 0; sleep 0.08; grim -g "$geom" - | satty --filename - --copy-command '${root.copy}' --output-filename '${path}'`, path);
     }
 
     Process {
@@ -102,6 +220,7 @@ Singleton {
             Diag.log("screenshot", `exited code=${code} status=${status} path=${root.lastPath}`);
             watchdog.stop();
             root.busy = false;
+            root.endFreeze();
         }
     }
 
@@ -118,6 +237,7 @@ Singleton {
         onTriggered: {
             Diag.log("screenshot", "watchdog fired: releasing a capture that never exited");
             root.busy = false;
+            root.endFreeze();
         }
     }
 }

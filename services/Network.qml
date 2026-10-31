@@ -108,17 +108,23 @@ Singleton {
         return "offline";
     }
 
+    /*
+     * The address other machines see this one by: the source address the
+     * kernel would use to reach the internet. Asking the active device by name
+     * read loopback whenever it ran before a device was known, and a Process
+     * that is already running ignores being started again, so it stuck there.
+     */
     Process {
         id: addrProc
 
         running: true
-        command: ["ip", "-4", "-json", "addr", "show", root.active?.name ?? "lo"]
+        command: ["sh", "-c", "ip -4 -json route get 1.1.1.1 2>/dev/null || ip -4 -json addr show scope global"]
 
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    const info = JSON.parse(text)?.[0]?.addr_info?.[0];
-                    root.ipv4 = info?.local ?? "";
+                    const info = JSON.parse(text)?.[0];
+                    root.ipv4 = info?.prefsrc ?? info?.addr_info?.[0]?.local ?? "";
                 } catch (e) {
                     root.ipv4 = "";
                 }
@@ -126,7 +132,22 @@ Singleton {
         }
     }
 
-    onActiveChanged: addrProc.running = true
+    function readAddress() {
+        addrProc.running = false;
+        addrProc.running = true;
+    }
+
+    Timer {
+        // DHCP can change it under a connection that never drops.
+        interval: 30000
+        running: true
+        repeat: true
+        onTriggered: root.readAddress()
+    }
+
+    onActiveChanged: root.readAddress()
+    onActiveNetworkChanged: root.readAddress()
+    onOnlineChanged: root.readAddress()
 
 
 }

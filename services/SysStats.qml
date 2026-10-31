@@ -56,6 +56,17 @@ Singleton {
         root.watchers = Math.max(0, root.watchers - 1);
     }
 
+    // Widgets on an energy saver: kept running, at the slow tick.
+    property int slowWatchers: 0
+
+    function watchSlowly() {
+        root.slowWatchers++;
+    }
+
+    function unwatchSlowly() {
+        root.slowWatchers = Math.max(0, root.slowWatchers - 1);
+    }
+
     function refresh() {
         statFile.reload();
         memFile.reload();

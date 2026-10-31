@@ -27,6 +27,10 @@ Singleton {
     property bool ready: false
     property string error: ""
     property var tokens: ({})
+    // Colours worked out from the wallpaper (services/WallColours.qml), laid over
+    // everything else when that is switched on, and empty when it is not.
+    property var generated: ({})
+    onGeneratedChanged: root.tokens = Config.merge(Config.merge(root.preset, root.user), root.generated)
 
     // The user's overrides held in memory, for the same reason Config holds its
     // own: a write that has not landed must not be overwritten by a re-read.
@@ -35,20 +39,25 @@ Singleton {
     property bool dirty: false
 
     // --- colour ---
-    readonly property color bg: pick("color.bg", "#09090A")
-    readonly property color panel: pick("color.panel", "#0B0B0C")
-    readonly property color surface: pick("color.surface", "#141416")
-    readonly property color surfaceHi: pick("color.surfaceHi", "#1D1D20")
-    readonly property color surfaceTop: pick("color.surfaceTop", "#232327")
+    readonly property color bg: pick("color.bg", "#080808")
+    readonly property color panel: pick("color.panel", "#0B0B0B")
+    // Behind the wallpaper's dots: paper on a light theme, rather than the grey bg.
+    readonly property color wall: pick("color.wall", root.bg)
+    readonly property color surface: pick("color.surface", "#121212")
+    readonly property color surfaceHi: pick("color.surfaceHi", "#1B1B1B")
+    readonly property color surfaceTop: pick("color.surfaceTop", "#242424")
     readonly property color line: pick("color.line", "#12FFFFFF")
     readonly property color lineHi: pick("color.lineHi", "#24FFFFFF")
-    readonly property color fg: pick("color.fg", "#F4F4F5")
-    readonly property color fgDim: pick("color.fgDim", "#9A9AA0")
-    readonly property color fgBright: pick("color.fgBright", "#D2D2D8")
-    readonly property color fgFaint: pick("color.fgFaint", "#5C5C62")
+    readonly property color fg: pick("color.fg", "#F5F5F5")
+    readonly property color fgDim: pick("color.fgDim", "#9C9C9C")
+    readonly property color fgBright: pick("color.fgBright", "#D6D6D6")
+    readonly property color fgFaint: pick("color.fgFaint", "#5E5E5E")
     readonly property color dotOn: pick("color.dotOn", "#FFFFFF")
     readonly property color dotOff: pick("color.dotOff", "#21FFFFFF")
     readonly property color accent: pick("color.accent", "#E5252B")
+    // Notifications: blacker than any surface, drawn with a pale outline.
+    readonly property color deep: pick("color.deep", "#030303")
+    readonly property color outline: pick("color.outline", "#D9FFFFFF")
     // Something has gone wrong. Not the accent, which is a decoration you may have
     // changed to white: an error must still read as one.
     readonly property color danger: pick("color.danger", "#E5252B")
@@ -58,6 +67,14 @@ Singleton {
     readonly property color ok: pick("color.ok", "#4ADE80")
     readonly property color warn: pick("color.warn", "#FBBF24")
     readonly property color crit: pick("color.crit", "#EF4444")
+
+    // --- dots ---
+    // One dot, everywhere: rings, bars, fields, icons and dividers all draw
+    // their dots this size and this far apart, and a larger ring has more dots
+    // rather than bigger ones. Pictures (album art, the wallpaper) are the
+    // exception, because there the dot size is the picture's resolution.
+    readonly property real dot: pick("dot.size", 4)
+    readonly property real dotPitch: pick("dot.pitch", 8)
 
     // --- geometry ---
     readonly property int rTile: pick("radius.tile", 20)
@@ -78,16 +95,25 @@ Singleton {
     readonly property string fontRounded: pick("font.rounded", "Nunito")
 
     // --- motion ---
-    readonly property int micro: pick("motion.micro", 120)
-    readonly property int standard: pick("motion.standard", 200)
-    readonly property int sheetMs: pick("motion.sheet", 420)
+    /*
+     * How long everything takes, as a multiple: 1 is as designed, under 1 is
+     * brisker, 0 turns animation off. Settings → Motion sets it.
+     */
+    readonly property real speed: root.calm || root.gaming ? 0 : Math.max(0, Config.get("motion.speed", 1))
+    // Set by the power profile when it is saving on animation.
+    property bool calm: false
+    // Set by game mode.
+    property bool gaming: false
+    readonly property int micro: Math.round(pick("motion.micro", 70) * root.speed)
+    readonly property int standard: Math.round(pick("motion.standard", 100) * root.speed)
+    readonly property int sheetMs: Math.round(pick("motion.sheet", 220) * root.speed)
 
     // How long a popout takes to appear, resize and move between triggers. Leaving
     // is shorter: something arriving is watched, something leaving is already
     // being left, and a slow exit reads as the panel refusing to go.
-    readonly property int popoutMs: pick("motion.popout", 420)
-    readonly property int popoutExitMs: pick("motion.popoutExit", 260)
-    readonly property real dotStagger: pick("motion.dotStagger", 8)
+    readonly property int popoutMs: Math.round(pick("motion.popout", 220) * root.speed)
+    readonly property int popoutExitMs: Math.round(pick("motion.popoutExit", 130) * root.speed)
+    readonly property real dotStagger: pick("motion.dotStagger", 5) * root.speed
 
     /*
      * Bezier easing points. Qt requires these in multiples of six — two control
@@ -99,8 +125,8 @@ Singleton {
     // use `soft`. The previous pair — ease-out-cubic in, ease-in out — measured
     // 40% of the travel inside the first 15% of the time on the way in, and the
     // way out accelerated into a dead stop. Both read as aggressive.
-    readonly property var enterEasing: pick("motion.enterEasing", [0.37, 0, 0.63, 1, 1, 1])
-    readonly property var exitEasing: pick("motion.exitEasing", [0.37, 0, 0.63, 1, 1, 1])
+    readonly property var enterEasing: pick("motion.enterEasing", [0.45, 0, 0.15, 1, 1, 1])
+    readonly property var exitEasing: pick("motion.exitEasing", [0.45, 0, 0.15, 1, 1, 1])
     // Overshoots slightly. For things that appear rather than merely move.
     readonly property var expressive: pick("motion.expressive", [0.34, 1.26, 0.38, 1, 1, 1])
     // Eased at both ends. For something changing size, where enterEasing's hard
@@ -113,7 +139,10 @@ Singleton {
      * covered 40% of its distance after 15% of its time. Use for anything large
      * enough that its motion is watched.
      */
-    readonly property var soft: pick("motion.soft", [0.37, 0, 0.63, 1, 1, 1])
+    // Revised to land more softly: sine in-out reaches its stop in the same
+    // time it took to get going, which on a short sheet read as arriving with a
+    // thud. This one starts as gently but spends longer settling.
+    readonly property var soft: pick("motion.soft", [0.45, 0, 0.15, 1, 1, 1])
 
     /*
      * Eased out, for small feedback only: a press, a hover lift, a colour. At
@@ -122,7 +151,7 @@ Singleton {
      * use `soft` for those.
      */
     readonly property var gentle: pick("motion.gentle", [0.215, 0.61, 0.355, 1, 1, 1])
-    readonly property int expressiveMs: pick("motion.expressiveMs", 420)
+    readonly property int expressiveMs: Math.round(pick("motion.expressiveMs", 220) * root.speed)
 
     function pick(keyPath, fallback) {
         let node = tokens;
@@ -158,7 +187,7 @@ Singleton {
         root.preset = preset;
         if (!root.dirty)
             root.user = user;
-        root.tokens = Config.merge(preset, root.user);
+        root.tokens = Config.merge(Config.merge(preset, root.user), root.generated);
         root.ready = true;
     }
 
@@ -212,7 +241,7 @@ Singleton {
     function commitUser(next) {
         root.user = next;
         root.dirty = true;
-        root.tokens = Config.merge(root.preset, next);
+        root.tokens = Config.merge(Config.merge(root.preset, next), root.generated);
         writer.restart();
     }
 

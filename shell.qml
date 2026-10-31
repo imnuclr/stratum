@@ -1,5 +1,5 @@
 //@ pragma DefaultEnv QS_NO_RELOAD_POPUP=1
-//@ pragma DefaultEnv QSG_RENDER_LOOP=threaded
+//@ pragma DefaultEnv QSG_RENDER_LOOP=basic
 //@ pragma DefaultEnv QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
 
 import QtQuick
@@ -14,8 +14,11 @@ import qs.modules.bar
 import qs.modules.control
 import qs.modules.dashboard
 import qs.modules.hotzones
+import qs.modules.launcher
 import qs.modules.lock
 import qs.modules.notifications
+import qs.modules.osd
+import qs.modules.widgets
 import qs.modules.session
 import qs.modules.settings
 
@@ -38,6 +41,17 @@ ShellRoot {
         // rather than on first panel open.
         Config.ready;
         Theme.ready;
+        // Lazy, so touched here: nothing else asks for it until a colour is wanted.
+        WallColours.mode;
+        Cutout.enabled;
+        // Reads the binds now, which also brings an old binds file up to date.
+        Binds.refresh();
+        // Puts your chosen window blur in place.
+        Decor.blur;
+        // Keeps app themes in step with the shell's colours.
+        AppTheme.palette;
+        // Looks for updates a little later, then every six hours.
+        Updates.automatic;
     }
 
     // Quickshell singletons are lazy, and a lazy singleton never registers its
@@ -82,6 +96,7 @@ ShellRoot {
 
     // Bottom of the stack, so everything else draws over it.
     Background {}
+    WidgetLayer {}
     Bar {}
     Dashboard {}
     Control {}
@@ -89,10 +104,17 @@ ShellRoot {
     Notifications {}
     HotZones {}
     Toasts {}
+    OsdOverlay {}
     Session {}
     Lock {}
     Settings {}
+    Spotlight {}
+    WallpaperMenus {}
+    WallpaperPickers {}
     Shortcuts {}
+
+    Freeze {}
+    CutoutLayer {}
 
     /*
      * Settings, scriptably. Values are JSON, so `config set notifications.toastMs 8000`
@@ -150,6 +172,107 @@ ShellRoot {
 
         function rescan(): void {
             Wallpaper.scan();
+        }
+    }
+
+    // `stratum ipc palette status` — what the shell knows about matugen. Here
+    // rather than in WallColours: a handler inside a lazy singleton never registers.
+    IpcHandler {
+        target: "palette"
+
+        function status(): string {
+            // Undefined here means the service failed to load: see the log.
+            if (WallColours.mode === undefined)
+                return "WallColours did not load — see: stratum log";
+            return [
+                `mode:     ${WallColours.mode}`,
+                `matugen:  ${WallColours.binary || "(none)"}`,
+                `search:   ${WallColours.searched}`,
+                `image:    ${WallColours.image || "(no wallpaper)"}`,
+                `error:    ${WallColours.error || "(none)"}`,
+                `colours:  ${JSON.stringify(Theme.generated?.color ?? {})}`
+            ].join("\n");
+        }
+
+        function find(): string {
+            WallColours.binary = "";
+            WallColours.find();
+            return "searching again — ask for status in a second";
+        }
+
+        function run(): string {
+            WallColours.cache = ({});
+            WallColours.refresh();
+            return "running matugen — ask for status in a second";
+        }
+    }
+
+    // An app's window brought to this workspace, or the app started: what an
+    // "open app" key runs.
+    IpcHandler {
+        target: "apps"
+
+        function open(name: string): void {
+            Apps.open(name);
+        }
+    }
+
+    // Modes and one-shot actions, for stratumctl and your own keybinds.
+    IpcHandler {
+        target: "do"
+
+        function game(on: string): string {
+            GameMode.setOn(on === "toggle" ? !GameMode.on : on === "on");
+            return GameMode.on ? "game mode on" : "game mode off";
+        }
+
+        function dnd(on: string): string {
+            if ((on === "toggle") || (on === "on") !== Notifs.dnd)
+                Notifs.toggleDnd();
+            return Notifs.dnd ? "do not disturb on" : "do not disturb off";
+        }
+
+        function caffeine(on: string): string {
+            if ((on === "toggle") || (on === "on") !== Toggles.caffeine)
+                Toggles.toggleCaffeine();
+            return Toggles.caffeine ? "keeping awake" : "sleeping as usual";
+        }
+
+        function screenshot(kind: string): void {
+            if (kind === "screen")
+                Screenshot.screen();
+            else if (kind === "edit")
+                Screenshot.annotate();
+            else
+                Screenshot.region();
+        }
+
+        function record(kind: string): void {
+            if (kind === "region")
+                Toggles.toggleRecordRegion();
+            else
+                Toggles.toggleRecording();
+        }
+
+        function profile(name: string): string {
+            if (name.length > 0)
+                Power.setProfile(name === "eco" ? "power-saver" : name);
+            return Power.profile;
+        }
+
+        function update(): string {
+            Updates.update();
+            return Updates.count > 0 ? "updating" : "nothing to update — run: stratumctl check";
+        }
+
+        function check(): string {
+            Updates.check();
+            return "checking — stratumctl updates to see the result";
+        }
+
+        function updates(): string {
+            return Updates.count === 0 ? `up to date (${Updates.version})`
+                : Updates.waiting.map(c => `${c.hash}  ${c.title}`).join("\n");
         }
     }
 

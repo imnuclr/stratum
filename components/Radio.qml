@@ -30,6 +30,8 @@ Item {
         Behavior on border.color {
             ColorAnimation {
                 duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
 
@@ -68,6 +70,8 @@ Item {
         Behavior on color {
             ColorAnimation {
                 duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
             }
         }
     }

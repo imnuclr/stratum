@@ -22,6 +22,19 @@ Scope {
     id: root
 
     property bool preview: false
+
+    /*
+     * If the shell ever goes down while the screen is locked, Hyprland keeps the
+     * session locked and shows its "lock screen crashed" screen. With this on, a
+     * shell started again (stratum start, from a TTY) takes the lock back over
+     * and shows the password box, instead of the only way out being a reboot.
+     */
+    Component.onCompleted: {
+        if (Hypr.lua)
+            Hypr.configure("{ misc = { allow_session_lock_restore = true } }");
+        else
+            Quickshell.execDetached(["hyprctl", "keyword", "misc:allow_session_lock_restore", "1"]);
+    }
     // What the compositor has confirmed, not what was last asked for: `locked`
     // is the request and was seen reading true after the session had been released.
     readonly property bool locked: session.secure
@@ -38,6 +51,7 @@ Scope {
     }
 
     function lock() {
+        console.info(`[lock] asked to lock (secure=${session.secure})`);
         if (session.secure)
             return;
         Shell.close();
@@ -46,6 +60,7 @@ Scope {
     }
 
     function release() {
+        console.info("[lock] releasing");
         session.locked = false;
         root.preview = false;
         credentials.reset();
@@ -62,12 +77,17 @@ Scope {
     Timer {
         id: letGo
 
-        interval: Theme.sheetMs + 60
+        // The ring filling, then the screen drawing in (LockScreen's depart).
+        interval: Math.max(60, Theme.speed * 680)
         onTriggered: root.release()
     }
 
     WlSessionLock {
         id: session
+
+        // Each step, in the log, so a lock that fails says how far it got.
+        onLockedChanged: console.info(`[lock] locked=${locked}`)
+        onSecureChanged: console.info(`[lock] compositor confirms secure=${secure}`)
 
         LockSurface {
             auth: credentials

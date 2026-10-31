@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.services
 
 /*
  * Panel visibility, centralised. Exactly one panel is open at a time; opening
@@ -20,12 +21,33 @@ Singleton {
     property string openPanel: ""
 
     /*
+     * Settings is a window, not a panel, so it has its own state: opening the
+     * control centre or a menu over it must not close it, the way one panel
+     * replaces another. Asking for "settings" through open or toggle lands here.
+     */
+    property bool settingsOpen: false
+
+    // Whether the settings window is on the workspace in front of you.
+    function settingsHere() {
+        const win = Hypr.toplevels.find(t => t.title === "Stratum Settings");
+        return !win || win.workspace?.id === Hypr.focusedWorkspace?.id;
+    }
+
+    function closeSettings() {
+        root.settingsOpen = false;
+    }
+
+    /*
      * Which screen the open panel belongs to. Panels are built per screen, so
      * without this every screen's copy shows at once and the panel appears on
      * both monitors. Empty means "wherever", for a panel opened over IPC with no
      * pointer to attribute it to.
      */
     property string openScreen: ""
+
+    // Where the open panel was asked for from — "bar", "control" or empty — so a
+    // panel reachable from more than one place can open beside whichever it was.
+    property string openFrom: ""
 
     // Set when a panel was opened by hover, so a click-opened panel is not
     // dismissed by the pointer wandering off.
@@ -53,6 +75,10 @@ Singleton {
     // is one sheet per monitor and the choice should follow you between them.
     property string settingsPage: "wallpaper"
 
+    // A setting to bring into view and flash once its page is showing, by its
+    // title. Cleared by the row that answers to it.
+    property string settingsFocus: ""
+
     function expand(which) {
         root.expandedChip = root.expandedChip === which ? "" : which;
     }
@@ -77,7 +103,29 @@ Singleton {
     }
     property int holds: 0
 
-    function toggle(name, screen) {
+    function toggle(name, screen, from) {
+        if (name === "settings") {
+            /*
+             * Open, but on another workspace: asking for it brings it here
+             * rather than closing it. Closing first meant a second click to
+             * get it back, on the workspace you had just left.
+             */
+            if (root.settingsOpen && !root.settingsHere()) {
+                Hypr.bringWindow("title:^(Stratum Settings)$");
+                root.close();
+                return;
+            }
+            root.settingsOpen = !root.settingsOpen;
+            if (root.settingsOpen)
+                root.close();
+            return;
+        }
+        // A click on the trigger that opened a click-dismissed panel first lands
+        // outside it, closing it, and then arrives here as a toggle. Without this
+        // the panel closed and immediately opened again.
+        if (cooldown.running && name === root.lastClosed && openPanel.length === 0)
+            return;
+        root.openFrom = from ?? "";
         root.hoverOpened = false;
         root.expandedChip = "";
         adopt.stop();
@@ -86,6 +134,13 @@ Singleton {
     }
 
     function open(name, screen) {
+        if (name === "settings") {
+            if (root.settingsOpen && !root.settingsHere())
+                Hypr.bringWindow("title:^(Stratum Settings)$");
+            root.settingsOpen = true;
+            root.close();
+            return;
+        }
         root.hoverOpened = false;
         root.expandedChip = "";
         adopt.stop();

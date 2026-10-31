@@ -2,22 +2,25 @@
   "name": "mono",
   "mode": "dark",
   "color": {
-    "bg": "#09090A",
-    "panel": "#0B0B0C",
-    "surface": "#141416",
-    "surfaceHi": "#1D1D20",
-    "surfaceTop": "#232327",
+    "bg": "#080808",
+    "panel": "#0B0B0B",
+    "surface": "#121212",
+    "surfaceHi": "#1B1B1B",
+    "surfaceTop": "#242424",
     "line": "#12FFFFFF",
     "lineHi": "#24FFFFFF",
-    "fg": "#F4F4F5",
-    "fgDim": "#9A9AA0",
-    "fgFaint": "#5C5C62",
+    "fg": "#F5F5F5",
+    "fgDim": "#9C9C9C",
+    "fgFaint": "#5E5E5E",
     "dotOn": "#FFFFFF",
     "dotOff": "#21FFFFFF",
     "accent": "#FFFFFF",
     "ok": "#4ADE80",
     "warn": "#FBBF24",
-    "crit": "#EF4444"
+    "crit": "#EF4444",
+    "fgBright": "#D6D6D6",
+    "deep": "#030303",
+    "outline": "#D9FFFFFF"
   },
   "radius": {
     "tile": 20,
@@ -44,9 +47,9 @@
     "mono": "JetBrainsMono Nerd Font"
   },
   "motion": {
-    "micro": 120,
-    "standard": 200,
+    "micro": 70,
+    "standard": 100,
     "ambient": 500,
-    "dotStagger": 8
+    "dotStagger": 5
   }
 }

@@ -5,6 +5,7 @@ import qs.components
 import qs.config
 import qs.services
 import qs.theme
+import qs.modules.bar
 import qs.modules.bar.popouts
 
 /*
@@ -111,6 +112,7 @@ PanelWindow {
         monitorName: root.name
         vertical: true
         barBottom: 0
-        barEdge: root.onLeft ? column.width : 0
+        barEdge: root.onLeft ? column.width : column.x
+        opensLeft: !root.onLeft
     }
 }

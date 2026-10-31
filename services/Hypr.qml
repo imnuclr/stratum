@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Io
 
 /*
  * Semantic wrapper over Hyprland dispatch.
@@ -25,6 +26,57 @@ Singleton {
     readonly property var toplevels: Hyprland.toplevels?.values ?? []
     readonly property var focusedWorkspace: Hyprland.focusedWorkspace
     readonly property var activeToplevel: Hyprland.activeToplevel
+
+    /*
+     * Changes one output's resolution and refresh rate, keeping where it sits and
+     * its scale. `monitor` is the object from `hyprctl -j monitors`.
+     */
+    /*
+     * Runs Lua in Hyprland's config at runtime, for settings (hl.config) and
+     * outputs (hl.monitor). There is no direct way in: a dispatch arrives as
+     * `return hl.dispatch(<what was sent>)`, and hl.dispatch takes only an
+     * action, so sending hl.config(...) was refused every time. Sent instead is
+     * a function that runs the Lua — guarded, so a statement Hyprland rejects
+     * does not stop the ones after it — and returns a harmless action.
+     */
+    function runLua(statements) {
+        const body = [].concat(statements).map(st => `pcall(function() ${st} end)`).join(" ");
+        Hyprland.dispatch(`(function() ${body} return hl.dsp.exec_cmd("true") end)()`);
+    }
+
+    function configure(table) {
+        root.runLua(`hl.config(${table})`);
+    }
+
+    function setMonitorMode(monitor, width, height, hz) {
+        const mode = `${width}x${height}@${hz}`;
+        const pos = `${monitor.x}x${monitor.y}`;
+        if (lua) {
+            root.runLua(`hl.monitor({ output = "${monitor.name}", mode = "${mode}", position = "${pos}", scale = ${monitor.scale} })`);
+        } else {
+            modeProc.command = ["hyprctl", "keyword", "monitor", `${monitor.name},${mode},${pos},${monitor.scale}`];
+            modeProc.running = true;
+        }
+    }
+
+    Process {
+        id: modeProc
+    }
+
+    /*
+     * Window blur and shadows, off to save power or back on. Off is set
+     * directly; on is a config reload, which puts back whatever your own
+     * config says rather than guessing what it was.
+     */
+    function setEffects(on) {
+        if (on) {
+            Quickshell.execDetached(["hyprctl", "reload"]);
+        } else if (lua) {
+            root.configure("{ decoration = { blur = { enabled = false }, shadow = { enabled = false } } }");
+        } else {
+            Quickshell.execDetached(["hyprctl", "--batch", "keyword decoration:blur:enabled 0 ; keyword decoration:shadow:enabled 0"]);
+        }
+    }
 
     function focusWorkspace(id) {
         Hyprland.dispatch(lua ? `hl.dsp.focus({ workspace = "${id}" })` : `workspace ${id}`);
@@ -53,6 +105,21 @@ Singleton {
         Hyprland.dispatch(lua
             ? `hl.dsp.focus({ window = "class:${pattern}" })`
             : `focuswindow class:${pattern}`);
+    }
+
+    /*
+     * Moves a window (by a Hyprland window selector, e.g.
+     * "title:^(Stratum Settings)$") to the workspace in front of you and
+     * focuses it.
+     */
+    function bringWindow(selector) {
+        const here = root.focusedWorkspace?.id ?? 1;
+        Hyprland.dispatch(lua
+            ? `hl.dsp.window.move({ window = "${selector}", workspace = "${here}", follow = false })`
+            : `movetoworkspacesilent ${here},${selector}`);
+        Hyprland.dispatch(lua
+            ? `hl.dsp.focus({ window = "${selector}" })`
+            : `focuswindow ${selector}`);
     }
 
     function focusWindow(address) {

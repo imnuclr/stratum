@@ -20,7 +20,7 @@ Item {
 
         DotText {
             anchors.verticalCenter: parent.verticalCenter
-            text: Time.format("HH:mm")
+            text: Time.clock
             size: 26
             // Changes once a minute, but the cascade on a clock in a panel that
             // is only up for seconds just looks like a glitch.
@@ -57,6 +57,8 @@ Item {
                 Behavior on color {
                     ColorAnimation {
                         duration: Theme.micro
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
                     }
                 }
 
@@ -74,7 +76,7 @@ Item {
                 }
 
                 TapHandler {
-                    onTapped: Shell.toggle(modelData.action)
+                    onTapped: Shell.toggle(modelData.action, Shell.openScreen, "control")
                 }
             }
         }

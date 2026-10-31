@@ -1,3 +1,4 @@
+import QtQuick
 import Quickshell.Wayland
 
 // One per screen, made by the session lock. The screen shows the shared auth
@@ -8,6 +9,9 @@ WlSessionLockSurface {
     required property var auth
 
     color: "black"
+
+    Component.onCompleted: console.info(`[lock] surface made for ${screen?.name ?? "a screen"}`)
+    Component.onDestruction: console.info(`[lock] surface gone for ${screen?.name ?? "a screen"}`)
 
     LockScreen {
         anchors.fill: parent

@@ -121,7 +121,7 @@
         "width": 300
     },
     "debug": {
-        "trace": true
+        "trace": false
     },
     "notifications": {
         "width": 380,
@@ -130,6 +130,25 @@
     },
     "wallpaper": {
         "dir": "~/Pictures/Wallpapers",
-        "fadeMs": 600
+        "fadeMs": 150
+    },
+    "motion": {
+        "speed": 1
+    },
+    "clock": {
+        "twelveHour": false
+    },
+    "launcher": {
+        "files": true,
+        "recent": true,
+        "calc": true,
+        "web": true,
+        "engine": "duckduckgo"
+    },
+    "audio": {
+        "step": 2
+    },
+    "osd": {
+        "enabled": true
     }
 }

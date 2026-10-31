@@ -13,45 +13,32 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: Theme.space(4)
 
-        Repeater {
-            // Captions carry a second reading each, so the rings can stay as
-            // bare numbers without losing what they refer to.
-            model: [
-                { value: SysStats.cpu, reading: `${Math.round(SysStats.cpu * 100)}`, caption: `cpu · ${Math.round(SysStats.temperature)}°` },
-                { value: SysStats.memory, reading: `${Math.round(SysStats.memory * 100)}`, caption: `mem · ${SysStats.memoryShort}` },
-                { value: Gpu.usage, reading: Gpu.available ? `${Math.round(Gpu.usage * 100)}` : "--", caption: Gpu.available ? `gpu · ${Math.round(Gpu.temperature)}°` : "gpu · n/a" }
-            ]
+        // Built once and left in place: the readings are bindings on each ring,
+        // so a new value moves the ring rather than replacing it. They used to be
+        // an array of readings handed to a Repeater, which rebuilt all three rings
+        // on every poll and so could never animate.
+        MetricRing {
+            size: 92
+            numberSize: 23
+            value: SysStats.cpu
+            number: SysStats.cpu * 100
+            caption: SysStats.temperature > 0 ? `cpu · ${Math.round(SysStats.temperature)}°` : "cpu"
+        }
 
-            Column {
-                required property var modelData
+        MetricRing {
+            size: 92
+            numberSize: 23
+            value: SysStats.memory
+            number: SysStats.memory * 100
+            caption: `mem · ${SysStats.memoryShort}`
+        }
 
-                spacing: Theme.space(2)
-
-                DotRing {
-                    width: 92
-                    height: 92
-                    count: 44
-                    dotSize: 4.2
-
-                    value: modelData.value
-
-                    DotText {
-                        anchors.centerIn: parent
-                        text: modelData.reading
-                        size: 23
-                        // These change every second. The cascade is the shell's
-                        // signature on a value that changes occasionally; on one
-                        // that changes constantly it is a flicker.
-                        plain: true
-                    }
-                }
-
-                SectionLabel {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    dim: true
-                    text: modelData.caption
-                }
-            }
+        MetricRing {
+            size: 92
+            numberSize: 23
+            value: Gpu.usage
+            number: Gpu.available ? Gpu.usage * 100 : -1
+            caption: Gpu.available ? (Gpu.temperature > 0 ? `gpu · ${Math.round(Gpu.temperature)}°` : "gpu") : "gpu · n/a"
         }
     }
 
@@ -65,8 +52,35 @@ Item {
             width: 180
             spacing: Theme.space(2)
 
-            SectionLabel {
-                text: "processes"
+            // What the list is ranked by: click to switch.
+            Row {
+                spacing: Theme.space(2)
+
+                Repeater {
+                    model: [["cpu", "cpu"], ["memory", "mem"], ["gpu", "gpu"]].filter(m => m[0] !== "gpu" || Gpu.available)
+
+                    SectionLabel {
+                        id: sortBy
+
+                        required property var modelData
+
+                        readonly property bool on: Processes.mode === sortBy.modelData[0]
+
+                        text: sortBy.modelData[1]
+                        color: sortBy.on ? Theme.fg : (sortHover.hovered ? Theme.fgBright : Theme.fgFaint)
+                        font.underline: sortBy.on
+
+                        HoverHandler {
+                            id: sortHover
+
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
+                        TapHandler {
+                            onTapped: Processes.setMode(sortBy.modelData[0])
+                        }
+                    }
+                }
             }
 
             Repeater {
@@ -110,7 +124,6 @@ Item {
                     DotBar {
                         anchors.verticalCenter: parent.verticalCenter
                         count: 6
-                        dotSize: 2.6
                         litScale: 1.5
                         value: modelData.usage
                     }
@@ -118,19 +131,30 @@ Item {
             }
         }
 
+        /*
+         * Each processor core's load right now: one column per core, filled from
+         * the bottom, so a full column is a core working flat out. The title
+         * carries the current clock speed. Spread across the room it has, so a
+         * machine with eight cores does not leave half the column empty.
+         */
         Column {
+            id: cores
+
+            width: parent.width - 180 - Theme.space(4)
             spacing: Theme.space(2)
+
+            readonly property int count: Math.max(1, SysStats.cores.length)
 
             SectionLabel {
                 text: SysStats.frequencyLabel.length > 0 ? `cores · ${SysStats.frequencyLabel}` : "cores"
             }
 
-            // One column per core, all sixteen in a single block — splitting them
-            // into two rows of eight implies a grouping the cores do not have.
+            // One column per core, all of them in a single block — splitting them
+            // into rows implies a grouping the cores do not have.
             DotField {
-                rows: 7
-                cell: 9.4
-                dotSize: 4.4
+                rows: 8
+                // Same dots as everything else, the columns spread to the width.
+                columnSpacing: Math.max(Theme.dotPitch - Theme.dot, Math.min(28, (cores.width - cores.count * Theme.dot) / Math.max(1, cores.count - 1)))
                 values: SysStats.cores
             }
         }

@@ -18,8 +18,6 @@ Item {
 
     DotRing {
         anchors.fill: parent
-        count: 24
-        dotSize: 2.6
         // A full ring, not a meter: this is a frame, not a reading.
         value: 1
         onColor: hover.hovered || root.active ? Theme.fg : Theme.dotOff
