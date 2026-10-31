@@ -47,8 +47,10 @@ Read from the fork, not guessed. These are the specific failures Stratum is desi
 - `WlSessionLock` + `Quickshell.Services.Pam` is the correct lock architecture (`modules/lock/Lock.qml`).
 - The transparency-aware colour maths in `services/Colours.qml` (`alterColour`/`layer`) —
   luminance-compensated layering over a wallpaper is genuinely good and worth porting in spirit.
-- `//@ pragma` env block in `shell.qml`: `QSG_RENDER_LOOP=threaded` and
-  `QT_QUICK_FLICKABLE_WHEEL_DECELERATION` are hard-won. Keep them.
+- `//@ pragma` env block in `shell.qml`: `QT_QUICK_FLICKABLE_WHEEL_DECELERATION` is
+  hard-won. The render loop is `basic`, not `threaded`: on NVIDIA with Qt 6.12 the
+  threaded loop failed `eglSwapBuffers` on some surfaces, so panels and the lock
+  screen opened without ever drawing, and Quickshell crashed on start.
 - The C++ plugin boundary pattern — but build it *only* when profiling demands it, not up front.
 
 ---
@@ -215,7 +217,7 @@ These exist to prevent the specific decay found in the current shell.
 ### Startup budget
 
 Target: **bar visible in <400ms**, full shell warm in <1.5s. Measured in CI with
-`QSG_RENDER_LOOP=threaded`, on the real 3440x1440 display.
+`QSG_RENDER_LOOP=basic`, on the real 3440x1440 display.
 
 ---
 
