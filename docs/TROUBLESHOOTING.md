@@ -125,6 +125,25 @@ Stratum's version brings the app's window to the workspace you're on, from anywh
 
 ---
 
+### Closing the lid does not lock
+
+Stratum locks when the machine suspends, which is what closing a laptop's lid
+normally does. If it does not:
+
+1. Check the setting is on: **Settings → Power → Lock when it sleeps**.
+2. Check closing the lid actually suspends:
+   ```bash
+   grep -i handlelidswitch /etc/systemd/logind.conf /etc/systemd/logind.conf.d/*.conf 2>/dev/null
+   ```
+   `HandleLidSwitch=ignore` means something else (often Hyprland) is handling it.
+   With Hyprland handling it, lock from your config instead:
+   ```lua
+   hl.bindl("", "switch:on:Lid Switch", hl.dsp.global("stratum:lock"))
+   ```
+   (classic config: `bindl = , switch:on:Lid Switch, global, stratum:lock`)
+3. Test the path without the lid: `systemctl suspend`. If that locks, the lid is
+   the part that is not suspending.
+
 ## Looks
 
 ### "Colours from wallpaper" says matugen isn't installed, but it is
