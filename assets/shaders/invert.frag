@@ -4,7 +4,7 @@
 // scale: a widget drawn for one theme, shown over a wallpaper that suits the
 // other. Colours arrive premultiplied, so inverting is alpha minus colour.
 //
-// Compiled with:  qsb --glsl "150,300 es,330" --hlsl 50 --msl 12 -o invert.frag.qsb invert.frag
+// Compiled with:  qsb --glsl "100 es,120,150,300 es,310 es,330,440" --hlsl 50 --msl 12 -o invert.frag.qsb invert.frag
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
