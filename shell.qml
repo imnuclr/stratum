@@ -1,5 +1,5 @@
 //@ pragma DefaultEnv QS_NO_RELOAD_POPUP=1
-//@ pragma DefaultEnv QSG_RENDER_LOOP=threaded
+//@ pragma DefaultEnv QSG_RENDER_LOOP=basic
 //@ pragma DefaultEnv QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
 
 import QtQuick
