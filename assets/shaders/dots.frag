@@ -7,7 +7,7 @@
 // is per-dot work on the CPU, so changing the grid, the dot size or the light is
 // only a change of numbers.
 //
-// Compiled with:  qsb --qt6 -o dots.frag.qsb dots.frag
+// Compiled with:  qsb --glsl "100 es,120,150,300 es,310 es,330,440" --hlsl 50 --msl 12 -o dots.frag.qsb dots.frag
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
