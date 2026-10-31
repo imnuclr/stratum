@@ -50,6 +50,25 @@ updated with `git pull` yourself, also run `stratum restart`.
 
 ---
 
+### The lock screen crashed (red "lock screen crashed" screen)
+
+Your session is still locked and safe. To get back in:
+
+1. Press <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>F3</kbd> and log in on the text console.
+2. Start the shell again on your desktop:
+   ```bash
+   hyprctl --instance 0 keyword misc:allow_session_lock_restore 1
+   hyprctl --instance 0 dispatch exec "qs -c stratum"
+   ```
+   (Lua configs: `hyprctl --instance 0 dispatch '(function() hl.config({ misc = { allow_session_lock_restore = true } }) return hl.dsp.exec_cmd("qs -c stratum") end)()'`)
+3. Press <kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>F1</kbd> (or F2) to go back; the lock screen is
+   there again and takes your password.
+
+Stratum turns `allow_session_lock_restore` on itself while it runs, so usually step 2's
+first line is already done. Then send the crash: `stratum log | tail -n 60`.
+
+Test the lock screen without locking: `stratum ipc lock preview` (Escape closes it).
+
 ## Keys
 
 ### No Stratum keys work (Super + Space, screenshots, Super + L…)

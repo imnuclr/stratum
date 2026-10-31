@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.components
 import qs.services
 import qs.theme
@@ -39,43 +38,32 @@ Item {
         visible: root.fill > 0
     }
 
-    Image {
+    /*
+     * Drawn by DotImage, as the rest of the shell's pictures are, with dots
+     * fine enough to read as a photo. A masked MultiEffect looked cleaner but
+     * took the shell down on the session lock surface, which is the one place
+     * a crash locks you out. Framing on a detected subject is off: it is what
+     * pushed the face off the centre of its ring.
+     */
+    DotImage {
         id: photo
 
         anchors.fill: parent
         anchors.margins: root.inset
-        visible: false
+        visible: Account.avatar.length > 0
         source: Account.avatar.length > 0 ? `file://${Account.avatar}` : ""
-        sourceSize.width: width * 2
-        sourceSize.height: height * 2
-        fillMode: Image.PreserveAspectCrop
-        smooth: true
-        mipmap: true
-    }
-
-    Rectangle {
-        id: disc
-
-        anchors.fill: photo
-        radius: width / 2
-        visible: false
-        layer.enabled: true
-    }
-
-    MultiEffect {
-        anchors.fill: photo
-        visible: Account.avatar.length > 0 && photo.status === Image.Ready
-        source: photo
-        maskEnabled: true
-        maskSource: disc
-        maskThresholdMin: 0.5
-        maskSpreadAtMin: 1
+        circular: true
+        colored: true
+        halftone: false
+        frameSubject: false
+        dotScale: 0.5
+        cell: Math.max(1.4, (root.size - 2 * root.inset) / 90)
     }
 
     Rectangle {
         anchors.fill: photo
         radius: width / 2
-        visible: Account.avatar.length === 0 || photo.status !== Image.Ready
+        visible: Account.avatar.length === 0
         color: Theme.surfaceHi
 
         Text {
