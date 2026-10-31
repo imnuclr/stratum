@@ -53,13 +53,21 @@ Singleton {
     readonly property var palette: {
         const dark = Theme.dark;
         const acc = Theme.accent;
+        /*
+         * A white or grey accent has no hue, and matugen given one invents a
+         * pale blue to build from — so a white accent came out blue in every
+         * app. A colourless accent keeps everything colourless: no scheme, and
+         * greys with no tint.
+         */
+        const grey = acc.hslSaturation < 0.12 || acc.hslHue < 0;
         const role = (name, fallback) => {
-            const v = WallColours.role(name);
+            const v = grey ? "" : WallColours.role(name);
             return v.length > 0 ? v : fallback;
         };
         const h = Math.max(0, acc.hslHue);
-        const tone = (sat, light) => root.hex(Qt.hsla(h, sat, light, 1));
-        const turn = (deg, sat, light) => root.hex(Qt.hsla((h + deg / 360 + 1) % 1, sat, light, 1));
+        const chroma = grey ? 0 : 1;
+        const tone = (sat, light) => root.hex(Qt.hsla(h, sat * chroma, light, 1));
+        const turn = (deg, sat, light) => root.hex(Qt.hsla((h + deg / 360 + 1) % 1, sat * chroma, light, 1));
         const L = dark ? [0.05, 0.07, 0.10, 0.13, 0.16] : [0.98, 0.95, 0.92, 0.89, 0.86];
         const p = {
             dark: dark,
