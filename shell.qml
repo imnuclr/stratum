@@ -217,6 +217,65 @@ ShellRoot {
         }
     }
 
+    // Modes and one-shot actions, for stratumctl and your own keybinds.
+    IpcHandler {
+        target: "do"
+
+        function game(on: string): string {
+            GameMode.setOn(on === "toggle" ? !GameMode.on : on === "on");
+            return GameMode.on ? "game mode on" : "game mode off";
+        }
+
+        function dnd(on: string): string {
+            if ((on === "toggle") || (on === "on") !== Notifs.dnd)
+                Notifs.toggleDnd();
+            return Notifs.dnd ? "do not disturb on" : "do not disturb off";
+        }
+
+        function caffeine(on: string): string {
+            if ((on === "toggle") || (on === "on") !== Toggles.caffeine)
+                Toggles.toggleCaffeine();
+            return Toggles.caffeine ? "keeping awake" : "sleeping as usual";
+        }
+
+        function screenshot(kind: string): void {
+            if (kind === "screen")
+                Screenshot.screen();
+            else if (kind === "edit")
+                Screenshot.annotate();
+            else
+                Screenshot.region();
+        }
+
+        function record(kind: string): void {
+            if (kind === "region")
+                Toggles.toggleRecordRegion();
+            else
+                Toggles.toggleRecording();
+        }
+
+        function profile(name: string): string {
+            if (name.length > 0)
+                Power.setProfile(name === "eco" ? "power-saver" : name);
+            return Power.profile;
+        }
+
+        function update(): string {
+            Updates.update();
+            return Updates.count > 0 ? "updating" : "nothing to update — run: stratumctl check";
+        }
+
+        function check(): string {
+            Updates.check();
+            return "checking — stratumctl updates to see the result";
+        }
+
+        function updates(): string {
+            return Updates.count === 0 ? `up to date (${Updates.version})`
+                : Updates.waiting.map(c => `${c.hash}  ${c.title}`).join("\n");
+        }
+    }
+
     IpcHandler {
         target: "theme"
 
