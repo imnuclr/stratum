@@ -64,13 +64,23 @@ void main() {
         radius = cell * dotScale * sqrt(v);
         colour = vec3(1.0);
     } else {
+        /*
+         * Colour, with the same tone stretch mono gets: the dot's size spans
+         * the range the picture really uses, rather than the whole scale. A
+         * dark picture used most of the scale on tones it never reaches, so
+         * every dot came out small and dim where mono was crisp.
+         */
+        v = clamp((luma - lo) / max(hi - lo, 0.12), 0.0, 1.0);
         // A coloured dot has to be big enough to show its colour.
-        radius = v < 0.04 ? 0.0 : cell * dotScale * (0.4 + 0.6 * sqrt(v));
-        // Same hue, brightness raised to a floor, so shadows become small
-        // saturated dots rather than disappearing.
+        radius = v < 0.02 ? 0.0 : cell * dotScale * (0.34 + 0.66 * sqrt(v));
+        /*
+         * The hue as it is, lifted to the brightness its stretched tone asks
+         * for: a dark but saturated area keeps its colour and still reads,
+         * instead of being a muddy speck.
+         */
         float peak = max(max(c.r, c.g), c.b);
-        const float want = 0.62;
-        colour = peak >= want ? c : (peak < 0.047 ? vec3(want) : c * (want / peak));
+        float want = mix(0.42, 1.0, v);
+        colour = peak < 0.02 ? vec3(want) : c * (want / peak);
     }
 
     float a = clamp(radius - length(px - centre) + 0.5, 0.0, 1.0) * light;

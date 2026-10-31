@@ -182,10 +182,11 @@ PanelWindow {
             }
         }
 
-        // A click on bare screen keeps the one being shown and closes.
+        // A click on bare screen leaves, as Esc does — a stray click setting a
+        // wallpaper is a surprise, and the strip is where choosing happens.
         MouseArea {
             anchors.fill: parent
-            onClicked: root.keep()
+            onClicked: Shell.close()
             onWheel: wheel => root.go(root.index + (wheel.angleDelta.y > 0 ? -1 : 1))
         }
 

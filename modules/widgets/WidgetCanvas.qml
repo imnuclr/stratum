@@ -86,6 +86,8 @@ PanelWindow {
             "battery": batteryWidget,
             "disk": diskWidget,
             "network": networkWidget,
+            "power": powerWidget,
+            "uptime": uptimeWidget,
             "photo": photoWidget
         })[type];
     }
@@ -1079,6 +1081,18 @@ PanelWindow {
         id: networkWidget
 
         NetworkWidget {}
+    }
+
+    Component {
+        id: powerWidget
+
+        PowerWidget {}
+    }
+
+    Component {
+        id: uptimeWidget
+
+        UptimeWidget {}
     }
 
     Component {

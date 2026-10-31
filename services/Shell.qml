@@ -180,6 +180,20 @@ Singleton {
         return best.name;
     }
 
+    /*
+     * A panel that covers a whole screen belongs to that screen. Moving the
+     * pointer to another one leaves it behind, over a display you are no longer
+     * looking at and taking every click there, so it closes instead.
+     */
+    readonly property var fullScreenPanels: ["picker", "wallpaper"]
+    readonly property string focusedMonitor: Hypr.focusedWorkspace?.monitor?.name ?? ""
+
+    onFocusedMonitorChanged: {
+        if (root.fullScreenPanels.includes(root.openPanel)
+            && root.openScreen.length > 0 && root.openScreen !== root.focusedMonitor)
+            root.close();
+    }
+
     property string lastClosed: ""
 
     function close() {
