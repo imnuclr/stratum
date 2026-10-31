@@ -17,10 +17,6 @@
 
 ---
 
-<p align="center">
-  <img src="docs/images/widgets.jpg" alt="The desktop: a dot-matrix clock, greeting and widgets" width="85%">
-</p>
-
 Stratum draws the whole desktop as layers — wallpaper, widgets, bar and panels,
 overlays, lock screen — and draws all of it in dots. Every gauge is a dotted ring,
 every progress bar a row of dots, the clock a dot matrix, album art dithered into
@@ -70,13 +66,6 @@ shell, window borders, terminal, Spotify (Spicetify), Vesktop and GTK.
 </tr>
 </table>
 
-<p align="center">
-  <img src="docs/images/keybinds.png" alt="Keybinds, drawn as a keyboard" width="48%">
-  &nbsp;
-  <img src="docs/images/tray.png" alt="A tray app's menu in a popout" width="22%">
-  &nbsp;
-  <img src="docs/images/now-playing.png" alt="Now playing widget" width="26%">
-</p>
 
 ## Install
 
