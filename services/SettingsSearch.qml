@@ -100,6 +100,7 @@ Singleton {
         ["power", "Power profile", "power profile eco balanced performance battery saver mode"],
         ["power", "Saving energy", "battery life save energy eco low power savers"],
         ["power", "On the lock screen", "lock screen shut down restart reboot log out sleep power buttons"],
+        ["power", "Lock when it sleeps", "lock lid close suspend sleep screen password wake"],
         ["power", "Keep awake", "caffeine idle sleep screen off awake inhibit"],
         ["power", "Battery", "battery charge percentage charging time remaining"],
         // keybinds

@@ -190,6 +190,16 @@ SettingsPage {
         title: "sleep"
 
         SettingRow {
+            title: "Lock when it sleeps"
+            detail: "Closing the lid or suspending locks the screen first, so it wakes up locked."
+
+            Switch {
+                checked: Config.get("lock.onSleep", true)
+                onToggled: value => Config.set("lock.onSleep", value)
+            }
+        }
+
+        SettingRow {
             title: "Keep awake"
             detail: "Stops the screen dimming, locking or sleeping on its own until you turn this off."
 

@@ -59,6 +59,31 @@ Scope {
         session.locked = true;
     }
 
+    /*
+     * About to sleep — the lid closing, or anything else that suspends. The
+     * screen is locked first so the machine wakes up locked, which is what
+     * closing a laptop is usually taken to mean. `lock.onSleep: false` leaves
+     * it unlocked.
+     */
+    function sleeping() {
+        if (!Config.get("lock.onSleep", true))
+            return;
+        console.info("[lock] sleeping, locking first");
+        root.lock();
+    }
+
+    /*
+     * Awake again. Services that are polled on a timer have been frozen for as
+     * long as the machine slept, so each is nudged — a clock an hour behind and
+     * a battery reading from yesterday are what the first seconds after waking
+     * otherwise look like.
+     */
+    function woke() {
+        console.info("[lock] awake");
+        Time.now = new Date();
+        Netstat.reset();
+    }
+
     function release() {
         console.info("[lock] releasing");
         session.locked = false;
@@ -127,11 +152,36 @@ Scope {
         command: [
             "dbus-monitor", "--system",
             "type='signal',interface='org.freedesktop.login1.Session',member='Lock'",
-            "type='signal',interface='org.freedesktop.login1.Session',member='Unlock'"
+            "type='signal',interface='org.freedesktop.login1.Session',member='Unlock'",
+            // Closing the lid suspends the machine, and logind says so here
+            // rather than asking for a lock; without this the laptop woke up
+            // unlocked.
+            "type='signal',interface='org.freedesktop.login1.Manager',member='PrepareForSleep'"
         ]
+
+        /*
+         * PrepareForSleep carries its true or false on the line after the
+         * signal, so the signal is remembered until that line arrives.
+         */
+        property bool sleepNext: false
 
         stdout: SplitParser {
             onRead: line => {
+                if (logind.sleepNext) {
+                    const b = line.match(/boolean (true|false)/);
+                    if (b) {
+                        logind.sleepNext = false;
+                        if (b[1] === "true")
+                            root.sleeping();
+                        else
+                            root.woke();
+                        return;
+                    }
+                }
+                if (/member=PrepareForSleep\b/.test(line)) {
+                    logind.sleepNext = true;
+                    return;
+                }
                 const m = line.match(/path=(\S+?);.*member=(Lock|Unlock)\b/);
                 if (!m)
                     return;

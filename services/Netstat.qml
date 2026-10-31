@@ -38,6 +38,18 @@ Singleton {
 
     property int watchers: 0
 
+    /*
+     * Forget the last sample. Rates are the difference between two samples over
+     * the time between them, so the first sample after the machine has been
+     * asleep for an hour reads as an hour of traffic in one tick.
+     */
+    function reset() {
+        root.lastRx = 0;
+        root.lastTx = 0;
+        root.rxRate = 0;
+        root.txRate = 0;
+    }
+
     function watch() {
         root.watchers++;
     }
