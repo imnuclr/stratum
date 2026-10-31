@@ -90,13 +90,21 @@ Singleton {
             d = ((d + 540) % 360) - 180;
             return ((hue + d * tint) + 360) % 360 / 360;
         };
-        const ansi = hue => root.hex(Qt.hsla(pull(hue), dark ? 0.62 : 0.55, dark ? 0.72 : 0.38, 1));
-        const bright = hue => root.hex(Qt.hsla(pull(hue), dark ? 0.7 : 0.6, dark ? 0.8 : 0.3, 1));
-        p.hues = [p.error, ansi(130), ansi(45), ansi(215), p.tertiary, ansi(185)];
-        p.brights = [bright(5), bright(130), bright(45), bright(215), bright(300), bright(185)];
-        p.black = dark ? p.bgHi : p.fgDim;
+        /*
+         * Terminal colours as roles, the way Material You terminal themes do it:
+         * blue, magenta and cyan are the scheme's three accents, red its error
+         * colour, and green and yellow soft pastels leaned toward the accent.
+         * All sit at one softness, so a diff, a prompt and an ls listing look
+         * like one thing rather than the stock eight hues on a tinted grey.
+         */
+        const soft = hue => root.hex(Qt.hsla(pull(hue), dark ? 0.48 : 0.5, dark ? 0.76 : 0.36, 1));
+        const lift = c => root.hex(dark ? root.mix(root.parse(c), Qt.rgba(1, 1, 1, 1), 0.18) : root.mix(root.parse(c), Qt.rgba(0, 0, 0, 1), 0.15));
+        p.hues = [p.error, soft(135), soft(48), p.accent, p.tertiary, p.secondary];
+        p.brights = p.hues.map(lift);
+        p.black = dark ? p.bgTop : p.fgDim;
         p.white = dark ? p.fgDim : p.bgTop;
-        p.grey = p.outline;
+        // Comments and dim text: readable, not a smudge.
+        p.grey = root.hex(dark ? root.mix(root.parse(p.outline), root.parse(p.fg), 0.25) : root.parse(p.outline));
         return p;
     }
 
@@ -127,6 +135,8 @@ Singleton {
             root.put(`${root.cfg}/spicetify/Themes/Stratum/color.ini`, root.spicetify(p));
             root.put(`${root.cfg}/spicetify/Themes/Stratum/user.css`, "/* Stratum: colours only. */\n");
         }
+        if (root.on("fetch"))
+            root.put(`${root.cfg}/fastfetch/config.jsonc`, root.fetch(p));
         if (root.on("discord")) {
             for (const dir of ["vesktop", "Vencord", "equibop"])
                 root.put(`${root.cfg}/${dir}/themes/stratum.theme.css`, root.discord(p));
@@ -229,11 +239,20 @@ Singleton {
         linker.running = true;
         if (app === "spotify")
             spicetifySetup.running = true;
+        // fastfetch reads one config; yours is kept beside it, once.
+        if (app === "fetch")
+            Quickshell.execDetached(["sh", "-c", `d="${c}/fastfetch"; mkdir -p "$d"
+                [ -f "$d/config.jsonc" ] && ! grep -q 'Written by Stratum' "$d/config.jsonc" && [ ! -f "$d/config.before-stratum.jsonc" ] \
+                    && cp "$d/config.jsonc" "$d/config.before-stratum.jsonc"; true`]);
         writeLater.restart();
     }
 
     function disconnect(app) {
         Config.set(`apps.theme.${app}`, false);
+        // Your own fastfetch config back, as it was.
+        if (app === "fetch")
+            Quickshell.execDetached(["sh", "-c", `d="${root.cfg}/fastfetch"
+                [ -f "$d/config.before-stratum.jsonc" ] && mv "$d/config.before-stratum.jsonc" "$d/config.jsonc"; true`]);
     }
 
     Process {
@@ -308,6 +327,58 @@ Singleton {
             `@define-color theme_selected_bg_color ${p.accent};`,
             `@define-color theme_selected_fg_color ${p.accentText};`,
             ":root {", `  --accent-color: ${p.accent};`, `  --accent-bg-color: ${p.accent};`, `  --accent-fg-color: ${p.accentText};`, "}"].join("\n") + "\n";
+    }
+
+    /*
+     * The terminal greeting: the bar's mark — a ring of dots round an accent
+     * dot — beside a short, lowercase list, ending in the palette as a row of
+     * dots. fastfetch takes colours as SGR codes, so each is a truecolour one.
+     */
+    function fetch(p) {
+        const sgr = hex => {
+            const n = parseInt(hex.slice(1, 7), 16);
+            return `38;2;${(n >> 16) & 255};${(n >> 8) & 255};${n & 255}`;
+        };
+        const logo = [
+            "     $2·  ·  ·  ·",
+            "  $2·              ·",
+            " $2·                ·",
+            "$2·        $1●        $2·",
+            " $2·                ·",
+            "  $2·              ·",
+            "     $2·  ·  ·  ·"
+        ].join("\n");
+        const key = (type, name, extra) => Object.assign({ type: type, key: name }, extra ?? {});
+        return "// Written by Stratum from the shell's colours. Changes are overwritten;\n"
+            + "// switch it off in Settings → Appearance → Apps to get your own back.\n"
+            + JSON.stringify({
+                $schema: "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+                logo: {
+                    type: "data",
+                    source: logo,
+                    color: { "1": sgr(p.accent), "2": sgr(p.grey) },
+                    padding: { top: 1, left: 2, right: 4 }
+                },
+                display: {
+                    separator: "  ",
+                    color: { keys: sgr(p.fgDim), title: sgr(p.accent), output: sgr(p.fg), separator: sgr(p.grey) },
+                    key: { width: 9 }
+                },
+                modules: [
+                    "break",
+                    { type: "title", format: "{user-name}{#" + sgr(p.grey) + "} · {#" + sgr(p.accent) + "}{host-name}" },
+                    { type: "custom", format: "{#" + sgr(p.grey) + "}· · · · · · · · · · · · · · · ·" },
+                    key("os", "system"),
+                    key("kernel", "kernel"),
+                    key("uptime", "up"),
+                    key("packages", "packages"),
+                    key("shell", "shell"),
+                    key("wm", "desktop", { format: "{pretty-name} · stratum" }),
+                    key("memory", "memory"),
+                    "break",
+                    { type: "colors", symbol: "circle", paddingLeft: 0 }
+                ]
+            }, null, 2) + "\n";
     }
 
     function spicetify(p) {
