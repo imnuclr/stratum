@@ -158,6 +158,34 @@ SettingsPage {
         }
     }
 
+    // What the lock screen offers without unlocking. Sleep is always there.
+    SettingCard {
+        title: "on the lock screen"
+        footnote: "Sleep is always there. Anyone at the keyboard can use these without your password."
+
+        Repeater {
+            model: [
+                { key: "restart", title: "Restart" },
+                { key: "shutdown", title: "Shut down" },
+                { key: "logout", title: "Log out", detail: "Ends your session; unsaved work in open apps is lost." }
+            ]
+
+            SettingRow {
+                id: lockOption
+
+                required property var modelData
+
+                title: lockOption.modelData.title
+                detail: lockOption.modelData.detail ?? ""
+
+                Switch {
+                    checked: Config.get(`lock.session.${lockOption.modelData.key}`, false)
+                    onToggled: value => Config.set(`lock.session.${lockOption.modelData.key}`, value)
+                }
+            }
+        }
+    }
+
     SettingCard {
         title: "sleep"
 

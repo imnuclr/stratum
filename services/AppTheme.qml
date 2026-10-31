@@ -48,7 +48,7 @@ Singleton {
      * there is one (WallColours.scheme: the wallpaper's, or one built from your
      * accent), so surfaces, text and three accents belong together the way
      * Material You's do. Without matugen, the same roles are worked out from
-     * the accent's hue: tinted greys, and secondary and tertiary turned from it.
+     * the accent's hue: tinted neutrals, and secondary and tertiary turned from it.
      */
     readonly property var palette: {
         const dark = Theme.dark;
@@ -57,7 +57,7 @@ Singleton {
          * A white or grey accent has no hue, and matugen given one invents a
          * pale blue to build from — so a white accent came out blue in every
          * app. A colourless accent keeps everything colourless: no scheme, and
-         * greys with no tint.
+         * neutrals with no tint.
          */
         const grey = acc.hslSaturation < 0.12 || acc.hslHue < 0;
         const role = (name, fallback) => {

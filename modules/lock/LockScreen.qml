@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import qs.components
 import qs.config
 import qs.services
@@ -130,6 +131,84 @@ FocusScope {
         anchors.fill: parent
         opacity: 1 - root.leave
         scale: 1 - 0.05 * root.leave
+
+        /*
+         * Power, without unlocking: sleep always, and restart, shut down and log
+         * out when turned on in Settings → Power. Round, quiet buttons in the
+         * corner opposite the notification count; the ones that end the
+         * session turn red under the pointer.
+         */
+        Row {
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: 56 * root.u
+            anchors.bottomMargin: 34 * root.u
+            spacing: 12 * root.u
+            opacity: root.part(0.45)
+
+            Repeater {
+                model: [
+                    { key: "sleep", icon: "moon", label: "sleep", cmd: ["systemctl", "suspend"], shown: true, danger: false },
+                    { key: "logout", icon: "link-off", label: "log out", cmd: ["hyprctl", "dispatch", "exit"], shown: Config.get("lock.session.logout", false), danger: true },
+                    { key: "restart", icon: "scan", label: "restart", cmd: ["systemctl", "reboot"], shown: Config.get("lock.session.restart", false), danger: true },
+                    { key: "shutdown", icon: "power", label: "shut down", cmd: ["systemctl", "poweroff"], shown: Config.get("lock.session.shutdown", false), danger: true }
+                ].filter(b => b.shown)
+
+                Rectangle {
+                    id: power
+
+                    required property var modelData
+
+                    width: 46 * root.u
+                    height: width
+                    radius: width / 2
+                    color: powerHover.hovered ? (power.modelData.danger ? Theme.danger : Theme.surfaceTop) : Theme.surfaceHi
+                    border.width: 1
+                    border.color: Theme.line
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Theme.micro
+                            easing.type: Easing.Bezier
+                            easing.bezierCurve: Theme.smooth
+                        }
+                    }
+
+                    Glyph {
+                        anchors.centerIn: parent
+                        name: power.modelData.icon
+                        size: 18 * root.u
+                        color: powerHover.hovered && power.modelData.danger ? "#FFFFFF" : Theme.fgBright
+                    }
+
+                    // Its name, above it, while pointed at.
+                    LockLabel {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.top
+                        anchors.bottomMargin: 8 * root.u
+                        u: root.u * 0.9
+                        text: power.modelData.label
+                        opacity: powerHover.hovered ? 1 : 0
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Theme.micro
+                            }
+                        }
+                    }
+
+                    HoverHandler {
+                        id: powerHover
+
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    TapHandler {
+                        onTapped: Quickshell.execDetached(power.modelData.cmd)
+                    }
+                }
+            }
+        }
 
         StatusCorner {
             opacity: root.part(0.45)
