@@ -75,7 +75,9 @@ SettingsPage {
                 let name = "";
                 try {
                     const a = JSON.parse(text).address ?? {};
-                    name = a.city || a.town || a.village || a.municipality || a.county || a.state || "";
+                    // The town people would name, not the hamlet nearest the
+                    // click: a point between villages came back as one of them.
+                    name = a.city || a.town || a.municipality || a.village || a.suburb || a.county || a.state || "";
                 } catch (e) {}
                 Weather.choose(page.pendingLat, page.pendingLon,
                     name || `${page.pendingLat.toFixed(2)}, ${page.pendingLon.toFixed(2)}`);
@@ -89,7 +91,7 @@ SettingsPage {
         // Shown at once; named when the answer comes.
         Weather.choose(lat, lon, `${lat.toFixed(2)}, ${lon.toFixed(2)}`);
         reverse.command = ["curl", "-s", "--max-time", "8", "-A", "Stratum shell weather picker",
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&lat=${lat}&lon=${lon}`];
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=8&lat=${lat}&lon=${lon}`];
         reverse.running = true;
     }
 
