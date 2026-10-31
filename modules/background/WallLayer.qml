@@ -68,8 +68,8 @@ Item {
         // Kept, so going back to a picture already seen is instant, and so the
         // picker can have its neighbours decoded before they are asked for.
         cache: true
-        // For the shader, which reads a cell's average from a coarser level.
-        mipmap: root.look === "dots"
+        // The shader averages the cell itself, from the picture as it is.
+        mipmap: false
 
         onStatusChanged: {
             if (status === Image.Ready) {

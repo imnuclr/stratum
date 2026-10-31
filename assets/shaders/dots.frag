@@ -34,9 +34,20 @@ void main() {
     vec2 centre = (floor(px / cell) + 0.5) * cell;
     vec2 uv = uvOffset + uvScale * (centre / size);
 
-    // Mipmapped, so a read at the cell's middle is an average of the cell and
-    // not a single speck that happens to sit there.
-    vec3 c = textureLod(source, uv, log2(max(cell, 1.0))).rgb;
+    /*
+     * The cell's average, as nine taps across it rather than one mip level.
+     *
+     * Reading a blurred level is cheaper, but the level has to exist: where the
+     * texture had none the read returned nothing and the whole wallpaper came
+     * out black, on one machine and not another. Nothing here names a level.
+     */
+    vec2 tap = uvScale / size * (cell / 3.0);
+    vec3 c = vec3(0.0);
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++)
+            c += texture(source, uv + vec2(float(i), float(j)) * tap).rgb;
+    }
+    c /= 9.0;
     float luma = dot(c, vec3(0.299, 0.587, 0.114));
 
     float v = luma;
