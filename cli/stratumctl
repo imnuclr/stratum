@@ -1,26 +1,95 @@
 #!/usr/bin/env bash
-# stratumctl — talk to a running Stratum over Quickshell IPC.
+# stratumctl — control a running Stratum: panels, modes, wallpaper, screenshots,
+# settings and updates, for scripts and your own keybinds.
+#
+# `stratum` starts and stops the shell; this talks to it once it is running.
 set -euo pipefail
 
 ipc() { qs -c stratum ipc call "$@"; }
 
-case "${1:-help}" in
-  toggle)  ipc panel toggle "${2:?panel name required}" ;;
-  open)    ipc panel open "${2:?panel name required}" ;;
-  close)   ipc panel close ;;
-  current) ipc panel current ;;
-  reload)  pkill -USR1 -f "qs -c stratum" || { echo "stratum is not running" >&2; exit 1; } ;;
-  *)
-    cat <<USAGE
+need() { [ -n "${1:-}" ] || { usage; exit 1; }; }
+
+usage() {
+  cat <<USAGE
 
   stratumctl — control a running Stratum
 
-    stratumctl toggle PANEL    dashboard | controlCentre | launcher
+  panels
+    stratumctl toggle PANEL       launcher · control · dashboard · session · settings
     stratumctl open PANEL
     stratumctl close
-    stratumctl current         print the open panel, if any
-    stratumctl reload
+    stratumctl settings [PAGE]    open settings, on a page (e.g. displays, weather)
+    stratumctl launcher [TEXT]    open the launcher, optionally already searching
+
+  modes                           each takes on, off or toggle (default toggle)
+    stratumctl game [on|off]
+    stratumctl dnd [on|off]
+    stratumctl awake [on|off]     keep the screen awake
+    stratumctl dark | light       theme
+    stratumctl profile [NAME]     eco · balanced · performance; prints it without one
+
+  doing
+    stratumctl screenshot [region|screen|edit]
+    stratumctl record [screen|region]   press again to stop
+    stratumctl lock
+    stratumctl open-app NAME      bring an app's window here, or start it
+
+  wallpaper
+    stratumctl wallpaper next|prev|random
+    stratumctl wallpaper set FILE
+
+  settings and state
+    stratumctl get KEY            e.g. stratumctl get bar.edge
+    stratumctl set KEY JSON       e.g. stratumctl set bar.edge '"right"'
+    stratumctl colours            what matugen is doing
+
+  updates
+    stratumctl check              look for a new version
+    stratumctl updates            list what is waiting
+    stratumctl update             update and restart
 
 USAGE
-    ;;
+}
+
+mode() { echo "${1:-toggle}"; }
+
+case "${1:-help}" in
+  toggle)     need "${2:-}"; ipc panel toggle "$2" ;;
+  open)       need "${2:-}"; ipc panel open "$2" ;;
+  close)      ipc panel close ;;
+  current)    ipc panel current ;;
+  settings)   ipc panel settings "${2:-}" ;;
+  launcher)   if [ -n "${2:-}" ]; then shift; ipc launcher search "$*"; else ipc launcher toggle; fi ;;
+
+  game)       ipc do game "$(mode "${2:-}")" ;;
+  dnd)        ipc do dnd "$(mode "${2:-}")" ;;
+  awake)      ipc do caffeine "$(mode "${2:-}")" ;;
+  dark)       ipc theme dark true ;;
+  light)      ipc theme dark false ;;
+  profile)    ipc do profile "${2:-}" ;;
+
+  screenshot) ipc do screenshot "${2:-region}" ;;
+  record)     ipc do record "${2:-screen}" ;;
+  lock)       ipc lock lock ;;
+  open-app)   need "${2:-}"; ipc apps open "$2" ;;
+
+  wallpaper)
+    case "${2:-}" in
+      next)   ipc wallpaper next "" ;;
+      prev)   ipc wallpaper prev "" ;;
+      random) ipc wallpaper random "" ;;
+      set)    need "${3:-}"; ipc wallpaper set "$(readlink -f "$3")" "" ;;
+      *)      usage; exit 1 ;;
+    esac ;;
+
+  get)        need "${2:-}"; ipc config get "$2" ;;
+  set)        need "${3:-}"; ipc config set "$2" "$3" ;;
+  colours|colors) ipc palette status ;;
+
+  check)      ipc do check ;;
+  updates)    ipc do updates ;;
+  update)     ipc do update ;;
+
+  reload)     pkill -USR1 -f "qs -c stratum" || { echo "stratum is not running" >&2; exit 1; } ;;
+  *)          usage ;;
 esac
