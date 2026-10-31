@@ -28,7 +28,10 @@ Item {
     readonly property int slots: 40
     // As many dots as the pill holds; a longer password keeps typing, it just
     // stops drawing more, so the row never runs out of the box.
-    readonly property int fits: Math.max(1, Math.floor((root.width - 48 * root.u) / root.pitch))
+    // Room is kept at the right for the overflow count.
+    readonly property int fits: Math.max(1, Math.floor((root.width - 96 * root.u) / root.pitch))
+    // Characters past what the row shows.
+    readonly property int extra: Math.max(0, root.auth.length - root.fits)
     readonly property real pitch: 26 * root.u
     readonly property real dot: 11 * root.u
 
@@ -100,6 +103,26 @@ Item {
             }
         }
 
+        // How many more there are than dots, at the right end of the pill.
+        Text {
+            anchors.right: parent.right
+            anchors.rightMargin: 20 * root.u
+            anchors.verticalCenter: parent.verticalCenter
+            text: `+${root.extra}`
+            color: root.bad ? Theme.danger : Theme.fgDim
+            font.family: Theme.fontRounded
+            font.pixelSize: 15 * root.u
+            font.variableAxes: ({ "wght": 600 })
+            renderType: Text.NativeRendering
+            opacity: root.extra > 0 ? 1 : 0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.standard
+                }
+            }
+        }
+
         Row {
             id: dots
 
@@ -142,8 +165,14 @@ Item {
                     }
 
                     Rectangle {
+                        id: mark
+
+                        // Past the end of the row, the last dot pops on every
+                        // keystroke, so typing still visibly lands somewhere.
+                        property real pop: 1
+
                         anchors.centerIn: parent
-                        width: root.dot
+                        width: root.dot * mark.pop
                         height: width
                         radius: width / 2
                         color: root.bad ? Theme.danger : (slot.typed ? Theme.fg : Theme.fgFaint)
@@ -165,6 +194,22 @@ Item {
                                 duration: Theme.standard
                                 easing.type: Easing.Bezier
                                 easing.bezierCurve: Theme.smooth
+                            }
+                        }
+
+                        SequentialAnimation {
+                            id: popping
+
+                            NumberAnimation { target: mark; property: "pop"; to: 1.45; duration: 60; easing.type: Easing.OutQuad }
+                            NumberAnimation { target: mark; property: "pop"; to: 1; duration: 160; easing.type: Easing.OutCubic }
+                        }
+
+                        Connections {
+                            target: root.auth
+
+                            function onLengthChanged() {
+                                if (root.extra > 0 && slot.index === root.fits - 1)
+                                    popping.restart();
                             }
                         }
 
