@@ -216,45 +216,21 @@ Variants {
                 }
             }
 
-            // How long is left before it is thrown away.
+            // How long is left before it is thrown away. Measured against the
+            // bar it sits in, so it cannot reach past it however wide the bar is
+            // at that moment.
             Rectangle {
-                id: clock
-
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 height: 2
                 color: Theme.accent
-                width: 0
+                width: bar.width * Math.max(0, Math.min(1, Screenshot.remaining))
                 opacity: win.inside
 
-                NumberAnimation {
-                    id: counting
-
-                    target: clock
-                    property: "width"
-                    from: bar.openWidth
-                    to: 0
-                    duration: Config.get("screenshot.offerMs", 3000)
-                }
-
-                // Restarted for each new capture; paused while pointed at.
-                Connections {
-                    target: Screenshot
-
-                    function onPendingChanged() {
-                        if (Screenshot.offering)
-                            counting.restart();
-                        else
-                            counting.stop();
-                    }
-
-                    function onHeldChanged() {
-                        if (!Screenshot.offering)
-                            return;
-                        if (Screenshot.held)
-                            counting.pause();
-                        else
-                            counting.resume();
+                // The clock ticks in steps; this smooths them into a slide.
+                Behavior on width {
+                    NumberAnimation {
+                        duration: 60
                     }
                 }
             }
