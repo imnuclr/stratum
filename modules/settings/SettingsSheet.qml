@@ -72,6 +72,7 @@ FloatingWindow {
         { label: "bluetooth", name: "Bluetooth", icon: "bluetooth", group: "system", words: "devices pair headphones", component: bluetoothPage },
         { label: "power", name: "Power", icon: "bolt", group: "system", words: "battery profile eco performance sleep caffeine awake", component: powerPage },
         { label: "keybinds", name: "Keybinds", icon: "keyboard", group: "system", words: "keyboard shortcuts keys hotkeys", component: keybindsPage },
+        { label: "updates", name: "Updates", icon: "arrow-down", group: "stratum", words: "update upgrade version new release git pull", component: updatesPage },
         { label: "about", name: "About", icon: "info", group: "stratum", words: "version system computer hardware", component: aboutPage },
         { label: "advanced", name: "Advanced", icon: "sliders", group: "stratum", words: "debug config files folder", component: advancedPage }
     ]
@@ -599,6 +600,12 @@ FloatingWindow {
         id: weatherPage
 
         WeatherPage {}
+    }
+
+    Component {
+        id: updatesPage
+
+        UpdatesPage {}
     }
 
     Component {

@@ -102,6 +102,8 @@ Singleton {
         ["keybinds", "Keybinds", "keyboard shortcuts hotkeys keys bindings binds"],
         // about
         ["about", "About", "system information version hardware specs computer hostname"],
+        // updates
+        ["updates", "Check automatically", "update upgrade version new release automatic"],
         // advanced
         ["advanced", "Diagnostic tracing", "debug logging trace logs"],
         ["advanced", "Settings folder", "config configuration files folder"],

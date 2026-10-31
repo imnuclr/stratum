@@ -50,6 +50,8 @@ ShellRoot {
         Decor.blur;
         // Keeps app themes in step with the shell's colours.
         AppTheme.palette;
+        // Looks for updates a little later, then every six hours.
+        Updates.automatic;
     }
 
     // Quickshell singletons are lazy, and a lazy singleton never registers its
