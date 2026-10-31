@@ -179,9 +179,49 @@ Singleton {
             root.vpnRun(["nmcli", "connection", "modify", "uuid", c.id, "connection.autoconnect", on ? "yes" : "no"]);
     }
 
+    /*
+     * Taking one off the list. A connection you added is deleted outright; a
+     * service you are signed in to is signed out of, which is what removing it
+     * means for WARP, Tailscale and Mullvad — the app stays installed, and
+     * signing in again brings it back.
+     */
     function removeVpn(c) {
+        const commands = {
+            nm: ["nmcli", "connection", "delete", "uuid", c.id],
+            warp: ["warp-cli", "--accept-tos", "registration", "delete"],
+            tailscale: ["tailscale", "logout"],
+            mullvad: ["mullvad", "account", "logout"]
+        };
+        root.vpnRun(commands[c.kind], c.kind === "nm" ? `${c.name} removed` : `signed out of ${c.name}`);
+    }
+
+    // What "remove" does for this one, said plainly before it is done.
+    function removeVpnWord(c) {
+        return c.kind === "nm" ? "remove" : "sign out";
+    }
+
+    function canRemoveVpn(c) {
         if (c.kind === "nm")
-            root.vpnRun(["nmcli", "connection", "delete", "uuid", c.id], `${c.name} removed`);
+            return true;
+        // Nothing to sign out of yet.
+        return c.detail === "signed in" || c.detail === "registered";
+    }
+
+    function addVpnWord(c) {
+        return c.kind === "warp" ? "register" : "sign in";
+    }
+
+    function canAddVpn(c) {
+        return c.kind !== "nm" && !root.canRemoveVpn(c);
+    }
+
+    function addVpn(c) {
+        if (c.kind === "warp")
+            root.warpRegister();
+        else if (c.kind === "tailscale")
+            root.tailscaleSignIn();
+        else if (c.kind === "mullvad")
+            root.vpnRun(["sh", "-c", "command -v mullvad-gui >/dev/null && mullvad-gui >/dev/null 2>&1 & true"], "sign in in the Mullvad app");
     }
 
     /*

@@ -68,79 +68,88 @@ SettingsPage {
 
     SettingCard {
         title: "your vpns"
-        footnote: page.list.length === 0 ? "None yet. Add one below." : "The ring marks the one the control centre's toggle switches. Click a name to make it that one."
+        footnote: page.list.length === 0
+            ? "None yet. Add one below."
+            : "The ring marks the one the control centre's toggle switches; click a name to change it. Signing out of a service leaves it installed — sign in again to bring it back."
 
         Repeater {
             model: page.list
 
-            Item {
+            SettingRow {
                 id: vpn
 
                 required property var modelData
 
-                readonly property bool chosen: page.prefer.length > 0 ? page.prefer === vpn.modelData.name : vpn.modelData === page.list[0]
+                readonly property bool preferred: page.prefer.length > 0
+                    ? page.prefer === vpn.modelData.name
+                    : vpn.modelData === page.list[0]
 
-                width: parent.width
-                height: 64
-
-                ChoiceRow {
-                    anchors.left: parent.left
-                    anchors.right: controls.left
-                    anchors.rightMargin: Theme.space(3)
-                    anchors.verticalCenter: parent.verticalCenter
-                    icon: "shield"
-                    title: vpn.modelData.name
-                    sub: [page.kindName(vpn.modelData), vpn.modelData.active ? "connected" : (vpn.modelData.busy ? "connecting…" : ""),
-                        vpn.modelData.kind !== "nm" && vpn.modelData.detail !== "signed in" && vpn.modelData.detail !== "registered" ? vpn.modelData.detail : ""]
-                        .filter(s => s.length > 0).join(" · ")
-                    chosen: vpn.chosen
-                    divider: false
-                    onClicked: Config.set("vpn.prefer", vpn.modelData.name)
-                }
+                title: vpn.modelData.name
+                detail: [page.kindName(vpn.modelData),
+                    vpn.modelData.active ? "connected" : (vpn.modelData.busy ? "connecting…" : "not connected"),
+                    vpn.modelData.kind === "nm" ? "" : vpn.modelData.detail]
+                    .filter(t => t.length > 0).join(" · ")
 
                 Row {
-                    id: controls
-
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
                     spacing: Theme.space(2)
 
-                    // First-time set-ups, where the service needs one.
+                    // Signed in, or not yet: whichever it is, the one action.
                     LinkButton {
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: vpn.modelData.kind === "warp" && vpn.modelData.detail === "not registered"
-                        text: "register"
-                        onClicked: Toggles.warpRegister()
+                        visible: Toggles.canAddVpn(vpn.modelData)
+                        text: Toggles.addVpnWord(vpn.modelData)
+                        onClicked: Toggles.addVpn(vpn.modelData)
                     }
 
                     LinkButton {
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: vpn.modelData.kind === "tailscale" && vpn.modelData.detail === "not signed in"
-                        text: "sign in"
-                        onClicked: Toggles.tailscaleSignIn()
-                    }
-
-                    LinkButton {
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: vpn.modelData.kind === "nm"
-                        text: "remove"
+                        visible: Toggles.canRemoveVpn(vpn.modelData)
+                        text: Toggles.removeVpnWord(vpn.modelData)
                         danger: true
                         onClicked: Toggles.removeVpn(vpn.modelData)
                     }
 
+                    // Which one the control centre's toggle switches.
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 18
+                        height: 18
+                        radius: 9
+                        color: "transparent"
+                        border.width: 1
+                        border.color: vpn.preferred ? Theme.fg : Theme.lineHi
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: vpn.preferred ? 9 : 0
+                            height: width
+                            radius: width / 2
+                            color: Theme.fg
+
+                            Behavior on width {
+                                NumberAnimation {
+                                    duration: Theme.standard
+                                    easing.type: Easing.Bezier
+                                    easing.bezierCurve: Theme.smooth
+                                }
+                            }
+                        }
+
+                        HoverHandler {
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
+                        TapHandler {
+                            onTapped: Config.set("vpn.prefer", vpn.modelData.name)
+                        }
+                    }
+
                     Switch {
                         anchors.verticalCenter: parent.verticalCenter
+                        enabled: !Toggles.canAddVpn(vpn.modelData)
                         checked: vpn.modelData.active || vpn.modelData.busy
                         onToggled: value => Toggles.setVpn(vpn.modelData, value)
                     }
-                }
-
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    height: 1
-                    color: Theme.line
                 }
             }
         }

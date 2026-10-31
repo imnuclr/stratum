@@ -124,11 +124,35 @@ Singleton {
 
         // Dragging the hue strip changes the accent many times a second.
         interval: 900
-        onTriggered: root.writeAll()
+        property bool force: false
+
+        onTriggered: {
+            root.writeAll(writeLater.force);
+            writeLater.force = false;
+        }
     }
 
-    function writeAll() {
+    // Which apps can be themed, and what each one is called.
+    readonly property var apps: ({
+        terminal: "Terminal", fetch: "Terminal greeting", gtk: "GTK apps",
+        spotify: "Spotify", discord: "Vesktop / Discord"
+    })
+
+    // What was last written, so nothing is rewritten for nothing.
+    property string written: ""
+
+    /*
+     * `force` writes even when the colours have not moved, for switching an app
+     * on. Otherwise an unchanged palette writes nothing: the palette is a
+     * binding that reads Config, so *any* setting changing re-ran it, every
+     * theme file was rewritten, and Vesktop reloaded its theme each time.
+     */
+    function writeAll(force) {
         const p = root.palette;
+        const mark = JSON.stringify([p, Object.keys(root.apps).filter(a => root.on(a))]);
+        if (!force && mark === root.written)
+            return;
+        root.written = mark;
         if (root.on("terminal")) {
             root.put(`${root.cfg}/kitty/stratum.conf`, root.kitty(p));
             root.put(`${root.cfg}/alacritty/stratum.toml`, root.alacritty(p));
@@ -247,6 +271,7 @@ Singleton {
         linker.running = true;
         if (app === "spotify")
             spicetifySetup.running = true;
+        writeLater.force = true;
         // fastfetch reads one config; yours is kept beside it, once.
         if (app === "fetch")
             Quickshell.execDetached(["sh", "-c", `d="${c}/fastfetch"; mkdir -p "$d"

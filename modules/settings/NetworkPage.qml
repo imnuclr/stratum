@@ -48,7 +48,17 @@ SettingsPage {
 
         SettingRow {
             title: "VPN"
-            detail: Toggles.hasVpn ? Toggles.vpnConnections.map(c => c.name).join(", ") : "None set up yet."
+            // What is up, or how many are waiting — never a bare list of names,
+            // which read as "these are connected".
+            detail: {
+                if (!Toggles.hasVpn)
+                    return "None set up yet.";
+                const up = Toggles.vpnConnections.filter(c => c.active).map(c => c.name);
+                if (up.length > 0)
+                    return `Connected: ${up.join(", ")}.`;
+                const n = Toggles.vpnConnections.length;
+                return `${n} set up, none connected.`;
+            }
 
             Row {
                 spacing: Theme.space(2)
