@@ -14,7 +14,7 @@ import qs.theme
  * animated, so the row opens up to make room for each character and closes behind
  * each deletion, and the others slide to follow.
  *
- * Empty, it says what it wants — "type your password"; a lone dot sitting there
+ * Empty, it says what it wants — "password"; a lone dot sitting there
  * read as a glitch. Each character is a dot, the row opening outward from the
  * centre.
  */
@@ -26,6 +26,9 @@ Item {
 
     readonly property int resting: 0
     readonly property int slots: 40
+    // As many dots as the pill holds; a longer password keeps typing, it just
+    // stops drawing more, so the row never runs out of the box.
+    readonly property int fits: Math.max(1, Math.floor((root.width - 48 * root.u) / root.pitch))
     readonly property real pitch: 26 * root.u
     readonly property real dot: 11 * root.u
 
@@ -80,8 +83,7 @@ Item {
             id: hint
 
             anchors.centerIn: parent
-            anchors.horizontalCenterOffset: 8 * root.u
-            text: root.checking ? "checking…" : "type your password"
+            text: root.checking ? "checking…" : "password"
             color: Theme.fgFaint
             font.family: Theme.fontRounded
             font.pixelSize: 17 * root.u
@@ -125,7 +127,7 @@ Item {
                     required property int index
 
                     readonly property bool typed: slot.index < root.auth.length
-                    readonly property bool present: slot.index < Math.max(root.resting, root.auth.length)
+                    readonly property bool present: slot.index < Math.min(root.fits, Math.max(root.resting, root.auth.length))
 
                     width: slot.present ? root.pitch : 0
                     height: root.dot
