@@ -53,7 +53,7 @@ Singleton {
         root.saved = "";
         root.pendingKind = kind;
         root.pending = path;
-        linger.restart();
+        root.remaining = 1;
     }
 
     // Into the screenshots folder, under its own name.
@@ -64,7 +64,6 @@ Singleton {
         keeper.command = ["sh", "-c", `mkdir -p '${root.directory}' && mv -f "$1" '${dest}'`, "sh", path];
         keeper.running = true;
         root.pending = "";
-        linger.stop();
     }
 
     function keepPending() {
@@ -82,7 +81,6 @@ Singleton {
             "sh", root.pending];
         editor.running = true;
         root.pending = "";
-        linger.stop();
     }
 
     // Left alone, or waved away: the temporary file goes too.
@@ -92,24 +90,38 @@ Singleton {
         dropper.command = ["rm", "-f", root.pending];
         dropper.running = true;
         root.pending = "";
-        linger.stop();
     }
 
     // Held open while the pointer is on the bar.
     property bool held: false
 
-    onHeldChanged: {
-        if (root.held)
-            linger.stop();
-        else if (root.offering)
-            linger.restart();
+    /*
+     * How much of the wait is left, 1 to 0, which is both the line drawn on the
+     * bar and what throws the capture away at the end. One clock for both: as a
+     * line animating on its own beside a timer, the two could disagree — the
+     * line ran out while the bar stayed, and could draw wider than the bar it
+     * was drawn in.
+     */
+    property real remaining: 0
+
+    // Nothing to hold open once it has gone.
+    onOfferingChanged: {
+        if (!root.offering) {
+            root.held = false;
+            root.remaining = 0;
+        }
     }
 
     Timer {
-        id: linger
+        interval: 40
+        repeat: true
+        running: root.offering && !root.held
 
-        interval: Config.get("screenshot.offerMs", 3000)
-        onTriggered: root.dropPending()
+        onTriggered: {
+            root.remaining -= 40 / Math.max(400, Config.get("screenshot.offerMs", 2000));
+            if (root.remaining <= 0)
+                root.dropPending();
+        }
     }
 
     Process {
