@@ -30,12 +30,15 @@ Column {
      * Settings → Bar → Tray: "show" keeps every icon out, "hover" folds them
      * behind a chevron until the pointer comes near, "hide" leaves the tray off.
      */
-    readonly property string trayMode: Config.get("bar.tray", "show")
+    readonly property string trayMode: Config.get("bar.tray", "hover")
 
     Column {
         id: trayColumn
 
-        readonly property bool open: root.trayMode === "show" || trayHover.hovered || trayGrace.running
+        // Pressing an icon takes the pointer and clears the hover, so the
+        // column is held open until the press ends or it folded under the click.
+        property bool holding: false
+        readonly property bool open: root.trayMode === "show" || trayHover.hovered || trayGrace.running || trayColumn.holding
             || (Popouts.open && Popouts.current.startsWith("tray:") && Popouts.monitorName === root.monitorName)
 
         anchors.horizontalCenter: parent.horizontalCenter
@@ -59,23 +62,13 @@ Column {
             interval: 260
         }
 
-        Glyph {
-            anchors.horizontalCenter: parent.horizontalCenter
-            visible: root.trayMode === "hover"
-            name: "chevron-down"
-            size: 14
-            color: trayColumn.open ? Theme.fg : Theme.fgDim
-            rotation: trayColumn.open ? 180 : 0
-
-            Behavior on rotation {
-                NumberAnimation {
-                    duration: Theme.standard * 1.6
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.smooth
-                }
-            }
-        }
-
+        /*
+         * The icons open above the chevron, not below it. The column sits at
+         * the foot of the bar and grows upward, so with the icons underneath
+         * the chevron was pushed up out from under the pointer and the first
+         * icon slid in beneath it. Above, the chevron stays where it was
+         * pointed at. It points up while closed, the way they will come from.
+         */
         Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: icons.implicitWidth
@@ -104,7 +97,7 @@ Column {
 
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: Theme.space(3)
-                topPadding: root.trayMode === "hover" ? Theme.space(1) : 0
+                bottomPadding: root.trayMode === "hover" ? Theme.space(1) : 0
 
                 Repeater {
                     model: SystemTray.items?.values ?? []
@@ -117,8 +110,26 @@ Column {
                         size: 17
                         monitorName: root.monitorName
                         vertical: true
+                        onHeld: down => trayColumn.holding = down
                         edge: Config.forMonitor(root.monitorName, "bar.edge", "left") === "right" ? Edges.Left : Edges.Right
                     }
+                }
+            }
+        }
+
+        Glyph {
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: root.trayMode === "hover"
+            name: "chevron-down"
+            size: 14
+            color: trayColumn.open ? Theme.fg : Theme.fgDim
+            rotation: trayColumn.open ? 0 : 180
+
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: Theme.standard * 1.6
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.smooth
                 }
             }
         }

@@ -296,7 +296,7 @@ Flickable {
 
                         Text {
                             width: 170
-                            text: Binds.combo(bindRow.modelData.mods, page.layout.find(k => k.key === page.shown)?.label ?? page.shown)
+                            text: Binds.label(bindRow.modelData.mods, page.layout.find(k => k.key === page.shown)?.label ?? page.shown)
                             color: Theme.fg
                             font.family: Theme.fontUi
                             font.pixelSize: 13

@@ -121,8 +121,15 @@ Sheet {
             anchors.top: parent.top
             anchors.margins: Theme.space(4)
             active: root.satelliteShown
-            sourceComponent: root.lastChip === "network" ? networkList : deviceList
+            sourceComponent: root.lastChip === "network" ? networkList
+                : (root.lastChip === "focus" ? focusList : deviceList)
         }
+    }
+
+    Component {
+        id: focusList
+
+        FocusList {}
     }
 
     Component {
@@ -175,6 +182,18 @@ Sheet {
                 onToggled: Bt.toggle()
                 onExpanded: Shell.expand("bluetooth")
             }
+        }
+
+        // Focus: the disc turns the last mode used on or off, the chevron
+        // opens the list of them in the card above.
+        ServicePill {
+            width: parent.width
+            icon: Focus.current?.icon ?? "moon"
+            title: "Focus"
+            detail: Focus.on ? `${Focus.current.name} · ${Focus.untilLabel}` : "off"
+            active: Focus.on
+            onToggled: Focus.toggle()
+            onExpanded: Shell.expand("focus")
         }
 
         QuickToggles {

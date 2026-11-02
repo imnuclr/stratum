@@ -13,6 +13,9 @@ Rectangle {
     property string placeholder: ""
 
     signal accepted(string text)
+    // Enter, or focus moving away: for a field that saves what was typed
+    // rather than submitting it.
+    signal finished(string text)
 
     implicitHeight: 28
     radius: Theme.rInner
@@ -48,6 +51,7 @@ Rectangle {
         clip: true
 
         onAccepted: root.accepted(text)
+        onEditingFinished: root.finished(text)
 
         Text {
             anchors.verticalCenter: parent.verticalCenter

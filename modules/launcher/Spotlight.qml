@@ -18,10 +18,28 @@ Scope {
         }
     }
 
+    /*
+     * Fires on the press, or on a release with no press before it. Super on
+     * its own is a release bind, so that it waits to see whether another key
+     * follows, and Hyprland hands a release bind's shortcut only the release:
+     * listening for the press alone, tapping Super did nothing.
+     */
     GlobalShortcut {
+        id: launcherKey
+
+        property bool pressed: false
+
         appid: "stratum"
         name: "launcher"
-        onPressed: Shell.toggle("launcher")
+        onPressed: {
+            launcherKey.pressed = true;
+            Shell.toggle("launcher");
+        }
+        onReleased: {
+            if (!launcherKey.pressed)
+                Shell.toggle("launcher");
+            launcherKey.pressed = false;
+        }
     }
 
     IpcHandler {

@@ -19,8 +19,20 @@ Singleton {
     id: root
 
     property real battery: -1
+    // Going into the battery while it charges. Not what the machine draws —
+    // the charger covers that and the battery's meter cannot see it — but on a
+    // laptop plugged in it is the one figure there is.
+    property real charging: -1
     property real cpu: -1
     property real gpu: -1
+
+    /*
+     * One line for wherever the reading is shown beside other things: what
+     * the machine draws, else the charge rate, else nothing.
+     */
+    readonly property string summary: root.available
+        ? `${root.total.toFixed(1)} W${root.battery > 0 ? " from battery" : ` · ${root.label}`}`
+        : (root.charging > 0 ? `charging at ${root.charging.toFixed(1)} W` : "")
 
     readonly property bool available: root.total > 0
     // The battery's figure already covers the whole machine; otherwise the
@@ -77,15 +89,21 @@ Singleton {
         id: probe
 
         command: ["sh", "-c", `
-            # The battery, discharging: microwatts, or amps times volts.
+            # The battery's meter, in microwatts or amps times volts: what the
+            # machine draws while discharging, what goes in while charging.
             for b in /sys/class/power_supply/BAT*; do
                 [ -d "$b" ] || continue
-                [ "$(cat "$b/status" 2>/dev/null)" = Discharging ] || continue
+                w=""
                 if [ -r "$b/power_now" ]; then
-                    echo "battery=$(cat "$b/power_now")"
+                    w=$(cat "$b/power_now")
                 elif [ -r "$b/current_now" ] && [ -r "$b/voltage_now" ]; then
-                    echo "battery=$(( $(cat "$b/current_now") * $(cat "$b/voltage_now") / 1000000 ))"
+                    w=$(( $(cat "$b/current_now") * $(cat "$b/voltage_now") / 1000000 ))
                 fi
+                [ -n "$w" ] || continue
+                case "$(cat "$b/status" 2>/dev/null)" in
+                    Discharging) echo "battery=$w" ;;
+                    Charging) echo "charging=$w" ;;
+                esac
                 break
             done
             # The processor package, as energy counted over one second.
@@ -101,7 +119,7 @@ Singleton {
 
         stdout: StdioCollector {
             onStreamFinished: {
-                let battery = -1, cpu = -1, gpu = -1;
+                let battery = -1, charging = -1, cpu = -1, gpu = -1;
                 for (const line of text.split("\n")) {
                     const at = line.indexOf("=");
                     if (at < 0)
@@ -113,12 +131,15 @@ Singleton {
                     // Microwatts and microjoules-per-second both become watts.
                     if (key === "battery")
                         battery = v / 1000000;
+                    else if (key === "charging")
+                        charging = v / 1000000;
                     else if (key === "cpu")
                         cpu = v / 1000000;
                     else if (key === "gpu")
                         gpu = v;
                 }
                 root.battery = battery;
+                root.charging = charging;
                 root.cpu = cpu;
                 root.gpu = gpu;
             }

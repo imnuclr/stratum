@@ -23,7 +23,7 @@ SettingsPage {
         SettingRow {
             width: parent.width
             title: "Do not disturb"
-            detail: "Nothing appears on screen. Notifications still collect in the page."
+            detail: "The Do Not Disturb focus: nothing appears on screen. Notifications still collect in the page."
 
             Switch {
                 checked: Notifs.dnd
@@ -69,6 +69,99 @@ SettingsPage {
                 width: 108
                 enabled: Notifs.any
                 onClicked: Notifs.clearAll()
+            }
+        }
+    }
+
+    /*
+     * Focus modes: what each lets through, and whether the control centre
+     * offers it. The app lists are comma-separated, matched against the
+     * sender's name, and saved when the field is left or Enter is pressed.
+     */
+    SettingCard {
+        title: "focus"
+        footnote: "Silenced notifications still collect in the page. Switch a mode off to hide it from the control centre."
+
+        Repeater {
+            model: Focus.modes
+
+            SettingRow {
+                id: modeRow
+
+                required property var modelData
+
+                width: parent.width
+                title: modeRow.modelData.name
+                detail: Focus.allowed(modeRow.modelData.id).length > 0
+                    ? "Lets these apps through."
+                    : "Lets nothing through. Add apps to let them in."
+
+                Row {
+                    spacing: Theme.space(3)
+
+                    TextField {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 200
+                        text: Focus.allowed(modeRow.modelData.id).join(", ")
+                        placeholder: "apps, comma separated"
+                        onFinished: value => Focus.setAllowed(modeRow.modelData.id, value)
+                    }
+
+                    Switch {
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: !Focus.hidden.includes(modeRow.modelData.id)
+                        onToggled: value => Focus.setShown(modeRow.modelData.id, value)
+                    }
+                }
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            title: "Sleep warms the screen"
+            detail: "Turns the night light on with Sleep, and off again after."
+            visible: Toggles.hasNight
+
+            Switch {
+                checked: Focus.sleepWarms
+                onToggled: value => Config.set("focus.sleepNight", value)
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            title: "Gaming turns on game mode"
+            detail: "Performance profile, no animations, and the machine kept awake."
+
+            Switch {
+                checked: Focus.gamingGameMode
+                onToggled: value => Config.set("focus.gamingGameMode", value)
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            title: "Critical breaks through"
+            detail: "Urgent notifications, like a battery about to run out, show whatever the mode."
+
+            Switch {
+                checked: Focus.criticalThrough
+                onToggled: value => Config.set("focus.critical", value)
+            }
+        }
+
+        SettingRow {
+            width: parent.width
+            title: "Morning"
+            detail: "When \"until morning\" ends."
+
+            Stepper {
+                value: Focus.morningHour
+                from: 4
+                to: 12
+                step: 1
+                suffix: ":00"
+                onMoved: v => Config.set("focus.morning", v)
             }
         }
     }

@@ -103,6 +103,32 @@ Scope {
         root.nudge++;
         Time.now = new Date();
         Netstat.reset();
+        root.rouse();
+    }
+
+    /*
+     * Wakes the lock screen up properly after sleep, as moving the mouse did.
+     *
+     * Hyprland comes back from sleep without redrawing or handing out keyboard
+     * focus until there is input. On one screen that froze the clock and the
+     * password box for a moment; with two, a monitor that reconnected on
+     * waking got its lock surface drawn only once the mouse moved, and typing
+     * went nowhere until the pointer was taken over to it. So the pointer is
+     * put back where it is, which Hyprland takes as movement: everything is
+     * redrawn and the lock under the pointer gets the keyboard. A few times
+     * over, because a monitor can take a couple of seconds to come back.
+     *
+     * Not `dpms on` as well: the screens are already on after waking, and
+     * turning on one that is on blanks it and fades it back up, which is
+     * what opening the lid looked like.
+     */
+    function rouse() {
+        if (!session.secure)
+            return;
+        console.info(`[lock] rousing ${Quickshell.screens.length} screen(s)`);
+        rousing.left = 3;
+        rousing.restart();
+        rousing.triggered();
     }
 
     function release() {
@@ -266,6 +292,40 @@ Scope {
         onTriggered: {
             console.warn("[lock] lock not confirmed in time, sleeping anyway");
             sleepGuard.running = false;
+        }
+    }
+
+    Timer {
+        id: rousing
+
+        property int left: 0
+
+        interval: 700
+        repeat: true
+        onTriggered: {
+            if (rousing.left-- <= 0 || !session.secure) {
+                rousing.stop();
+                return;
+            }
+            root.nudge++;
+            if (Hypr.lua) {
+                Hypr.runLua([
+                    `local p = hl.get_cursor_pos(); if p then hl.dispatch(hl.dsp.cursor.move({ x = p.x, y = p.y })) end`
+                ]);
+            } else {
+                Quickshell.execDetached(["sh", "-c",
+                    `p=$(hyprctl cursorpos | tr -d ,); hyprctl dispatch movecursor $p`]);
+            }
+        }
+    }
+
+    // A monitor coming back while locked gets a fresh lock surface, which
+    // needs the same rousing to be drawn and to take the keyboard.
+    Connections {
+        target: Quickshell
+
+        function onScreensChanged() {
+            root.rouse();
         }
     }
 

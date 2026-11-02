@@ -82,7 +82,7 @@ SettingsPage {
                 readonly property var modes: ["show", "hover", "hide"]
 
                 model: ["always", "on hover", "hidden"]
-                current: Math.max(0, modes.indexOf(Config.get("bar.tray", page.vertical ? "show" : "hover")))
+                current: Math.max(0, modes.indexOf(Config.get("bar.tray", "hover")))
                 onPicked: index => Config.set("bar.tray", modes[index])
             }
         }
