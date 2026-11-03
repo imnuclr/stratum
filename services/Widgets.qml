@@ -71,7 +71,7 @@ Singleton {
         "photo": { label: "photo", icon: "scan", w: 20, h: 15, minW: 8, minH: 8, shape: "square", style: "tile",
             options: [{ key: "look", label: "look", values: ["dots", "plain"] }, { key: "every", label: "change", values: ["hour", "day", "never"] }] }
     })
-    readonly property var typeNames: ["clock", "greeting", "weather", "date", "media", "stats", "cpu", "gpu", "memory", "disk", "battery", "network", "photo"]
+    readonly property var typeNames: ["clock", "greeting", "weather", "date", "media", "stats", "cpu", "gpu", "memory", "disk", "battery", "power", "network", "photo"]
 
     // Every widget can choose how it sits on the wallpaper.
     readonly property var styleOption: ({ key: "style", label: "style", values: ["tile", "shadow", "plain"] })

@@ -54,10 +54,11 @@ Variants {
 
         /*
          * Hidden while the notification page is up — it is the same corner and
-         * the same notifications — and while do not disturb is on, which is what
-         * do not disturb means.
+         * the same notifications — and while a focus mode that lets nothing
+         * through is on. One that lets some apps through silences the rest
+         * toast by toast, below.
          */
-        readonly property bool muted: Notifs.dnd
+        readonly property bool muted: Focus.silencesAll
             || Shell.openPanel === "notifications"
             || !win.focused
 
@@ -152,7 +153,10 @@ Variants {
                 // The slot opens in the first stretch, so a small p already has room.
                 readonly property real slot: Math.min(1, toast.p * 8)
 
+                // A focus mode's silenced ones never announce themselves; they
+                // are still in the list on the notification page.
                 Component.onCompleted: toast.live = Notifs.fresh(toast.modelData, toast.timeout)
+                    && !Focus.silences(toast.modelData)
 
                 onLiveChanged: {
                     grow.to = toast.live ? 1 : 0;

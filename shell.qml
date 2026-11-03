@@ -245,6 +245,16 @@ ShellRoot {
             return Notifs.dnd ? "do not disturb on" : "do not disturb off";
         }
 
+        // A focus mode by id (dnd, sleep, work, personal, gaming), "off" to
+        // leave whichever is on. Until turned off.
+        function focus(mode: string): string {
+            if (mode === "off")
+                Focus.stop();
+            else
+                Focus.set(mode, "off");
+            return Focus.on ? `focus ${Focus.current.name} ${Focus.untilLabel}` : "focus off";
+        }
+
         function caffeine(on: string): string {
             if ((on === "toggle") || (on === "on") !== Toggles.caffeine)
                 Toggles.toggleCaffeine();

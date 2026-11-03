@@ -13,7 +13,7 @@ import qs.theme
  * other.
  *
  * Hold any of them to arrange: drag a circle to another slot to reorder, tap the
- * x to take one off, tap a name underneath to bring one back. The order is
+ * x to take one off, tap an icon underneath to bring one back. The order is
  * written to shell.json as it changes, and "done" (or closing the panel) ends it.
  */
 Item {
@@ -291,39 +291,51 @@ Item {
             Repeater {
                 model: root.missing
 
-                Rectangle {
+                // Icons only, as the circles above are: a "+" where those
+                // have their "x".
+                Item {
                     id: chip
 
                     required property string modelData
 
-                    width: chipRow.implicitWidth + Theme.space(4)
-                    height: 34
-                    radius: height / 2
-                    color: chipHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+                    width: 40
+                    height: 40
 
-                    Row {
-                        id: chipRow
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: width / 2
+                        color: chipHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
 
-                        anchors.centerIn: parent
-                        spacing: Theme.space(2)
+                        Behavior on color {
+                            ColorAnimation {
+                                duration: Theme.micro
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.smooth
+                            }
+                        }
 
                         Glyph {
-                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.centerIn: parent
                             name: root.registry[chip.modelData].icon
-                            size: 15
+                            size: 17
                             color: Theme.fg
                         }
+                    }
 
-                        SectionLabel {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: root.registry[chip.modelData].label
-                            color: Theme.fg
-                        }
+                    Rectangle {
+                        x: parent.width - 14
+                        y: -4
+                        width: 18
+                        height: 18
+                        radius: 9
+                        color: Theme.fg
 
-                        SectionLabel {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "+"
-                            color: Theme.fgBright
+                        Glyph {
+                            anchors.centerIn: parent
+                            name: "plus"
+                            size: 10
+                            stroke: 2.2
+                            color: Theme.bg
                         }
                     }
 

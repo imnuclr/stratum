@@ -120,16 +120,42 @@ Item {
                     visible: Wifi.isSecure(entry.modelData)
                 }
 
-                Text {
+                Column {
                     anchors.verticalCenter: parent.verticalCenter
                     width: body.width - 72 - (Wifi.isSecure(entry.modelData) ? 11 + Theme.space(2) : 0)
-                    elide: Text.ElideRight
-                    text: entry.modelData.name
-                    color: entry.modelData.connected ? Theme.fg : Theme.fgDim
-                    font.family: Theme.fontUi
-                    font.pixelSize: 12
-                    font.weight: entry.modelData.connected ? Font.Medium : Font.Normal
-                    renderType: Text.NativeRendering
+                    spacing: 1
+
+                    Text {
+                        width: parent.width
+                        elide: Text.ElideRight
+                        text: entry.modelData.name
+                        color: entry.modelData.connected ? Theme.fg : Theme.fgDim
+                        font.family: Theme.fontUi
+                        font.pixelSize: 12
+                        font.weight: entry.modelData.connected ? Font.Medium : Font.Normal
+                        renderType: Text.NativeRendering
+                    }
+
+                    /*
+                     * The signal as a number, and for the connected one how
+                     * fast the link is running each way. The link speed is
+                     * what the card and the access point agreed, which is the
+                     * ceiling, not what a download will see.
+                     */
+                    Text {
+                        width: parent.width
+                        elide: Text.ElideRight
+                        text: {
+                            const parts = [`${Math.round(entry.modelData.signalStrength * 100)}%`];
+                            if (entry.modelData.connected && Wifi.rxRate > 0)
+                                parts.push(`↓ ${Math.round(Wifi.rxRate)}  ↑ ${Math.round(Wifi.txRate)} Mbps`);
+                            return parts.join("  ·  ");
+                        }
+                        color: Theme.fgFaint
+                        font.family: Theme.fontUi
+                        font.pixelSize: 10
+                        renderType: Text.NativeRendering
+                    }
                 }
 
                 IconButton {

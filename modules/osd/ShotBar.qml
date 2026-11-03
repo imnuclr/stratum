@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
 import qs.components
@@ -13,8 +14,8 @@ import qs.theme
  * screen with the picture itself, and save or edit.
  *
  * Nothing has been saved at this point — the capture is on the clipboard and in
- * a temporary file — so leaving it alone throws it away, and the line along the
- * bottom shows how long that is. Pointing at it stops the clock.
+ * a temporary file — so leaving it alone throws it away, and the ring round
+ * the close button shows how long that is. Pointing at it stops the clock.
  *
  * It arrives the way the volume indicator does: the picture lands first and the
  * bar opens out from it, so the eye starts on the thing being offered rather
@@ -196,6 +197,38 @@ Variants {
                         radius: 14
                         color: dropHover.hovered ? Theme.surfaceTop : "transparent"
 
+                        /*
+                         * How long is left before it is thrown away, as a ring
+                         * running down round the button that throws it away.
+                         * It was a line along the bar's foot, which had to dodge
+                         * the rounded corners and sat cramped against the
+                         * border; here it is inside the bar by construction and
+                         * beside the thing it is counting towards.
+                         */
+                        Shape {
+                            anchors.centerIn: parent
+                            width: 32
+                            height: 32
+                            preferredRendererType: Shape.CurveRenderer
+                            opacity: win.inside
+
+                            ShapePath {
+                                strokeColor: Theme.accent
+                                strokeWidth: 2
+                                fillColor: "transparent"
+                                capStyle: ShapePath.RoundCap
+
+                                PathAngleArc {
+                                    centerX: 16
+                                    centerY: 16
+                                    radiusX: 15
+                                    radiusY: 15
+                                    startAngle: -90
+                                    sweepAngle: 360 * Math.max(0, Math.min(1, Screenshot.remaining))
+                                }
+                            }
+                        }
+
                         Glyph {
                             anchors.centerIn: parent
                             name: "close"
@@ -212,28 +245,6 @@ Variants {
                         TapHandler {
                             onTapped: Screenshot.dropPending()
                         }
-                    }
-                }
-            }
-
-            // How long is left before it is thrown away. Measured against the
-            // flat run of the bar's bottom edge, between the rounded corners and
-            // inside the border: clipping is to the square bounds, so a line the
-            // full width ran out past the curve at both ends.
-            Rectangle {
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: bar.border.width
-                x: bar.radius
-                height: 2
-                radius: 1
-                color: Theme.accent
-                width: (bar.width - bar.radius * 2) * Math.max(0, Math.min(1, Screenshot.remaining))
-                opacity: win.inside
-
-                // The clock ticks in steps; this smooths them into a slide.
-                Behavior on width {
-                    NumberAnimation {
-                        duration: 60
                     }
                 }
             }

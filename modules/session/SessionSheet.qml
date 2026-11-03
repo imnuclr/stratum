@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.components
 import qs.config
+import qs.modules.widgets
 import qs.services
 import qs.theme
 
@@ -40,6 +41,17 @@ Sheet {
 
         SectionLabel {
             text: "session"
+        }
+
+        // What the machine is drawing, for a glance before choosing to put it
+        // to sleep or leave it on.
+        Text {
+            visible: text.length > 0
+            text: Watts.summary
+            color: Theme.fgDim
+            font.family: Theme.fontUi
+            font.pixelSize: 13
+            renderType: Text.NativeRendering
         }
 
         Repeater {
@@ -110,6 +122,11 @@ Sheet {
                 }
             }
         }
+    }
+
+    Watch {
+        service: Watts
+        live: root.open
     }
 
     Process {

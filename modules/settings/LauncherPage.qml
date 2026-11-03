@@ -11,11 +11,15 @@ SettingsPage {
     id: page
 
     readonly property var bind: Binds.own.find(b => b.action === "launcher") ?? null
+    // Every key that opens it, as read: "SUPER or SUPER + SPACE". Only the
+    // first was named, so a launcher on Super alone was said to be on Space.
+    readonly property string keys: Binds.own.filter(b => b.action === "launcher")
+        .map(b => Binds.label(b.mods, b.key)).join(" or ")
     readonly property var engines: ["duckduckgo", "google", "brave", "startpage"]
 
     icon: "search"
     title: "Launcher"
-    detail: page.bind ? `Open it with ${Binds.combo(page.bind.mods, page.bind.key)}, then just type.` : "Give it a key under Keybinds, then just type."
+    detail: page.bind ? `Open it with ${page.keys}, then just type.` : "Give it a key under Keybinds, then just type."
 
     SettingCard {
         title: "search"
@@ -92,7 +96,7 @@ SettingsPage {
 
         SettingRow {
             title: "Shortcut"
-            detail: page.bind ? Binds.combo(page.bind.mods, page.bind.key) : "none"
+            detail: page.bind ? page.keys : "none"
 
             LinkButton {
                 text: "change"

@@ -64,6 +64,9 @@ Singleton {
         ["weather", "Units", "celsius fahrenheit temperature units metric imperial"],
         // notifications
         ["notifications", "Do not disturb", "dnd silence quiet mute focus notifications"],
+        ["notifications", "focus", "focus modes sleep work personal gaming allow apps silence"],
+        ["notifications", "Morning", "focus until morning hour"],
+        ["notifications", "Critical breaks through", "focus critical urgent notifications"],
         ["notifications", "Toast duration", "popup notification time seconds how long timeout"],
         ["notifications", "Try it", "test notification preview send"],
         ["notifications", "Ask before saving", "screenshot save ask bar capture keep discard"],

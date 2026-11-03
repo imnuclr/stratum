@@ -92,10 +92,20 @@ Singleton {
         return !!network && !network.known && root.isSecure(network);
     }
 
-    // A known network has a stored profile, so an empty secret is enough.
+    /*
+     * A known network is brought up from its stored profile. It used to be
+     * handed an empty passphrase instead, which NetworkManager took as a new
+     * secret to try rather than the saved one, so picking another network
+     * did nothing. An open network needs no secret at all.
+     */
     function connect(network) {
-        if (network)
-            network.connectWithPsk("");
+        if (!network)
+            return;
+        console.info(`[wifi] connecting to ${network.name} (known=${network.known})`);
+        if (network.known || !root.isSecure(network))
+            network.connect();
+        else
+            root.requestPassword(network);
     }
 
     function toggleNetwork(network) {
@@ -120,23 +130,75 @@ Singleton {
         root.pendingNetwork = null;
     }
 
-    // Quickshell.Networking exposes no disconnect, so this is one of the two
-    // places the networking services leave the native API. Taking the connection
-    // down by name rather than the device keeps a wired link up.
+    /*
+     * The network's own disconnect, which takes down just that connection and
+     * leaves a wired link up. It used to be `nmcli connection down id <name>`,
+     * but the name shown is the network's, and the saved connection is often
+     * called something else ("TonbridgeSchool" against "Tonbridge-WiFi"), so
+     * nothing went down.
+     */
     function disconnect() {
-        const name = root.activeNetwork?.name ?? "";
-        if (!name)
-            return;
-        disconnectProc.command = ["nmcli", "connection", "down", "id", name];
-        disconnectProc.running = true;
+        root.activeNetwork?.disconnect();
     }
 
     function openSettings() {
         Launch.run(settingsApp);
     }
 
+    // Why a connection did not come up, for the log.
+    Instantiator {
+        model: root.device?.networks ?? null
+
+        delegate: Connections {
+            required property var modelData
+
+            target: modelData
+
+            function onConnectionFailed(reason) {
+                console.warn(`[wifi] could not connect to ${modelData.name}: ${reason}`);
+            }
+        }
+    }
+
+    /*
+     * How fast the link to the connected network is running, in Mbit/s, each
+     * way: what the card and the access point have settled on, not a speed
+     * test. Read from `iw` every few seconds, only while a network list is on
+     * screen. -1 when there is nothing to read.
+     */
+    property real rxRate: -1
+    property real txRate: -1
+
+    Timer {
+        running: root.scanning && !!root.activeNetwork && (root.device?.name ?? "").length > 0
+        repeat: true
+        triggeredOnStart: true
+        interval: 3000
+        onTriggered: {
+            if (!link.running)
+                link.running = true;
+        }
+        onRunningChanged: {
+            if (!running) {
+                root.rxRate = -1;
+                root.txRate = -1;
+            }
+        }
+    }
+
     Process {
-        id: disconnectProc
+        id: link
+
+        command: ["iw", "dev", root.device?.name ?? "", "link"]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const rx = text.match(/rx bitrate:\s*([\d.]+)/);
+                const tx = text.match(/tx bitrate:\s*([\d.]+)/);
+                root.rxRate = rx ? parseFloat(rx[1]) : -1;
+                root.txRate = tx ? parseFloat(tx[1]) : -1;
+            }
+        }
     }
 
     // The backend reports no "scan finished" signal, so the spinner runs for a

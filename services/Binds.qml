@@ -546,6 +546,21 @@ Singleton {
         return [...mods, key].join(" + ");
     }
 
+    /*
+     * A combination as a person reads it. The same as combo() except for a
+     * modifier pressed on its own: Hyprland needs it written SUPER + Super_L,
+     * which reads as two keys, so it is shown as just SUPER. combo() stays as
+     * it is because it also writes the binds file.
+     */
+    function label(mods, key) {
+        const k = String(key ?? "").toLowerCase();
+        const alone = { super_l: "SUPER", super_r: "SUPER", alt_l: "ALT", alt_r: "ALT",
+            control_l: "CTRL", control_r: "CTRL", shift_l: "SHIFT", shift_r: "SHIFT" }[k];
+        if (alone && mods.every(m => m === alone))
+            return alone;
+        return root.combo(mods, key);
+    }
+
     function forKey(key) {
         const k = root.norm(key);
         return root.all.filter(b => b.k === k);
@@ -659,7 +674,14 @@ Singleton {
         root.write(list);
     }
 
-    function flags(action) {
+    /*
+     * A bind on Super by itself fires when Super is let go, and only if no
+     * other key was pressed while it was down. Bound to the press it opened
+     * the launcher at the start of every Super shortcut as well.
+     */
+    function flags(action, key) {
+        if (["super_l", "super_r"].includes(String(key ?? "").toLowerCase()))
+            return "release";
         if (["volumeUp", "volumeDown", "brightnessUp", "brightnessDown"].includes(action))
             return "repeating";
         if (["mediaToggle", "mediaNext", "mediaPrev", "volumeMute", "micMute", "screenshot",
@@ -698,6 +720,7 @@ Singleton {
             "",
             "local locked = { locked = true }",
             "local repeating = { locked = true, repeating = true }",
+            "local release = { release = true }",
             "",
             "-- Anything already on these keys is dropped first, or Hyprland fires both.",
             "if type(hl.unbind) == \"function\" then"
@@ -711,7 +734,7 @@ Singleton {
                 out.push(`hl.bind("${root.combo(b.mods, b.key)}", hl.dsp.exec_cmd("${root.appCommand(b.app)}"))`);
                 continue;
             }
-            const f = root.flags(b.action);
+            const f = root.flags(b.action, b.key);
             out.push(`hl.bind("${root.combo(b.mods, b.key)}", hl.dsp.global("stratum:${b.action}")${f ? ", " + f : ""})`);
         }
         return out.join("\n") + "\n";
@@ -734,8 +757,8 @@ Singleton {
                 out.push(`bind = ${b.mods.join(" ")}, ${b.key}, exec, ${root.appCommand(b.app)}`);
                 continue;
             }
-            const f = root.flags(b.action);
-            const kind = f === "repeating" ? "bindle" : (f === "locked" ? "bindl" : "bind");
+            const f = root.flags(b.action, b.key);
+            const kind = { repeating: "bindle", locked: "bindl", release: "bindr" }[f] ?? "bind";
             out.push(`${kind} = ${b.mods.join(" ")}, ${b.key}, global, stratum:${b.action}`);
         }
         return out.join("\n") + "\n";

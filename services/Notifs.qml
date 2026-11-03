@@ -43,11 +43,18 @@ Singleton {
      * Do not disturb. Notifications are still accepted and still listed — the
      * flag suppresses the interruption, not the record, so nothing is lost while
      * it is on.
+     *
+     * Any focus mode counts, so the bell in the bar and everything else that
+     * reads this show quiet whichever one is on; toggling it turns Do Not
+     * Disturb on, or whatever mode is on off.
      */
-    property bool dnd: false
+    readonly property bool dnd: Focus.on
 
     function toggleDnd() {
-        root.dnd = !root.dnd;
+        if (Focus.on)
+            Focus.stop();
+        else
+            Focus.set("dnd", "off");
     }
 
     // id -> epoch ms. Pruned on close rather than swept, so it cannot grow.
