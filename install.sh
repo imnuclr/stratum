@@ -306,6 +306,25 @@ hook_hyprland() {
   fi
   ok "binds file: $file (Stratum keeps it up to date from Settings → Keybinds)"
 
+  # Window rules, in a file of their own beside the binds.
+  local rules rline
+  if [ -f "$HYPR_DIR/hyprland.lua" ]; then
+    rules="$HYPR_DIR/stratum-rules.lua"
+    rline='dofile(os.getenv("HOME") .. "/.config/hypr/stratum-rules.lua")'
+  else
+    rules="$HYPR_DIR/stratum-rules.conf"
+    rline='source = ~/.config/hypr/stratum-rules.conf'
+  fi
+  cp "$ROOT/assets/hypr/$(basename "$rules")" "$rules"
+  if grep -qF "stratum-rules" "$config" 2>/dev/null; then
+    ok "window rules: $rules"
+  else
+    local rmark="--"; [ "${config##*.}" = conf ] && rmark="#"
+    printf '%s %s\n' "$rmark" "Stratum window rules" >>"$config"
+    printf '%s\n' "$rline" >>"$config"
+    ok "window rules: $rules (loaded from $(basename "$config"))"
+  fi
+
   # Once per session, not on every config reload.
   local autostart='exec-once = qs -c stratum'
   [ -f "$HYPR_DIR/hyprland.lua" ] && autostart='hl.on("hyprland.start", function() hl.exec_cmd("qs -c stratum") end)'
