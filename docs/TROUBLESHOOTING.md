@@ -87,6 +87,26 @@ line **at the end** of your config:
 
 Then `hyprctl reload`.
 
+### Super does nothing in my *other* shell (caelestia, cykler-caelestia)
+
+Both shells' bind files are loading at once. Each unbinds a key before claiming it, so
+whichever file Hyprland reads last wins — and it points the key at `stratum:launcher`,
+which only Stratum answers. Load one overlay per shell instead:
+
+```sh
+shellctl binds setup
+shellctl binds doctor
+```
+
+That replaces the unconditional `dofile` with
+`~/.config/hypr/shellctl-binds.lua`, which reads `~/.config/stratum/active-shell` and
+loads only that shell's binds — `stratum-binds.lua` or `caelestia-binds.lua`. It also
+takes over the autostart, which was hardcoded to `qs -c stratum` and so started Stratum
+whatever you'd switched to.
+
+`shellctl use NAME` then saves the outgoing shell's keybinds, restores the incoming
+shell's, and reloads Hyprland. `shellctl binds show` lists what's tracked and saved.
+
 ### One key does something else as well, or instead
 
 Your own config binds the same keys. Stratum's file unbinds anything on its keys

@@ -89,6 +89,18 @@ Item {
                 probe.attempts = 0;
                 probe.requestPaint();
                 root.ready();
+            } else if (status === Image.Error) {
+                /*
+                 * A picture that will not load still has to report. The layer
+                 * that was given it is the one the crossfade is waiting on, and
+                 * a wait with nothing to end it leaves the whole wallpaper stuck
+                 * on the last picture that did load — every later change
+                 * silently ignored. Saying so lets the fade run and the fault
+                 * show as the plain ground, which is at least a fault you can
+                 * see.
+                 */
+                Diag.log("wallpaper", `could not load ${String(root.source).split("/").pop()}`);
+                root.ready();
             }
         }
     }

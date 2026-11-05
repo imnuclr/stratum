@@ -337,14 +337,28 @@ Click the dot-grid. **This is deliberately not the dashboard**: the dashboard sh
 *information*, the control centre takes *actions*. Conflating the two is the single
 biggest structural problem in the current shell.
 
-372 wide, anchored to the right island, grows from it. Top to bottom:
+A full-height column joined to the right edge, reached by running the pointer into that
+edge — the whole of it, not a corner. A corner is a target you have to aim for, and
+aiming for one means knowing *which* corner, when the panel it opens runs the length of
+that edge anyway. On a display with another to its right the same strip is on the route
+between the two, so it waits long enough there that a crossing is over before it fires:
+pressing into that edge to open the panel is not available, because the pointer leaves
+for the other screen instead.
 
-- **Header** — dot-matrix clock, date, and two circular buttons: settings and session.
+Read top to bottom: what has arrived, then what you can change, then the time and the two
+things that leave.
+
+- **Notifications** — at the top, filling everything the rest of the panel leaves. They
+  are the part that is *news*, which is the reason the panel is opened most of the time,
+  and the top of a column is where reading starts. A `NOTIFICATIONS` header with a count
+  badge and `CLEAR ALL` opposite, then the list, folded by app.
 - **Two wide connection pills** — Wi-Fi and Bluetooth side by side, each with a circular
   icon badge, a name, and the connected SSID or device count beneath. The badge inverts
-  with the tile: on a white (active) tile the badge goes black. A chevron **expands the
-  tile in place**, growing the sheet downward into a network list with inline PSK entry.
-  No page navigation, ever.
+  with the tile: on a white (active) tile the badge goes black. A chevron opens the
+  network list **over the controls**, anchored to the same bottom edge they are, with
+  inline PSK entry. No page navigation, ever — and not a sheet that grows either, because
+  a panel that resizes to fit an expanding section drags its own edge under the pointer
+  that just clicked. The sheet is already as tall as the screen; the list is laid over it.
 - **Eight circular toggles**, four across, two rows, each with a caps label *below* the
   circle: DND, Night, Airplane, Caffeine, Mic, Record, VPN, Theme. Active ones fill white.
 - **Two pill sliders** — brightness and volume. The filled portion is solid white with a
@@ -355,8 +369,15 @@ biggest structural problem in the current shell.
   increasing number of filled bars: ULT / ECO / BAL / MAX, backed by
   `power-profiles-daemon`. The selected segment is a white pill.
 - **Media card** — dithered art, title, artist, and transport with the one red button.
-- **Notifications** — a `NOTIFICATIONS · n` header with `CLEAR ALL` opposite, then rows
-  with a circular app badge, a caps `APP · WHEN` line, and the body beneath.
+- **Footer** — dot-matrix clock, date, and two circular buttons: settings and session, on
+  the floor of the panel. Neither is a state, so neither belongs among the toggles; and
+  neither is what the panel was opened to read, so neither belongs above everything else.
+  Both of them take you *out* of the panel, which is what a footer is for.
+
+  **Urgency is the one place the accent appears here.** Critical gets an accent border
+  and an accent `APP · WHEN` line, on both the sidebar row and the toast; the header
+  count badge fills with the accent while anything critical is listed. Low urgency dims
+  its header line instead. Everything else stays monochrome.
 
 **Movable icons.** The toggle grid is config-driven, not hardcoded:
 
@@ -521,6 +542,72 @@ A real floating window (`FloatingWindow`), not a layer-shell panel, so it tiles 
 
 ---
 
+### 5.8 Lyrics
+
+The words of whatever is playing, swept **word by word**. A line that lights up all at
+once tells you which line; a sweep tells you where in it you are, and that is the whole
+difference between following along and reading ahead. It is also why the shell bothers
+with a lyrics source that has word timings at all.
+
+Two surfaces, one service:
+
+- **A desktop widget** — a window onto the song: what has just gone, what is going now,
+  what is coming. One line answers "what is this word" and a handful answers "where are
+  we", which is what a glance at a desktop usually wants. How many is a setting, and it
+  sets the *type size* rather than the card's — the card is whatever size it was dragged
+  to, so asking for more lines makes the words smaller rather than the widget taller. The
+  sum for that has to include the gap between rows as well as the font's own line height
+  on top of the leading; leaving it out asked for five lines and fitted four.
+- **A full-screen view** (<kbd>Super</kbd>+<kbd>Y</kbd>) — the whole song, pinned so the
+  current line sits a little above the middle and everything moves past it. A click on
+  any line seeks to it: the words are timed, so they double as a way through the track.
+
+**The sweep is a hard edge, not a glow.** Two copies of each word, one dim and one
+bright, the bright one clipped to how far through the word the singing has got. A
+gradient reads as a light moving over the word, which is vaguer: you cannot tell from it
+which letter is being sung. Each word also rises and swells a little at its midpoint —
+only a little, enough to make the current word findable on a line of twelve without the
+line appearing to wobble.
+
+**Everything but the current line is out of focus.** Lines two or more away are blurred,
+progressively, and dimmed with it. This is the single thing that makes a wall of lyrics
+readable: the eye is told where to look by everything else going soft, rather than by the
+current line being a slightly different grey. The current line is *not* larger — `scale`
+is a paint-time transform the layout knows nothing about, so an enlarged line that wrapped
+grew over its neighbours, and size changes move the words being read anyway.
+
+**The clock is local, and a reading is a lower bound.** MPRIS answers with a number that
+has crossed a bus to get here, so it was true a moment ago. Averaging each reading into
+the anchor converges on the mean *staleness* rather than on the truth — measured against
+Spotify's own position that held the sweep a steady 110ms late, which is a syllable. So a
+reading ahead of the local clock is news and is taken at once, while one behind it is
+just an older sample and is dropped; only a reading a long way behind is believed, because
+that is a seek rather than latency. Same hardware, same track: 27ms, inside one frame.
+
+**Sources, in order.** Spicy Lyrics first, which is the one public source with word
+timings and wants a free key; LRCLIB second, which needs no account. Spicy answers with
+the best sync it holds, so even with a key a given track may come back timed by line —
+that is Apple Music's or Spotify's sync rather than a community one.
+
+**Lines that sound together light together.** Songs overlap their lines constantly — a
+backing vocal under the lead, one singer coming in over the last word of the other, a
+chorus answering a call. The lookup used to return the *first* line whose span held the
+clock, so the second of any overlapping pair had to wait for the first to finish, by which
+time it had often finished too: whole lines of a duet never appeared at all. What is
+sounding is a set, and every member of it lights, sweeps and stays sharp. Backing vocals
+come through as lines of their own, drawn smaller and dimmer under the lead they answer —
+they were being parsed and thrown away before.
+
+**A line-timed source lights its lines whole.** Spreading its words across the line was
+tried, first by letter and then by syllable count, and both are wrong in the same way: a
+sweep is a claim about where in the line the voice is, and a guess making that claim reads
+as the lyrics being out of time rather than as an estimate. Lighting the line whole claims
+only what the source actually knows. `Lyrics.exact` says which of the two is on screen and
+both views label it, so nothing has to be inferred from how it is moving.
+
+The key lives in `~/.config/stratum/spicylyrics.key`, not in `shell.json`: that is the
+file people paste into issues and push to dotfile repos.
+
 ## 6. The depth effect
 
 Two approaches. Ship **A** first; it reads far stronger and is ~40 lines.
@@ -590,6 +677,44 @@ shellctl restart
 One caveat worth recording: `pkill -f "qs -c stratum"` matches the *calling* script's own
 command line, so a naive switcher kills its own shell session. `shellctl` enumerates with
 `pgrep -f` and filters its own pid and parent before killing anything.
+
+### Keybinds don't survive a shared Hyprland config
+
+The sharper problem is keys. Both shells want the same ones — Super for the launcher,
+the media keys, Print — and each binds them to a global in its own namespace
+(`stratum:launcher`, `caelestia:launcher`). A single Hyprland config loads *both* bind
+files on every start, and because each one calls `hl.unbind` before claiming a key, the
+file read last wins it outright. Switching shells changed which shell was listening but
+not which globals the keys fired, so the Super key silently did nothing in whichever
+session hadn't won the race.
+
+Keys are global to the compositor, so the fix has to live in the compositor's config, not
+in either shell. `shellctl binds setup` installs `~/.config/hypr/shellctl-binds.lua` and
+hands it the two jobs the config was doing unconditionally: it reads
+`~/.config/stratum/active-shell`, `dofile`s only `<shell>-binds.lua`, and starts that
+shell. The old calls are commented out rather than deleted, so the change reads as a
+diff and reverses by hand.
+
+Three details that mattered:
+
+- **Reload, don't relogin.** `hl.on("hyprland.start", …)` fires once per session, so
+  `hyprctl reload` re-reads the loader and swaps overlays without re-launching the
+  shell — and without double-starting it, since `shellctl` launches it itself.
+- **`dofile` is wrapped in `pcall`.** A syntax error in an overlay would otherwise take
+  the whole Hyprland config down with it, costing you the keys you'd use to fix it. An
+  unknown or missing `active-shell` falls back to `stratum`.
+- **cykler-caelestia is caelestia.** The fork installs the same binary, the same
+  `caelestia:` namespace and the same `~/.config/caelestia`, so it answers to the
+  `caelestia` entry through an alias instead of being a third shell you could run
+  beside it.
+
+Per-shell *profiles* sit on top: a tracked set of files (listed in
+`~/.config/shellctl/tracked`) snapshotted under
+`~/.config/shellctl/profiles/<shell>/tree`, as a `$HOME`-relative tree rather than
+mangled filenames. `shellctl use` saves the outgoing shell's set and restores the
+incoming one's. Restores are additive — a tracked file absent from a profile is left
+alone, never deleted — because a half-filled profile should not be able to cost you a
+config file.
 
 ## 9. CLI and IPC
 

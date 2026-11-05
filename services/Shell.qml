@@ -185,10 +185,20 @@ Singleton {
      * pointer to another one leaves it behind, over a display you are no longer
      * looking at and taking every click there, so it closes instead.
      */
-    readonly property var fullScreenPanels: ["picker", "wallpaper"]
+    readonly property var fullScreenPanels: ["picker", "wallpaper", "lyrics"]
     readonly property string focusedMonitor: Hypr.focusedWorkspace?.monitor?.name ?? ""
 
     onFocusedMonitorChanged: {
+        /*
+         * An empty name is Hyprland not having said yet, not a different
+         * monitor. It reads empty for a moment whenever the focused workspace
+         * is being replaced — which includes a full-screen panel taking the
+         * keyboard — and treating that as "you have moved to another display"
+         * closed the panel a second after it opened, on a machine with one
+         * screen.
+         */
+        if (root.focusedMonitor.length === 0)
+            return;
         if (root.fullScreenPanels.includes(root.openPanel)
             && root.openScreen.length > 0 && root.openScreen !== root.focusedMonitor)
             root.close();

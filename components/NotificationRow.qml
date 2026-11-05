@@ -20,6 +20,15 @@ Rectangle {
 
     required property var notification
 
+    /*
+     * Urgency, which the row had been ignoring entirely — a battery warning and
+     * a now-playing ping were drawn exactly alike. Critical is the one case the
+     * design allows colour for: the sender is saying this should not be missed,
+     * and nothing else on the row earns the accent.
+     */
+    readonly property bool critical: Notifs.isCritical(root.notification)
+    readonly property bool low: Notifs.isLow(root.notification)
+
     readonly property var extraActions: (root.notification?.actions ?? [])
         .filter(a => a.identifier !== "default")
 
@@ -67,7 +76,7 @@ Rectangle {
     opacity: 1 - Math.min(0.9, Math.abs(root.slide) / Math.max(1, root.width))
     color: hover.hovered ? Theme.surfaceTop : Theme.surfaceHi
     border.width: 1
-    border.color: hover.hovered ? Theme.fg : Theme.outline
+    border.color: root.critical ? Theme.accent : (hover.hovered ? Theme.fg : Theme.outline)
 
     Behavior on color {
         ColorAnimation {
@@ -85,41 +94,30 @@ Rectangle {
         }
     }
 
-    // The sender's picture, or failing that the app's icon, dithered into dots —
-    // the same treatment album art gets.
-    Rectangle {
+    /*
+     * The sender's picture, or failing that the app's icon — as a photo in a
+     * ring of dots, not dithered into them. A face rendered as dots is muddy and
+     * genuinely hard to recognise at this size, which is the whole reason the
+     * lock screen stopped doing it to the user's avatar. The dots belong around
+     * the picture.
+     */
+    DotAvatar {
         id: badge
 
-        // Level with the middle of the notification, however many lines it has.
+        /*
+         * Level with the first line, not the middle. Centring put the icon
+         * halfway down a three-line notification while the text it belongs to
+         * started at the top, so the two read as unrelated.
+         */
         anchors.left: parent.left
         anchors.leftMargin: Theme.space(3)
-        anchors.verticalCenter: parent.verticalCenter
-        width: 40
-        height: 40
-        radius: 12
-        color: Theme.surfaceTop
+        anchors.top: parent.top
+        anchors.topMargin: Theme.space(3)
 
-        DotImage {
-            anchors.centerIn: parent
-            width: 34
-            height: 34
-            visible: root.iconSource.length > 0
-            source: root.iconSource
-            // Finer than album art: an app icon is small and its shape is the point.
-            cell: 1.6
-            dotScale: 0.5
-            halftone: true
-            colored: true
-        }
-
-        DotIcon {
-            anchors.centerIn: parent
-            width: 26
-            height: 26
-            visible: root.iconSource.length === 0
-            name: "bell"
-            color: Theme.fgBright
-        }
+        size: 40
+        source: root.iconSource
+        name: root.notification?.appName ?? ""
+        ringColor: root.critical ? Theme.accent : Theme.fgFaint
     }
 
     Column {
@@ -129,7 +127,9 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: Theme.space(3)
-        anchors.topMargin: Math.max(Theme.space(3), (root.height - implicitHeight) / 2)
+        // Top-aligned to match the icon. Centring this while the icon sat at the
+        // top left the two drifting apart as the body grew.
+        anchors.topMargin: Theme.space(3)
         spacing: Theme.space(1)
 
         Item {
@@ -143,8 +143,18 @@ Rectangle {
                 anchors.right: dismiss.left
                 anchors.rightMargin: Theme.space(2)
                 elide: Text.ElideRight
-                color: Theme.fgBright
+                // Says which app, and — when it matters — how much it matters.
+                // Low urgency sits back rather than shouting.
+                color: root.critical ? Theme.accent : (root.low ? Theme.fgDim : Theme.fgBright)
                 text: `${root.notification?.appName ?? "system"} · ${Notifs.age(root.notification)}`
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Theme.standard
+                        easing.type: Easing.Bezier
+                        easing.bezierCurve: Theme.smooth
+                    }
+                }
             }
 
             // Always drawn, dim until pointed at. The target is larger than the

@@ -5,93 +5,71 @@ import qs.services
 import qs.theme
 
 /*
- * Workspaces as a column of dots, the focused one drawn as a capsule.
- *
- * A dot also says which display its workspace is on, because with two monitors
- * a flat list of numbers gives no clue where switching to one will take you.
- * Filled means this display; a ring means the other one. The distinction is
- * drawn rather than labelled — a bar this narrow has no room for monitor names,
- * and the shape is readable at a glance once seen.
+ * The dot row, turned on its side. Same sizing and the same paging: a fixed
+ * window of `count` dots where workspace 6 of a five-wide row is the first dot
+ * of the next five, so going past the end still leaves something focused.
  */
 Column {
     id: root
 
     required property string monitorName
 
-    readonly property int count: Config.get("bar.workspaces.count", 6)
-    // Not a fixed run: anything that exists beyond the configured count gets a
-    // dot too, so switching past the end still shows where you are.
-    readonly property var ids: Hypr.visibleIds(root.count)
-    readonly property int focused: Hypr.focusedWorkspace?.id ?? 1
+    readonly property int count: Math.max(1, Config.forMonitor(monitorName, "bar.workspaces.count", 6))
+    readonly property real size: Config.forMonitor(monitorName, "bar.workspaces.slot", 22)
+    readonly property int animMs: Config.forMonitor(monitorName, "bar.workspaces.animMs", 500)
 
-    readonly property real dot: 5
-    readonly property real pitch: 16
-    readonly property real capsule: 18
+    readonly property int activeId: Hypr.focusedWorkspace?.id ?? 1
 
-    spacing: pitch - dot
+    // Which page of `count` workspaces the row is showing. Held rather than
+    // bound: a special workspace reports an id outside the run, and recomputing
+    // from it would flip the row to a nonsense page and then back.
+    property int groupOffset: 0
+
+    function sync() {
+        const id = root.activeId;
+        if (id < 1)
+            return;
+        root.groupOffset = Math.floor((id - 1) / root.count) * root.count;
+    }
+
+    onActiveIdChanged: sync()
+    onCountChanged: sync()
+    Component.onCompleted: sync()
+
+    spacing: Config.forMonitor(monitorName, "bar.workspaces.verticalGap", 2)
 
     Repeater {
-        model: root.ids
+        model: root.count
 
         Item {
-            id: slot
+            id: cell
 
-            required property var modelData
+            required property int index
 
-            readonly property int id: slot.modelData
-            readonly property bool isFocused: root.focused === slot.id
-            readonly property bool occupied: Hypr.isOccupied(slot.id)
-            readonly property string home: Hypr.monitorOf(slot.id)
-            // An unused workspace belongs to no display yet, so it is drawn as
-            // neither — a faint dot, the way it always was.
-            readonly property bool elsewhere: slot.occupied && slot.home !== root.monitorName
+            readonly property int wsId: root.groupOffset + cell.index + 1
 
-            width: root.dot
-            height: slot.isFocused ? root.capsule : root.dot
+            width: root.size
+            height: root.size
 
-            Behavior on height {
-                NumberAnimation {
-                    duration: Theme.standard
-                    easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.expressive
-                }
-            }
-
-            Rectangle {
+            WorkspaceDot {
                 anchors.fill: parent
-                radius: width / 2
 
-                // A workspace on another display is drawn as a ring: the same dot
-                // with its middle taken out, so the column reads as one set of
-                // workspaces rather than two unrelated groups.
-                color: slot.elsewhere
-                    ? "transparent"
-                    : (slot.isFocused ? Theme.fg : (slot.occupied ? Theme.fgDim : Theme.dotOff))
-                border.width: slot.elsewhere ? 1 : 0
-                border.color: slot.isFocused ? Theme.fg : Theme.fgDim
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Theme.standard
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.smooth
-                    }
-                }
-
-                Behavior on border.color {
-                    ColorAnimation {
-                        duration: Theme.standard
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.smooth
-                    }
-                }
+                focused: root.activeId === cell.wsId
+                occupied: Hypr.isOccupied(cell.wsId)
+                elsewhere: Hypr.isOccupied(cell.wsId) && Hypr.monitorOf(cell.wsId) !== root.monitorName
+                hovered: hover.containsMouse
+                pressed: hover.pressed
+                animMs: root.animMs
+                size: root.size
             }
 
             MouseArea {
+                id: hover
+
                 anchors.fill: parent
-                anchors.margins: -5
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Hypr.focusWorkspace(slot.id)
+                onClicked: Hypr.focusWorkspace(cell.wsId)
             }
         }
     }

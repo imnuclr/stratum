@@ -3,13 +3,19 @@ import qs.services
 import qs.theme
 
 /*
- * Album art as a disc: a ring around the dithered picture, turning while
- * something is playing and holding still where it stopped when it is paused —
- * the way a record would, not snapping back to upright.
+ * Album art as a disc: a ring around the sleeve, turning while something is
+ * playing and holding still where it stopped when it is paused — the way a
+ * record would, not snapping back to upright.
  *
  * The ring is what makes it read as an object rather than a crop, and what makes
- * the turning visible at all: a round picture of mostly-random dots spun on its
- * own looks like it has barely moved.
+ * the turning visible at all: a round picture spun on its own looks like it has
+ * barely moved.
+ *
+ * The sleeve is the photograph, not a dither of it. Album art is the one image
+ * on screen chosen to be looked at, and dithering a face or a cover into dots
+ * costs exactly the detail that makes it recognisable — the same reason the lock
+ * screen stopped doing it to the user's avatar. `dithered` keeps the old
+ * treatment for anyone who wants the dots.
  */
 Item {
     id: root
@@ -19,6 +25,7 @@ Item {
     property real cell: 3
     property real dotScale: 0.5
     property bool colored: true
+    property bool dithered: false
 
     implicitWidth: size
     implicitHeight: size
@@ -56,6 +63,14 @@ Item {
             }
         }
 
+        RoundImage {
+            anchors.centerIn: parent
+            width: root.size - 10
+            height: root.size - 10
+            source: root.source
+            visible: root.source.length > 0 && !root.dithered
+        }
+
         DotImage {
             anchors.centerIn: parent
             width: root.size - 10
@@ -66,7 +81,7 @@ Item {
             colored: root.colored
             circular: true
             source: root.source
-            visible: root.source.length > 0
+            visible: root.source.length > 0 && root.dithered
         }
 
         NoCover {

@@ -63,6 +63,9 @@ Singleton {
         ["weather", "Location", "weather location city town map where forecast place ip"],
         ["weather", "Units", "celsius fahrenheit temperature units metric imperial"],
         // notifications
+        ["defaultApps", "Web browser", "default browser links http https open with"],
+        ["defaultApps", "File manager", "default folders file manager open with"],
+        ["defaultApps", "Text editor", "default editor text source open with"],
         ["notifications", "Do not disturb", "dnd silence quiet mute focus notifications"],
         ["notifications", "focus", "focus modes sleep work personal gaming allow apps silence"],
         ["notifications", "Morning", "focus until morning hour"],

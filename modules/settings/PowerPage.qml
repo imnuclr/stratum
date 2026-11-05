@@ -61,6 +61,85 @@ SettingsPage {
         }
     }
 
+    /*
+     * Saying something before the battery runs out. The shell knew the battery
+     * was low long before it said so — the glyph in the bar coloured and nothing
+     * else happened, which on a column bar at the side of the screen is no
+     * warning at all.
+     */
+    SettingCard {
+        title: "warnings"
+        visible: Power.hasBattery
+        footnote: "Each level warns once per discharge. Plugging in clears them all. The last one is sent as urgent, so it shows through Do Not Disturb."
+
+        SettingRow {
+            title: "Warn me when it gets low"
+            detail: "An ordinary notification, so it toasts and then waits in the sidebar."
+
+            Switch {
+                checked: Config.get("power.warn", true)
+                onToggled: value => Config.set("power.warn", value)
+            }
+        }
+
+        SettingRow {
+            visible: Config.get("power.warn", true)
+            title: "First warning"
+            detail: "A nudge, which times out like anything else."
+
+            Stepper {
+                value: Math.round(Config.get("power.warnAt", 0.20) * 100)
+                from: 10
+                to: 50
+                step: 5
+                suffix: "%"
+                onMoved: v => Config.set("power.warnAt", v / 100)
+            }
+        }
+
+        SettingRow {
+            visible: Config.get("power.warn", true)
+            title: "Second warning"
+            detail: "Urgent: it stays until dismissed."
+
+            Stepper {
+                value: Math.round(Config.get("power.warnVeryLowAt", 0.10) * 100)
+                from: 5
+                to: 30
+                step: 1
+                suffix: "%"
+                onMoved: v => Config.set("power.warnVeryLowAt", v / 100)
+            }
+        }
+
+        SettingRow {
+            visible: Config.get("power.warn", true)
+            title: "Last warning"
+            detail: "The one that means now."
+
+            Stepper {
+                value: Math.round(Config.get("power.warnCriticalAt", 0.05) * 100)
+                from: 1
+                to: 20
+                step: 1
+                suffix: "%"
+                onMoved: v => Config.set("power.warnCriticalAt", v / 100)
+            }
+        }
+
+        SettingRow {
+            visible: Config.get("power.warn", true)
+            title: "Try it"
+            detail: "Sends the warning you would get at the current charge, whatever it is."
+
+            ActionButton {
+                text: "send test"
+                width: 108
+                onClicked: BatteryAlert.announce(BatteryAlert.levels[0])
+            }
+        }
+    }
+
     SettingCard {
         title: "performance"
 

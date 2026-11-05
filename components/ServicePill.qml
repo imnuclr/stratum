@@ -14,6 +14,9 @@ Item {
     property string title: ""
     property string detail: ""
     property bool active: false
+    // Whether this pill's list is the one showing, so the chevron points at
+    // what it will do rather than always down.
+    property bool open: false
 
     signal toggled
     signal expanded
@@ -100,14 +103,44 @@ Item {
         anchors.rightMargin: Theme.space(3)
         name: "chevron-down"
         size: 15
-        color: Theme.fgFaint
+        color: root.open ? Theme.fgBright : Theme.fgFaint
+        rotation: root.open ? 180 : 0
+
+        Behavior on rotation {
+            NumberAnimation {
+                duration: Theme.standard
+                easing.type: Easing.Bezier
+                easing.bezierCurve: Theme.smooth
+            }
+        }
     }
 
     HoverHandler {
         id: hover
     }
 
-    TapHandler {
-        onTapped: root.expanded()
+    /*
+     * Everything but the disc opens the list.
+     *
+     * This used to be a TapHandler on the pill itself, with the disc's own
+     * handler inside it. Two handlers over the same point both see the tap, so
+     * a press on the disc could turn the service off *and* open its list — and
+     * the list arriving over a service that had just been switched off is a
+     * confusing way to be told either thing happened. Separate areas mean one
+     * press does one thing.
+     */
+    Item {
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: disc.right
+        anchors.right: parent.right
+
+        TapHandler {
+            onTapped: root.expanded()
+        }
+
+        HoverHandler {
+            cursorShape: Qt.PointingHandCursor
+        }
     }
 }

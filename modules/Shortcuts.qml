@@ -168,6 +168,12 @@ Item {
 
     GlobalShortcut {
         appid: "stratum"
+        name: "lyrics"
+        onPressed: Shell.toggle("lyrics")
+    }
+
+    GlobalShortcut {
+        appid: "stratum"
         name: "control"
         onPressed: Shell.toggle("control")
     }

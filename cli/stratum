@@ -99,14 +99,34 @@ doctor() {
   if [ -f "$hypr/hyprland.lua" ]; then cfg="$hypr/hyprland.lua"; file="$hypr/stratum-binds.lua"
   else cfg="$hypr/hyprland.conf"; file="$hypr/stratum-binds.conf"; fi
   [ -f "$file" ] && good "binds file $file" || poor "no binds file — run the installer, or open Settings → Keybinds"
-  if grep -rqF "stratum-binds" "$hypr" --include='*.lua' --include='*.conf' --exclude='stratum-binds.*' 2>/dev/null; then
+  # Either the per-shell loader pulls it in (shellctl binds setup), or the config
+  # loads it directly. Commented-out calls don't count, and shellctl leaves one
+  # behind when it takes over.
+  if grep -rqF "shellctl-binds.lua" "$hypr" --include='*.lua' --exclude='shellctl-binds.lua' 2>/dev/null; then
+    good "Hyprland loads the binds file, per active shell (shellctl)"
+  elif grep -rqE '^[[:space:]]*[^#-].*stratum-binds' "$hypr" --include='*.lua' --include='*.conf' --exclude='stratum-binds.*' 2>/dev/null; then
     good "Hyprland loads the binds file"
+    if command -v shellctl >/dev/null && [ -f "$hypr/hyprland.lua" ]; then
+      say "  running another shell too? 'shellctl binds setup' stops these keys leaking into its session"
+    fi
   else
     poor "Hyprland does not load $file — add it to $cfg (see docs/TROUBLESHOOTING.md)"
   fi
+  # Lua binds all report as the __lua dispatcher with an opaque callback id, so the
+  # target isn't readable from hyprctl. Check the key is bound at all, and take the
+  # action from the file Stratum wrote.
   if command -v hyprctl >/dev/null; then
-    hyprctl binds 2>/dev/null | grep -q "stratum:launcher\|apps open\|launcher" \
-      && good "launcher key is bound" || poor "no launcher key bound in Hyprland — reload Hyprland, or bind one in Settings → Keybinds"
+    local lkey
+    lkey=$(grep -oE '^hl\.bind\("[^"]*"' "$file" 2>/dev/null |
+             grep -iF -m1 -e 'launcher' -e 'SPACE' | sed 's/.*"\(.*\)"/\1/' ||
+           grep -oE '^bind[[:space:]]*=.*' "$file" 2>/dev/null | head -1)
+    if grep -qE 'stratum:launcher|apps open' "$file" 2>/dev/null; then
+      good "launcher key is bound${lkey:+ ($lkey)}"
+    elif hyprctl binds 2>/dev/null | grep -q "stratum:launcher\|apps open\|launcher"; then
+      good "launcher key is bound"
+    else
+      poor "no launcher key in $file — bind one in Settings → Keybinds"
+    fi
   fi
   if command -v ddcutil >/dev/null && ! id -nG | grep -qw i2c && getent group i2c >/dev/null; then
     poor "not in the i2c group — external monitor brightness needs: sudo usermod -aG i2c $USER (then log out and in)"

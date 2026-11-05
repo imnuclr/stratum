@@ -53,13 +53,14 @@ Variants {
         implicitHeight: win.modelData.height
 
         /*
-         * Hidden while the notification page is up — it is the same corner and
-         * the same notifications — and while a focus mode that lets nothing
-         * through is on. One that lets some apps through silences the rest
-         * toast by toast, below.
+         * Hidden while the control centre is up — the list lives in there now,
+         * so a toast would be announcing something already on screen a few
+         * centimetres away — and while a focus mode that lets nothing through is
+         * on. One that lets some apps through silences the rest toast by toast,
+         * below.
          */
         readonly property bool muted: Focus.silencesAll
-            || Shell.openPanel === "notifications"
+            || Shell.openPanel === "control"
             || !win.focused
 
         // The display being worked on. A toast repeated on every monitor is
@@ -186,7 +187,10 @@ Variants {
                     radius: Math.min(height / 2, Theme.rTile)
                     color: linger.hovered ? Theme.surfaceHi : Theme.surface
                     border.width: 1
-                    border.color: linger.hovered ? Theme.fg : Theme.outline
+                    // The row inside draws no border of its own here, so the
+                    // card has to carry the urgency: a critical toast was
+                    // otherwise indistinguishable from a now-playing ping.
+                    border.color: row.critical ? Theme.accent : (linger.hovered ? Theme.fg : Theme.outline)
                     opacity: toast.slot
                     clip: true
                     visible: toast.p > 0.001

@@ -294,8 +294,9 @@ hook_hyprland() {
   bold "4. Hyprland"
   [ -d "$HYPR_DIR" ] || { warn "no $HYPR_DIR — is Hyprland set up?"; return; }
 
-  local file line config
+  local file line config lua=false
   if [ -f "$HYPR_DIR/hyprland.lua" ]; then
+    lua=true
     file="$HYPR_DIR/stratum-binds.lua"; config="$HYPR_DIR/hyprland.lua"
     line='dofile(os.getenv("HOME") .. "/.config/hypr/stratum-binds.lua")'
     [ -f "$file" ] || cp "$ROOT/assets/hypr/stratum-binds.lua" "$file"
@@ -327,9 +328,26 @@ hook_hyprland() {
 
   # Once per session, not on every config reload.
   local autostart='exec-once = qs -c stratum'
-  [ -f "$HYPR_DIR/hyprland.lua" ] && autostart='hl.on("hyprland.start", function() hl.exec_cmd("qs -c stratum") end)'
+  $lua && autostart='hl.on("hyprland.start", function() hl.exec_cmd("qs -c stratum") end)'
 
-  if grep -qF "stratum-binds" "$config" 2>/dev/null; then
+  # On a Lua config, prefer shellctl's loader: it reads the active shell and pulls
+  # in only that shell's binds, and starts that shell. Loading stratum-binds.lua
+  # outright instead leaves Stratum's keys bound in a caelestia session, pointing
+  # at stratum: globals nothing answers — that's why Super stops working there.
+  if $lua && grep -qF "shellctl-binds.lua" "$config" 2>/dev/null; then
+    ok "your config loads the per-shell loader (shellctl binds setup)"
+    return
+  fi
+
+  if $lua && command -v shellctl >/dev/null 2>&1 &&
+     ask "Load binds per shell, so Stratum's keys don't leak into a caelestia session?" y; then
+    shellctl binds setup
+    return
+  fi
+
+  # Comment lines don't count: `shellctl binds setup` leaves the old call behind,
+  # commented out, and a commented call loads nothing.
+  if grep -qE '^[[:space:]]*[^#-].*stratum-binds' "$config" 2>/dev/null; then
     ok "your config already loads it"
   elif ask "Add the line that loads it to the end of $(basename "$config")?" y; then
     local mark="--"; [ "${config##*.}" = conf ] && mark="#"
@@ -339,7 +357,7 @@ hook_hyprland() {
     say "add this yourself, at the end: $line"
   fi
 
-  if grep -qE "qs -c stratum|quickshell.*stratum|stratum start" "$config" 2>/dev/null; then
+  if grep -qE '^[[:space:]]*[^#-].*(qs -c stratum|quickshell.*stratum|stratum start)' "$config" 2>/dev/null; then
     ok "Stratum already starts with Hyprland"
   elif ask "Start Stratum with Hyprland?" y; then
     printf '%s\n' "$autostart" >>"$config"

@@ -67,11 +67,13 @@ FloatingWindow {
         { label: "weather", name: "Weather", icon: "cloud-sun", group: "desktop", words: "weather location city town map forecast temperature units celsius fahrenheit", component: weatherPage },
         { label: "notifications", name: "Notifications", icon: "bell", group: "desktop", words: "toasts do not disturb dnd", component: notificationsPage },
         { label: "defaults", name: "Default apps", icon: "file", group: "desktop", words: "default applications open with file types formats mime png jpg pdf browser image viewer video player associations", component: defaultAppsPage },
+        { label: "lyrics", name: "Lyrics", icon: "play", group: "desktop", words: "lyrics words song karaoke spicy spotify synced sing along", component: lyricsPage },
         { label: "displays", name: "Displays", icon: "monitor", group: "system", words: "display monitors screens brightness night light resolution refresh rate hz scale arrange position", component: displaysPage },
         { label: "sound", name: "Sound", icon: "volume-2", group: "system", words: "volume audio speakers headphones microphone mic output input", component: soundPage },
         { label: "network", name: "Network", icon: "wifi", group: "system", words: "wifi wi-fi ethernet wired vpn airplane internet", component: networkPage },
         { label: "vpn", name: "VPN", icon: "shield", group: "system", words: "vpn wireguard openvpn warp cloudflare tailscale mullvad tunnel private", component: vpnPage },
         { label: "bluetooth", name: "Bluetooth", icon: "bluetooth", group: "system", words: "devices pair headphones", component: bluetoothPage },
+        { label: "defaultApps", name: "Default apps", icon: "app", group: "system", words: "default apps browser mail email file manager terminal editor image video music pdf open with handler mime associations", component: defaultAppsPage },
         { label: "power", name: "Power", icon: "bolt", group: "system", words: "battery profile eco performance sleep caffeine awake", component: powerPage },
         { label: "keybinds", name: "Keybinds", icon: "keyboard", group: "system", words: "keyboard shortcuts keys hotkeys", component: keybindsPage },
         { label: "updates", name: "Updates", icon: "arrow-down", group: "stratum", words: "update upgrade version new release git pull", component: updatesPage },
@@ -515,6 +517,12 @@ FloatingWindow {
     }
 
     Component {
+        id: defaultAppsPage
+
+        DefaultAppsPage {}
+    }
+
+    Component {
         id: wallpaperPage
 
         WallpaperPage {}
@@ -533,9 +541,9 @@ FloatingWindow {
     }
 
     Component {
-        id: defaultAppsPage
+        id: lyricsPage
 
-        DefaultAppsPage {}
+        LyricsPage {}
     }
 
     Component {

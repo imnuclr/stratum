@@ -79,11 +79,21 @@ PanelWindow {
         keys.forceActiveFocus();
     }
 
-    // Walking along quickly should not ask for a new picture on every key press.
+    /*
+     * Walking along quickly should not ask for a new picture on every key press.
+     *
+     * At 30ms it effectively did: a key repeat is slower than that, so every
+     * step started a full-resolution decode of a picture that was about to be
+     * stepped past. Those decodes queue, they evict the strip's own thumbnails
+     * from the shared pixmap cache, and the desktop ends up a second or two
+     * behind the number on screen — which is what "it skips" looked like. Long
+     * enough that a continuous walk asks for nothing until it pauses, short
+     * enough that a single step still feels immediate.
+     */
     Timer {
         id: preview
 
-        interval: 30
+        interval: 110
         onTriggered: Wallpaper.set(root.entries[root.index])
     }
 
@@ -136,16 +146,25 @@ PanelWindow {
             event.accepted = true;
         }
 
-        // The pictures either side of the one being looked at, decoded ahead at the
-        // size the desktop will ask for so that stepping to them is instant. Kept
-        // referenced here, which is what keeps them in the image cache.
+        /*
+         * The picture either side of the one being looked at, decoded ahead at
+         * the size the desktop will ask for so that stepping to them is instant.
+         * Kept referenced here, which is what keeps them in the image cache.
+         *
+         * Two neighbours, not six. Each of these is the full size of the display
+         * — around 20MB decoded on a 2880x1800 screen — and seven of them is
+         * more than the pixmap cache holds, so they evicted each other *and*
+         * every thumbnail in the strip below. The blank discs that took a moment
+         * to fill in were cached thumbnails being thrown away to make room for
+         * pictures that were never going to be looked at.
+         */
         Repeater {
-            model: root.open ? 7 : 0
+            model: root.open ? 3 : 0
 
             Image {
                 required property int index
 
-                readonly property int at: root.index + index - 3
+                readonly property int at: root.index + index - 1
 
                 visible: false
                 asynchronous: true
@@ -321,14 +340,34 @@ PanelWindow {
                         }
                     }
 
+                    /*
+                     * Fades up when it has something to show, over the disc's own
+                     * surface colour. A thumbnail that is still decoding used to
+                     * appear as a flat grey circle indistinguishable from one
+                     * that had failed, and then pop in; arriving is now a thing
+                     * the strip does rather than something that happens to it.
+                     */
                     Image {
+                        id: thumb
+
                         anchors.fill: parent
                         source: `file://${cell.modelData}`
                         fillMode: Image.PreserveAspectCrop
-                        sourceSize.width: 240
-                        sourceSize.height: 240
+                        // Enough for the disc at its largest, and no more: these
+                        // share a pixmap cache with the full-size pictures above.
+                        sourceSize.width: 180
+                        sourceSize.height: 180
                         asynchronous: true
                         cache: true
+                        opacity: status === Image.Ready ? 1 : 0
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Theme.standard * 2
+                                easing.type: Easing.Bezier
+                                easing.bezierCurve: Theme.smooth
+                            }
+                        }
                     }
                 }
 

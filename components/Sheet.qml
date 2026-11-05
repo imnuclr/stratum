@@ -58,13 +58,32 @@ PanelWindow {
     readonly property real edgeGapBottom: Config.get("bar.margin", 10) + Theme.space(1)
     readonly property real availableHeight: monitor.height - edgeGapTop - edgeGapBottom
     // How far the sheet reaches sideways past its card, toward the screen edge.
-    readonly property real bridge: root.centered ? 0 : Theme.space(1)
+    readonly property real bridge: root.centered || root.attached ? 0 : Theme.space(1)
 
     // Most of the way off its own edge, capped so a tall sheet does not take an
     // age to arrive.
-    property real travel: Math.min(root.sheetHeight, 260)
-    // Which way it travels in from: +1 rises from below, -1 comes down from above.
-    property real slideSign: root.originY >= 0.5 ? 1 : -1
+    /*
+     * A sheet that fills the screen edge to edge down one side is a sidebar, and
+     * a sidebar arrives from the side it lives on, not from the top. Sliding a
+     * full-height panel down out of the ceiling reads as the whole screen
+     * dropping; coming in off its own edge reads as a drawer.
+     */
+    property bool sideways: false
+
+    /*
+     * Joined to the screen edge instead of floating clear of it. A panel that
+     * sits against its edge with the corners there squared off reads as part of
+     * the screen sliding open, where the same panel with a gap around it reads as
+     * a card someone dropped on top. The edge it joins is the one originX names.
+     */
+    property bool attached: false
+
+    property real travel: Math.min(root.sideways ? root.sheetWidth : root.sheetHeight, 260)
+    // Which way it travels in from: +1 rises from below or in from the right,
+    // -1 comes down from above or in from the left.
+    property real slideSign: root.sideways
+        ? (root.originX >= 0.5 ? 1 : -1)
+        : (root.originY >= 0.5 ? 1 : -1)
 
     /*
      * Sits in the middle of the free space instead of growing out of an edge, for
@@ -223,7 +242,11 @@ PanelWindow {
 
     // Clamped so a sheet growing from an item near the far edge stays on screen
     // rather than hanging off it, and clear of the bar on either side.
-    readonly property real cardX: Math.round(Math.max(root.insetLeft + Theme.space(1),
+    readonly property real cardX: root.attached
+        ? Math.round(root.originX >= 0.5
+            ? monitor.width - root.insetRight - root.sheetWidth
+            : root.insetLeft)
+        : Math.round(Math.max(root.insetLeft + Theme.space(1),
         Math.min(monitor.width - root.insetRight - root.sheetWidth - Theme.space(1),
             root.insetLeft + (monitor.width - root.insetLeft - root.insetRight) * root.originX - root.sheetWidth / 2)))
 
@@ -234,18 +257,35 @@ PanelWindow {
      * the "opens from the top" that only ever happened on the shorter monitor,
      * where the control centre does not fit while its content settles.
      */
-    readonly property real cardY: root.centered
+    readonly property real cardY: root.attached
+        // Joined to the edge means joined along its whole length: a full-height
+        // panel with the usual top and bottom gaps is still a card with air
+        // around it.
+        ? 0
+        : root.centered
         ? Math.round(root.edgeGapTop + Math.max(0, root.availableHeight - root.sheetHeight) / 2)
         : root.originY >= 0.5
         ? Math.round(monitor.height - root.edgeGapBottom - root.sheetHeight)
         : Math.round(root.edgeGapTop + Math.max(0, root.availableHeight - root.sheetHeight) * root.originY)
 
-    readonly property real reachX: Math.round(root.cardX - (root.originX < 0.5 ? root.bridge : 0))
-    readonly property real reachY: Math.round(root.cardY
-        - (!root.centered && root.originY < 0.5 ? root.edgeGapTop : 0) - root.satelliteRoom)
-    readonly property real reachW: Math.round(root.sheetWidth + root.bridge)
-    readonly property real reachH: Math.round(root.sheetHeight + root.satelliteRoom
-        + (root.centered ? 0 : (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom)))
+    /*
+     * An attached sheet is drawn a shade past the screen edges it is joined to,
+     * so the hairline on those sides lands outside the screen instead of down
+     * it. Theme.outline is 85% white: left to draw, it put a bright 1px seam
+     * along the top and right of the display, which is exactly the "card sitting
+     * on the screen" look that joining it is meant to remove. The free edge
+     * keeps its hairline, and the rounded corners on that side are inset far
+     * enough that a couple of pixels never reach them.
+     */
+    readonly property real overhang: root.attached ? 2 : 0
+
+    readonly property real reachX: Math.round(root.cardX
+        - (root.originX < 0.5 ? root.bridge + root.overhang : 0))
+    readonly property real reachY: Math.round(root.cardY - root.overhang
+        - (!root.centered && !root.attached && root.originY < 0.5 ? root.edgeGapTop : 0) - root.satelliteRoom)
+    readonly property real reachW: Math.round(root.sheetWidth + root.bridge + root.overhang)
+    readonly property real reachH: Math.round(root.sheetHeight + root.satelliteRoom + root.overhang * 2
+        + (root.centered || root.attached ? 0 : (root.originY < 0.5 ? root.edgeGapTop : root.edgeGapBottom)))
 
     mask: Region {
         x: root.open ? root.reachX : 0
@@ -398,12 +438,18 @@ PanelWindow {
 
                 // Where the card sits inside the reachable area: the whole of it,
                 // except for the band bridging to the screen edge.
-                x: Math.round(root.cardX - root.reachX)
+                //
+                // An attached sheet is grown past the edges it is joined to, so
+                // the hairline on those sides is drawn outside the screen rather
+                // than down it. The overhang lives here rather than on `reach`
+                // because this is what the card is sized to.
+                x: Math.round(root.cardX - root.reachX
+                    - (root.attached && root.originX < 0.5 ? root.overhang : 0))
 
-                y: Math.round(root.cardY - root.reachY)
+                y: Math.round(root.cardY - root.reachY - root.overhang)
 
-                width: root.sheetWidth
-                height: root.sheetHeight
+                width: root.sheetWidth + root.overhang
+                height: root.sheetHeight + root.overhang * 2
 
                 // Swallow clicks so they don't reach the dismiss layer underneath.
                 MouseArea {
@@ -428,11 +474,22 @@ PanelWindow {
                      */
                     property real slide: 0
 
-                    x: 0
-                    y: Math.round(slide)
+                    x: Math.round(root.sideways ? slide : 0)
+                    y: Math.round(root.sideways ? 0 : slide)
                     width: parent.width
                     height: parent.height
                     radius: Theme.rSheet
+                    /*
+                     * The corners that meet the screen edge are square. A rounded
+                     * corner against the edge leaves two slivers of wallpaper
+                     * showing through, which is exactly the "sitting on top of
+                     * the screen" look that attaching it is meant to avoid.
+                     */
+                    topRightRadius: root.attached && root.originX >= 0.5 ? 0 : radius
+                    bottomRightRadius: root.attached && root.originX >= 0.5 ? 0 : radius
+                    topLeftRadius: root.attached && root.originX < 0.5 ? 0 : radius
+                    bottomLeftRadius: root.attached && root.originX < 0.5 ? 0 : radius
+
                     color: root.deep ? Theme.deep : Theme.surface
                     border.width: 1
                     border.color: Theme.outline

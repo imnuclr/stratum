@@ -16,6 +16,7 @@ import qs.modules.dashboard
 import qs.modules.hotzones
 import qs.modules.launcher
 import qs.modules.lock
+import qs.modules.lyrics
 import qs.modules.notifications
 import qs.modules.osd
 import qs.modules.widgets
@@ -52,6 +53,11 @@ ShellRoot {
         AppTheme.palette;
         // Looks for updates a little later, then every six hours.
         Updates.automatic;
+        // Lazy like the rest: nothing else asks for it, so a low battery would
+        // never be noticed unless the service is loaded here.
+        BatteryAlert.enabled;
+        // Same: the lyrics follow whatever is playing without being looked at.
+        Lyrics.enabled;
     }
 
     // Quickshell singletons are lazy, and a lazy singleton never registers its
@@ -101,7 +107,6 @@ ShellRoot {
     Dashboard {}
     Control {}
 
-    Notifications {}
     HotZones {}
     Toasts {}
     OsdOverlay {}
@@ -110,6 +115,7 @@ ShellRoot {
     Lock {}
     Settings {}
     Spotlight {}
+    LyricsPanel {}
     WallpaperMenus {}
     WallpaperPickers {}
     Shortcuts {}
@@ -296,6 +302,50 @@ ShellRoot {
         function updates(): string {
             return Updates.count === 0 ? `up to date (${Updates.version})`
                 : Updates.waiting.map(c => `${c.hash}  ${c.title}`).join("\n");
+        }
+    }
+
+    /*
+     * The words of whatever is playing. `status` is the one to reach for when
+     * nothing is appearing: it says whether there is a key, whether the track
+     * was recognised, and which source answered.
+     */
+    IpcHandler {
+        target: "lyrics"
+
+        function status(): string {
+            return Lyrics.report();
+        }
+
+        // Stores the Spicy Lyrics key, in a file of its own beside shell.json.
+        function key(value: string): string {
+            if (value.length === 0)
+                return Lyrics.haveKey ? "a key is set" : "no key set";
+            Lyrics.saveKey(value);
+            return `saved to ${Lyrics.keyPath}`;
+        }
+
+        // Asks again for the track playing, ignoring what was cached.
+        function refresh(): string {
+            Lyrics.refresh(true);
+            return "asking again";
+        }
+
+        /*
+         * Four lines of placeholder, timed from here, for checking the view and
+         * the offset without needing a track both sources know. "line" shows
+         * what a source that only timed its lines looks like, which is most of
+         * them; anything else shows the swept kind.
+         */
+        function sample(kind: string): string {
+            Lyrics.sample(kind);
+            return `showing four ${kind === "line" ? "line-timed" : "word-timed"} sample lines for the next twelve seconds`;
+        }
+
+        // Nudges the words earlier or later, in milliseconds, for good.
+        function offset(ms: int): string {
+            Config.set("lyrics.offset" + "Ms", ms);
+            return `${ms}ms`;
         }
     }
 

@@ -5,96 +5,47 @@ import qs.services
 import qs.theme
 
 /*
- * Workspace indicator: fixed slots with a capsule that travels between them.
+ * Workspaces as dots, the way Caelestia draws them: a quarter of the box when
+ * empty, a third when occupied, two thirds when focused.
  *
- * The capsule's two edges animate at different durations, so the leading edge
- * runs ahead and the trailing edge catches up — the capsule stretches across the
- * gap and settles. That asymmetry is the whole effect; animating x and width
- * together just slides a rigid shape and reads as flat.
+ * The row is a fixed window of `count` dots that pages. With five shown,
+ * workspace 6 is not a sixth dot — it is the first dot of the next five, and the
+ * group is `floor((id - 1) / count) * count`. Without that the row simply had no
+ * dot for anything past the end, so walking off the last workspace left nothing
+ * focused and the indicator looked like it had gone out.
  *
- * Slots are uniform and wide enough for the capsule, so neighbouring dots never
- * end up sitting underneath it.
+ * Paging rather than growing keeps the row one width, which matters on the
+ * horizontal bar: a row that got longer every time you went further would shove
+ * the active-window title along with it.
  */
-Item {
+Row {
     id: root
 
     required property string monitorName
 
-    readonly property int count: Config.forMonitor(monitorName, "bar.workspaces.count", 6)
-    readonly property real slot: Config.forMonitor(monitorName, "bar.workspaces.slot", 15)
-    readonly property real gap: Config.forMonitor(monitorName, "bar.workspaces.gap", 4)
-    readonly property real dotSize: Config.forMonitor(monitorName, "bar.workspaces.dotSize", 5)
-    readonly property real trailFactor: Config.forMonitor(monitorName, "bar.workspaces.trailFactor", 1.6)
+    readonly property int count: Math.max(1, Config.forMonitor(monitorName, "bar.workspaces.count", 6))
+    readonly property real size: Config.forMonitor(monitorName, "bar.workspaces.slot", 22)
+    readonly property int animMs: Config.forMonitor(monitorName, "bar.workspaces.animMs", 500)
 
     readonly property int activeId: Hypr.focusedWorkspace?.id ?? 1
-    // Special workspaces report ids outside the range; hold the capsule where it is.
-    readonly property int activeIndex: Math.max(0, Math.min(count - 1, activeId - 1))
 
-    // Capsule edges, driven independently.
-    property real capsuleLeft: 0
-    property real capsuleRight: slot
+    // Which page of `count` workspaces the row is showing. Held rather than
+    // bound: a special workspace reports an id outside the run, and recomputing
+    // from it would flip the row to a nonsense page and then back.
+    property int groupOffset: 0
 
-    implicitWidth: count * slot + (count - 1) * gap
-    implicitHeight: Math.max(dotSize, 11)
-
-    function slotX(index) {
-        return index * (slot + gap);
+    function sync() {
+        const id = root.activeId;
+        if (id < 1)
+            return;
+        root.groupOffset = Math.floor((id - 1) / root.count) * root.count;
     }
 
-    function travel() {
-        const target = slotX(activeIndex);
-        const goingRight = target > capsuleLeft;
-        const lead = Theme.standard;
-        const trail = Math.round(lead * trailFactor);
+    onActiveIdChanged: sync()
+    onCountChanged: sync()
+    Component.onCompleted: sync()
 
-        leftAnim.stop();
-        rightAnim.stop();
-
-        leftAnim.to = target;
-        rightAnim.to = target + slot;
-        // The edge in front moves first; the one behind lags, stretching the shape.
-        leftAnim.duration = goingRight ? trail : lead;
-        rightAnim.duration = goingRight ? lead : trail;
-
-        leftAnim.start();
-        rightAnim.start();
-    }
-
-    onActiveIndexChanged: travel()
-
-    Component.onCompleted: {
-        capsuleLeft = slotX(activeIndex);
-        capsuleRight = capsuleLeft + slot;
-    }
-
-    NumberAnimation {
-        id: leftAnim
-
-        target: root
-        property: "capsuleLeft"
-        easing.type: Easing.Bezier
-        easing.bezierCurve: Theme.enterEasing
-    }
-
-    NumberAnimation {
-        id: rightAnim
-
-        target: root
-        property: "capsuleRight"
-        easing.type: Easing.Bezier
-        easing.bezierCurve: Theme.enterEasing
-    }
-
-    Rectangle {
-        id: capsule
-
-        x: root.capsuleLeft
-        width: Math.max(root.dotSize, root.capsuleRight - root.capsuleLeft)
-        height: root.dotSize
-        radius: height / 2
-        anchors.verticalCenter: parent.verticalCenter
-        color: Theme.dotOn
-    }
+    spacing: Config.forMonitor(monitorName, "bar.workspaces.gap", 2)
 
     Repeater {
         model: root.count
@@ -104,39 +55,28 @@ Item {
 
             required property int index
 
-            readonly property int wsId: index + 1
-            readonly property bool active: root.activeIndex === index
-            readonly property bool occupied: Hypr.isOccupied(wsId)
-            readonly property int windows: Hypr.windowsOn(wsId)
+            readonly property int wsId: root.groupOffset + cell.index + 1
 
-            x: root.slotX(index)
-            width: root.slot
-            height: parent.height
+            width: root.size
+            height: root.size
 
-            Rectangle {
-                anchors.centerIn: parent
-                width: root.dotSize
-                height: root.dotSize
-                radius: height / 2
-                // Inverts where the capsule covers it, so the capsule reads as a
-                // highlight rather than something sitting on top of the dot.
-                color: {
-                    if (cell.active)
-                        return Theme.surface;
-                    return cell.occupied ? Qt.alpha(Theme.fg, 0.55) : Theme.dotOff;
-                }
+            WorkspaceDot {
+                anchors.fill: parent
 
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Theme.standard
-                        easing.type: Easing.Bezier
-                        easing.bezierCurve: Theme.smooth
-                    }
-                }
+                focused: root.activeId === cell.wsId
+                occupied: Hypr.isOccupied(cell.wsId)
+                elsewhere: Hypr.isOccupied(cell.wsId) && Hypr.monitorOf(cell.wsId) !== root.monitorName
+                hovered: hover.containsMouse
+                pressed: hover.pressed
+                animMs: root.animMs
+                size: root.size
             }
 
             MouseArea {
+                id: hover
+
                 anchors.fill: parent
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Hypr.focusWorkspace(cell.wsId)
             }

@@ -52,14 +52,14 @@ Singleton {
      */
     readonly property var types: ({
         "clock": { label: "clock", icon: "moon", w: 54, h: 26, minW: 24, minH: 10, shape: "square", style: "shadow",
-            options: [{ key: "hours", label: "hours", values: ["auto", "24h", "12h"] }, { key: "date", label: "date", values: ["show", "hide"] }] },
+            options: [{ key: "hours", label: "hours", values: ["auto", "24h", "12h"] }, { key: "date", label: "date", values: ["show", "hide"] }, { key: "seconds", label: "seconds", values: ["show", "hide"] }] },
         "greeting": { label: "greeting", icon: "sun", w: 44, h: 14, minW: 22, minH: 6, shape: "square", style: "shadow",
             options: [{ key: "facts", label: "details", values: ["show", "hide"] }] },
         "weather": { label: "weather", icon: "cloud-sun", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "date": { label: "calendar", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "square", style: "tile", options: [] },
         "gpu": { label: "gpu", icon: "scan", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "media": { label: "now playing", icon: "play", w: 31, h: 15, minW: 20, minH: 10, shape: "square", style: "tile",
-            options: [{ key: "art", label: "cover", values: ["colour", "dots"] }] },
+            options: [{ key: "art", label: "cover", values: ["photo", "dots"] }] },
         "stats": { label: "system", icon: "terminal", w: 47, h: 15, minW: 26, minH: 10, shape: "square", style: "tile", options: [] },
         "cpu": { label: "cpu", icon: "terminal", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "memory": { label: "memory", icon: "app", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
@@ -69,9 +69,11 @@ Singleton {
         "power": { label: "power draw", icon: "bolt", w: 15, h: 15, minW: 9, minH: 9, shape: "round", style: "tile", options: [] },
         "uptime": { label: "uptime", icon: "scan", w: 18, h: 11, minW: 12, minH: 7, shape: "square", style: "shadow", options: [] },
         "photo": { label: "photo", icon: "scan", w: 20, h: 15, minW: 8, minH: 8, shape: "square", style: "tile",
-            options: [{ key: "look", label: "look", values: ["dots", "plain"] }, { key: "every", label: "change", values: ["hour", "day", "never"] }] }
+            options: [{ key: "look", label: "look", values: ["dots", "plain"] }, { key: "every", label: "change", values: ["hour", "day", "never"] }] },
+        "lyrics": { label: "lyrics", icon: "play", w: 44, h: 20, minW: 20, minH: 7, shape: "square", style: "shadow",
+            options: [{ key: "lines", label: "lines", values: ["5", "3", "7", "9", "1"] }, { key: "header", label: "label", values: ["show", "hide"] }, { key: "align", label: "align", values: ["left", "centre"] }] }
     })
-    readonly property var typeNames: ["clock", "greeting", "weather", "date", "media", "stats", "cpu", "gpu", "memory", "disk", "battery", "power", "network", "photo"]
+    readonly property var typeNames: ["clock", "greeting", "weather", "date", "media", "lyrics", "stats", "cpu", "gpu", "memory", "disk", "battery", "power", "network", "photo"]
 
     // Every widget can choose how it sits on the wallpaper.
     readonly property var styleOption: ({ key: "style", label: "style", values: ["tile", "shadow", "plain"] })

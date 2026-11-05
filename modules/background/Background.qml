@@ -88,6 +88,7 @@ Variants {
         property string queued: ""
 
         function show(url) {
+            stuck.restart();
             if (fade.running) {
                 // A switch during a fade waits for it to finish and only the latest
                 // is kept. Cutting the fade short jumped it to full in one frame,
@@ -199,6 +200,30 @@ Variants {
 
         }
 
+        /*
+         * A crossfade that never starts is a wallpaper that never changes.
+         *
+         * The incoming layer says when it has something to show, and everything
+         * after that hangs off it: `pending` stays set, every later change is
+         * folded into the layer nobody is watching, and the desktop keeps the
+         * picture it had. That should not happen — a load either succeeds or
+         * errors, and both report now — but the cost of being wrong is the
+         * wallpaper appearing to ignore you for the rest of the session, which
+         * is worth a few seconds of patience and a nudge.
+         */
+        Timer {
+            id: stuck
+
+            interval: 4000
+            onTriggered: {
+                if (!win.pending || fade.running)
+                    return;
+                Diag.log("wallpaper", `${win.modelData.name}: layer never reported, showing it anyway`);
+                fade.target = win.pending;
+                fade.restart();
+            }
+        }
+
         NumberAnimation {
             id: fade
 
@@ -210,6 +235,7 @@ Variants {
 
             // Freeing the outgoing image only once it is fully covered.
             onFinished: {
+                stuck.stop();
                 const old = win.topIsA ? layerB : layerA;
                 old.source = "";
                 win.pending = null;

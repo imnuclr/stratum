@@ -1,25 +1,86 @@
 #!/usr/bin/env bash
-# shellctl — switch between installed Quickshell desktop shells.
+# shellctl — switch between installed Quickshell desktop shells, and keep each
+# shell's keybinds with it.
 #
 # Stratum is built alongside caelestia rather than replacing it, so this picks
 # which one owns the session. The choice persists to ~/.config/stratum/active-shell
 # and is what the Hyprland autostart reads.
+#
+# Keybinds used to be the sharp edge of running two shells. Both shells' bind
+# files loaded on every Hyprland start, so whichever was read last won the keys
+# and pointed them at a shell that wasn't running — Super did nothing under
+# caelestia because stratum-binds.lua had already taken Super_L and aimed it at
+# stratum:launcher. Now Hyprland loads exactly one overlay, the active shell's,
+# through ~/.config/hypr/shellctl-binds.lua, and `shellctl binds` snapshots the
+# config files each shell owns so switching restores the set you left behind.
+#
+#   shellctl binds setup      install the loader into your Hyprland config
+#   shellctl binds save       snapshot the active shell's tracked files
+#   shellctl binds load NAME  restore NAME's snapshot
+#   shellctl binds doctor     check the wiring
 set -euo pipefail
 
-STATE="${XDG_CONFIG_HOME:-$HOME/.config}/stratum/active-shell"
-QS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+STATE="$CONFIG/stratum/active-shell"
+QS_DIR="$CONFIG/quickshell"
+HYPR_DIR="$CONFIG/hypr"
+SHELLCTL_DIR="$CONFIG/shellctl"
+PROFILES="$SHELLCTL_DIR/profiles"
+TRACKED="$SHELLCTL_DIR/tracked"
+LOADER="$HYPR_DIR/shellctl-binds.lua"
 
-# name|launch command|detection pattern
+# name|launch command|detection pattern|aliases
+#
+# cykler-caelestia installs as caelestia — same binary, same caelestia: global
+# namespace, same ~/.config/caelestia — so it answers to the caelestia entry
+# and its aliases rather than being a third shell you could run alongside it.
 SHELLS=(
-  "stratum|qs -c stratum|qs -c stratum"
-  "caelestia|caelestia shell|caelestia"
+  "stratum|qs -c stratum|qs -c stratum|"
+  "caelestia|caelestia shell|caelestia|cykler,cykler-caelestia"
+)
+
+# The config files each shell owns, and so the ones worth carrying between
+# switches. Paths are relative to $HOME. Edit the list with `binds track`, or by
+# hand in ~/.config/shellctl/tracked.
+DEFAULT_TRACKED=(
+  '.config/hypr/stratum-binds.lua'
+  '.config/hypr/caelestia-binds.lua'
+  '.config/caelestia/hypr-vars.lua'
+  '.config/caelestia/hypr-user.lua'
 )
 
 dim()  { printf '\033[2m%s\033[0m' "$1"; }
 bold() { printf '\033[1m%s\033[0m' "$1"; }
 red()  { printf '\033[31m%s\033[0m' "$1"; }
 
+# stderr, so a die inside $(...) is still seen rather than captured as output.
+die() { printf '  \033[31m%s\033[0m\n' "$1" >&2; exit 1; }
+
 field() { echo "$1" | cut -d'|' -f"$2"; }
+
+# Canonical name for a shell, accepting its aliases. Prints nothing and fails
+# if the name is unknown.
+resolve() {
+  local want=${1:-} entry name alias aliases
+  [[ -z "$want" ]] && return 1
+  for entry in "${SHELLS[@]}"; do
+    name=$(field "$entry" 1)
+    [[ "$want" == "$name" ]] && { echo "$name"; return 0; }
+    IFS=, read -ra aliases <<<"$(field "$entry" 4)"
+    for alias in "${aliases[@]:-}"; do
+      [[ -n "$alias" && "$want" == "$alias" ]] && { echo "$name"; return 0; }
+    done
+  done
+  return 1
+}
+
+entry_for() {
+  local name=$1 entry
+  for entry in "${SHELLS[@]}"; do
+    [[ "$(field "$entry" 1)" == "$name" ]] && { echo "$entry"; return 0; }
+  done
+  return 1
+}
 
 running_shell() {
   for entry in "${SHELLS[@]}"; do
@@ -31,6 +92,14 @@ running_shell() {
   return 1
 }
 
+# The shell the session belongs to, whether or not it is up right now.
+active_shell() {
+  running_shell 2>/dev/null && return 0
+  local saved; saved=$(tr -d '[:space:]' <"$STATE" 2>/dev/null || true)
+  [[ -n "$saved" ]] && resolve "$saved" && return 0
+  echo stratum
+}
+
 installed() {
   local name=$1
   case "$name" in
@@ -39,6 +108,409 @@ installed() {
     *)         return 1 ;;
   esac
 }
+
+# --- keybind profiles ---------------------------------------------------------
+
+# One tracked path per line, $HOME-relative, blanks and # comments stripped.
+tracked_paths() {
+  if [[ ! -f "$TRACKED" ]]; then
+    mkdir -p "$SHELLCTL_DIR"
+    {
+      echo "# Files shellctl carries between shells, one per line, relative to \$HOME."
+      echo "# Each shell gets its own copy under ~/.config/shellctl/profiles/<shell>/tree."
+      echo "# Add to this with: shellctl binds track PATH"
+      echo
+      printf '%s\n' "${DEFAULT_TRACKED[@]}"
+    } >"$TRACKED"
+  fi
+  sed -e 's/[[:space:]]*#.*$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$TRACKED" |
+    grep -v '^$' || true
+}
+
+# Normalise a path the user typed into a $HOME-relative one.
+relativise() {
+  local p=$1
+  case "$p" in
+    "$HOME"/*) echo "${p#"$HOME"/}" ;;
+    \~/*)      echo "${p#\~/}" ;;
+    /*)        return 1 ;;
+    *)         echo "$p" ;;
+  esac
+}
+
+profile_dir() { echo "$PROFILES/$1/tree"; }
+
+binds_save() {
+  local name=$1 quiet=${2:-} root rel src dst saved=0
+  root=$(profile_dir "$name")
+
+  while IFS= read -r rel; do
+    src="$HOME/$rel"
+    [[ -f "$src" ]] || continue
+    dst="$root/$rel"
+    mkdir -p "$(dirname "$dst")"
+    cp -p "$src" "$dst"
+    saved=$((saved + 1))
+  done < <(tracked_paths)
+
+  mkdir -p "$PROFILES/$name"
+  date -Iseconds >"$PROFILES/$name/saved-at"
+  [[ -n "$quiet" ]] || { dim "  saved $saved file(s) to the $name profile"; echo; }
+}
+
+binds_load() {
+  local name=$1 quiet=${2:-} root rel src dst restored=0
+  root=$(profile_dir "$name")
+
+  if [[ ! -d "$root" ]]; then
+    [[ -n "$quiet" ]] || { dim "  no saved binds for $name yet — leaving the current ones in place"; echo; }
+    return 0
+  fi
+
+  # Only files the profile actually holds are written. A tracked file missing
+  # from the snapshot is left alone rather than deleted: a half-filled profile
+  # should never cost you a config file.
+  while IFS= read -r rel; do
+    src="$root/$rel"
+    [[ -f "$src" ]] || continue
+    dst="$HOME/$rel"
+    cmp -s "$src" "$dst" 2>/dev/null && continue
+    mkdir -p "$(dirname "$dst")"
+    cp -p "$src" "$dst"
+    restored=$((restored + 1))
+  done < <(tracked_paths)
+
+  [[ -n "$quiet" ]] || { dim "  restored $restored changed file(s) from the $name profile"; echo; }
+}
+
+binds_show() {
+  local entry name root rel src dst state current
+  current=$(active_shell)
+  echo
+  dim "  KEYBIND PROFILES"; echo
+  for entry in "${SHELLS[@]}"; do
+    name=$(field "$entry" 1)
+    root=$(profile_dir "$name")
+    local mark="  "
+    [[ "$name" == "$current" ]] && mark="$(printf '\033[1m●\033[0m ')"
+    if [[ -d "$root" ]]; then
+      printf '  %s%-14s %s\n' "$mark" "$(bold "$name")" \
+        "$(dim "saved $(cat "$PROFILES/$name/saved-at" 2>/dev/null || echo '?')")"
+    else
+      printf '  %s%-14s %s\n' "$mark" "$(bold "$name")" "$(dim 'not saved yet')"
+    fi
+    while IFS= read -r rel; do
+      src="$root/$rel"; dst="$HOME/$rel"
+      if [[ ! -f "$src" && ! -f "$dst" ]]; then
+        continue
+      elif [[ ! -f "$src" ]]; then
+        state="live only"
+      elif [[ ! -f "$dst" ]]; then
+        state="saved only"
+      elif cmp -s "$src" "$dst"; then
+        state="in sync"
+      else
+        state="differs from live"
+      fi
+      printf '      %-44s %s\n' "$(dim "$rel")" "$(dim "$state")"
+    done < <(tracked_paths)
+  done
+  echo
+  dim "  overlay Hyprland loads: $(bold "$current")-binds.lua"; echo
+  echo
+}
+
+binds_diff() {
+  local name=$1 root rel src dst any=0
+  root=$(profile_dir "$name")
+  [[ -d "$root" ]] || die "no saved binds for $name"
+  while IFS= read -r rel; do
+    src="$root/$rel"; dst="$HOME/$rel"
+    [[ -f "$src" || -f "$dst" ]] || continue
+    cmp -s "$src" "$dst" 2>/dev/null && continue
+    any=1
+    diff -u --label "saved/$rel" --label "live/$rel" \
+      "$([[ -f "$src" ]] && echo "$src" || echo /dev/null)" \
+      "$([[ -f "$dst" ]] && echo "$dst" || echo /dev/null)" || true
+  done < <(tracked_paths)
+  [[ "$any" == 0 ]] && { dim "  $name profile matches what's on disk"; echo; }
+}
+
+binds_track() {
+  local p=${1:-} rel
+  [[ -z "$p" ]] && die "need a path"
+  rel=$(relativise "$p") || die "$p is outside \$HOME — shellctl only tracks files under it"
+  [[ -e "$HOME/$rel" ]] || { dim "  note: $HOME/$rel doesn't exist yet"; echo; }
+  tracked_paths >/dev/null # seed the file
+  if tracked_paths | grep -qxF "$rel"; then
+    dim "  already tracked: $rel"; echo
+    return 0
+  fi
+  printf '%s\n' "$rel" >>"$TRACKED"
+  dim "  tracking $rel"; echo
+}
+
+binds_untrack() {
+  local p=${1:-} rel tmp
+  [[ -z "$p" ]] && die "need a path"
+  rel=$(relativise "$p") || die "$p is outside \$HOME"
+  tracked_paths >/dev/null
+  tracked_paths | grep -qxF "$rel" || die "not tracked: $rel"
+  tmp=$(mktemp)
+  grep -vxF "$rel" "$TRACKED" >"$tmp" || true
+  mv "$tmp" "$TRACKED"
+  dim "  stopped tracking $rel"; echo
+}
+
+binds_forget() {
+  local name=$1
+  [[ -d "$PROFILES/$name" ]] || die "no saved binds for $name"
+  rm -rf "$PROFILES/$name"
+  dim "  dropped the $name profile"; echo
+}
+
+# --- the Hyprland loader ------------------------------------------------------
+
+write_loader() {
+  local entry name launch alias aliases
+  mkdir -p "$HYPR_DIR"
+  cat >"$LOADER" <<'LUA'
+-- shellctl — loads the keybinds of whichever shell owns the session, and starts it.
+--
+-- Written by `shellctl binds setup`; your edits here are lost on the next run.
+-- Put per-shell binds in the overlay files instead:
+--
+--     stratum    ~/.config/hypr/stratum-binds.lua    (Stratum's Settings -> Keybinds writes this)
+--     caelestia  ~/.config/hypr/caelestia-binds.lua  (hand-written; caelestia's own binds already
+--                                                     come from hyprland/keybinds.lua)
+--
+-- Loaded from your Hyprland config with:
+--     dofile(os.getenv("HOME") .. "/.config/hypr/shellctl-binds.lua")
+--
+-- Only the active shell's overlay is read. Reading both is what broke Super: an
+-- overlay unbinds a key before claiming it, so the file read last won the key and
+-- aimed it at a global ("stratum:launcher") that the running shell never answers.
+
+local home = os.getenv("HOME")
+local config = os.getenv("XDG_CONFIG_HOME") or (home .. "/.config")
+
+local function first_line(path)
+    local f = io.open(path)
+    if not f then return nil end
+    local line = f:read("*l")
+    f:close()
+    if type(line) ~= "string" then return nil end
+    line = line:gsub("%s+", "")
+    return line ~= "" and line or nil
+end
+
+local function exists(path)
+    local f = io.open(path)
+    if not f then return false end
+    f:close()
+    return true
+end
+
+-- Launch commands, kept in step with shellctl's own shell table.
+local launch = {
+LUA
+
+  for entry in "${SHELLS[@]}"; do
+    name=$(field "$entry" 1)
+    launch=$(field "$entry" 2)
+    printf '    ["%s"] = "%s",\n' "$name" "$launch" >>"$LOADER"
+  done
+
+  cat >>"$LOADER" <<'LUA'
+}
+
+-- Aliases, so a name like cykler-caelestia in active-shell still resolves.
+local aliases = {
+LUA
+
+  for entry in "${SHELLS[@]}"; do
+    name=$(field "$entry" 1)
+    IFS=, read -ra aliases <<<"$(field "$entry" 4)"
+    for alias in "${aliases[@]:-}"; do
+      [[ -n "$alias" ]] && printf '    ["%s"] = "%s",\n' "$alias" "$name" >>"$LOADER"
+    done
+  done
+
+  cat >>"$LOADER" <<'LUA'
+}
+
+local active = first_line(config .. "/stratum/active-shell") or "stratum"
+active = aliases[active] or active
+if not launch[active] then active = "stratum" end
+
+local overlay = config .. "/hypr/" .. active .. "-binds.lua"
+if exists(overlay) then
+    local ok, err = pcall(dofile, overlay)
+    if not ok then
+        io.stderr:write("shellctl: " .. active .. " keybinds failed to load: " .. tostring(err) .. "\n")
+    end
+end
+
+-- Once per session, not on every config reload: shellctl starts the shell itself
+-- when you switch, and a reload re-reads this file.
+hl.on("hyprland.start", function()
+    hl.exec_cmd(launch[active])
+end)
+LUA
+}
+
+# A placeholder overlay, so switching to a shell that has none doesn't look broken.
+seed_overlay() {
+  # Two statements, not one: bash expands every word of a `local` before it
+  # assigns any of them, so $name would still be unset in the same line.
+  local name=$1
+  local file="$HYPR_DIR/$name-binds.lua"
+  if [[ -f "$file" ]]; then return 0; fi
+  cat >"$file" <<LUA
+-- $name keybinds, loaded only while $name owns the session.
+--
+-- shellctl reads this from ~/.config/hypr/shellctl-binds.lua. Bind as usual:
+--
+--     hl.bind("SUPER + SPACE", hl.dsp.global("$name:launcher"))
+--
+-- Anything bound elsewhere in your config needs hl.unbind first, or Hyprland
+-- fires both. $name's own binds already come from your caelestia dots
+-- (hyprland/keybinds.lua), so this file is for overrides on top of them and
+-- starts empty.
+LUA
+  dim "  created $file"; echo
+}
+
+binds_setup() {
+  local config_file entry name line backup
+  if [[ -f "$HYPR_DIR/hyprland.lua" ]]; then
+    config_file="$HYPR_DIR/hyprland.lua"
+  else
+    die "binds setup needs a Lua Hyprland config at $HYPR_DIR/hyprland.lua"
+  fi
+
+  write_loader
+  dim "  wrote $LOADER"; echo
+
+  for entry in "${SHELLS[@]}"; do
+    name=$(field "$entry" 1)
+    [[ "$name" == stratum ]] && continue # Stratum writes its own from Settings
+    seed_overlay "$name"
+  done
+
+  # Hand the loader the two jobs the config was doing unconditionally: pulling in
+  # stratum's binds, and starting stratum.
+  line='dofile(os.getenv("HOME") .. "/.config/hypr/shellctl-binds.lua")'
+  if grep -qF "shellctl-binds.lua" "$config_file"; then
+    dim "  $config_file already loads it"; echo
+  else
+    backup="$config_file.bak-shellctl-$(date +%s)"
+    cp -p "$config_file" "$backup"
+    dim "  backed up $config_file to $backup"; echo
+
+    local tmp; tmp=$(mktemp)
+    # Comment out the old unconditional lines rather than dropping them, so the
+    # change is obvious and reversible by hand.
+    sed -e 's|^\(dofile(os\.getenv("HOME") \.\. "/\.config/hypr/stratum-binds\.lua")\)|-- shellctl: now loaded per-shell by shellctl-binds.lua\n-- \1|' \
+        -e 's|^\(hl\.on("hyprland\.start", function() hl\.exec_cmd("qs -c stratum") end)\)|-- shellctl: the active shell is started by shellctl-binds.lua\n-- \1|' \
+        "$config_file" >"$tmp"
+    printf '\n-- shellctl: loads the active shell'"'"'s keybinds, and starts that shell\n%s\n' "$line" >>"$tmp"
+    mv "$tmp" "$config_file"
+    dim "  added the loader to $config_file"; echo
+  fi
+
+  # Give whichever shell is up now a profile to come back to.
+  local current; current=$(active_shell)
+  binds_save "$current"
+}
+
+binds_doctor() {
+  local bad=0 config_file="$HYPR_DIR/hyprland.lua" entry name current
+  good() { printf '  \033[32m✓\033[0m %s\n' "$1"; }
+  poor() { printf '  \033[31m✗\033[0m %s\n' "$1"; bad=$((bad + 1)); }
+
+  echo
+  dim "  KEYBIND WIRING"; echo
+
+  [[ -f "$LOADER" ]] && good "loader at $LOADER" \
+    || poor "no loader — run: shellctl binds setup"
+
+  if [[ -f "$config_file" ]]; then
+    grep -qF "shellctl-binds.lua" "$config_file" \
+      && good "$(basename "$config_file") loads the loader" \
+      || poor "$(basename "$config_file") does not load the loader — run: shellctl binds setup"
+
+    if grep -qE '^[[:space:]]*dofile\(os\.getenv\("HOME"\) \.\. "/\.config/hypr/stratum-binds\.lua"\)' "$config_file"; then
+      poor "$(basename "$config_file") still loads stratum-binds.lua unconditionally — stratum's keys will override the other shell's"
+    else
+      good "no unconditional overlay left in $(basename "$config_file")"
+    fi
+
+    if grep -qE '^[[:space:]]*hl\.on\("hyprland\.start".*qs -c stratum' "$config_file"; then
+      poor "$(basename "$config_file") hardcodes 'qs -c stratum' as the autostart — it will start stratum whatever you switched to"
+    else
+      good "autostart follows the active shell"
+    fi
+  else
+    poor "no $config_file"
+  fi
+
+  for entry in "${SHELLS[@]}"; do
+    name=$(field "$entry" 1)
+    [[ -f "$HYPR_DIR/$name-binds.lua" ]] \
+      && good "overlay for $name" \
+      || poor "no overlay for $name at $HYPR_DIR/$name-binds.lua"
+  done
+
+  current=$(active_shell)
+  [[ -d "$(profile_dir "$current")" ]] \
+    && good "profile saved for the active shell ($current)" \
+    || poor "no profile for $current yet — run: shellctl binds save"
+
+  echo
+  [[ "$bad" == 0 ]] && { dim "  all good"; echo; } \
+    || { dim "  $bad problem(s)"; echo; }
+  echo
+  [[ "$bad" == 0 ]]
+}
+
+# An explicit shell name, or the active one when none was given. A name that
+# resolves to nothing is an error rather than a silent fall back to the active
+# shell: saving over the wrong profile is not a recoverable mistake.
+named_or_active() {
+  if [[ -z "${1:-}" ]]; then
+    active_shell
+  else
+    resolve "$1" || die "unknown shell: $1"
+  fi
+}
+
+cmd_binds() {
+  local sub=${1:-show} name
+  shift || true
+  case "$sub" in
+    setup)   binds_setup ;;
+    show|ls|list|status) binds_show ;;
+    doctor|check) binds_doctor ;;
+    save)
+      name=$(named_or_active "${1:-}")
+      binds_save "$name" ;;
+    load|restore)
+      name=$(resolve "${1:-}") || die "unknown shell: ${1:-}"
+      binds_load "$name" ;;
+    diff)
+      name=$(named_or_active "${1:-}")
+      binds_diff "$name" ;;
+    forget)
+      name=$(resolve "${1:-}") || die "unknown shell: ${1:-}"
+      binds_forget "$name" ;;
+    track)   binds_track "${1:-}" ;;
+    untrack) binds_untrack "${1:-}" ;;
+    *) die "unknown binds command: $sub" ;;
+  esac
+}
+
+# --- shells -------------------------------------------------------------------
 
 cmd_list() {
   local current; current=$(running_shell || echo "")
@@ -53,6 +525,7 @@ cmd_list() {
     else
       state="not installed"
     fi
+    [[ -d "$(profile_dir "$name")" ]] && state="$state, binds saved"
     printf '  %s%-14s %s\n' "$mark" "$(bold "$name")" "$(dim "$state")"
   done
   echo
@@ -60,18 +533,23 @@ cmd_list() {
 
 cmd_use() {
   local target=${1:-}
-  [[ -z "$target" ]] && { red "  need a shell name"; echo; exit 1; }
+  [[ -z "$target" ]] && die "need a shell name"
 
-  local found=""
-  for entry in "${SHELLS[@]}"; do
-    [[ "$(field "$entry" 1)" == "$target" ]] && found=$entry
-  done
-  [[ -z "$found" ]] && { red "  unknown shell: $target"; echo; exit 1; }
+  local resolved found
+  resolved=$(resolve "$target") || die "unknown shell: $target"
+  found=$(entry_for "$resolved")
 
-  if ! installed "$target"; then
-    red "  $target is not installed"; echo
-    [[ "$target" == stratum ]] && dim "  run: ln -s $PWD $QS_DIR/stratum" && echo
+  if ! installed "$resolved"; then
+    red "  $resolved is not installed"; echo
+    [[ "$resolved" == stratum ]] && dim "  run: ln -s $PWD $QS_DIR/stratum" && echo
     exit 1
+  fi
+
+  # Keep the outgoing shell's keybinds before anything changes, so coming back
+  # lands on the set you left. Skipped when it's already the active shell.
+  local outgoing; outgoing=$(active_shell)
+  if [[ "$outgoing" != "$resolved" ]]; then
+    binds_save "$outgoing" quiet
   fi
 
   # Stop whatever is running, including a shell this script didn't start.
@@ -86,24 +564,34 @@ cmd_use() {
   sleep 0.4
 
   mkdir -p "$(dirname "$STATE")"
-  echo "$target" > "$STATE"
+  echo "$resolved" > "$STATE"
+
+  # Put the incoming shell's files back, then reload Hyprland so it re-reads the
+  # loader and picks up the overlay for the shell we just switched to. Without
+  # the reload the old shell's keys stay bound to globals nothing answers.
+  binds_load "$resolved" quiet
+  if [[ -f "$LOADER" ]] && command -v hyprctl >/dev/null; then
+    hyprctl reload >/dev/null 2>&1 || dim "  (hyprctl reload failed — keybinds update on next login)"
+  fi
 
   local launch; launch=$(field "$found" 2)
-  dim "  starting $target"; echo
+  dim "  starting $resolved"; echo
   setsid nohup $launch >/dev/null 2>&1 &
   sleep 0.6
 
   if running_shell >/dev/null; then
-    printf '  %s %s\n' "$(bold '●')" "$(bold "$target")"
+    printf '  %s %s\n' "$(bold '●')" "$(bold "$resolved")"
+    [[ -f "$LOADER" ]] || dim "  keybinds are not switching yet — run: shellctl binds setup"
+    [[ -f "$LOADER" ]] || echo
   else
-    red "  $target failed to start"; echo
+    red "  $resolved failed to start"; echo
     dim "  try running '$launch' directly to see the error"; echo
     exit 1
   fi
 }
 
 cmd_restart() {
-  local current; current=$(running_shell || cat "$STATE" 2>/dev/null || echo "stratum")
+  local current; current=$(active_shell)
   cmd_use "$current"
 }
 
@@ -112,7 +600,7 @@ cmd_pick() {
   for entry in "${SHELLS[@]}"; do
     installed "$(field "$entry" 1)" && names+=("$(field "$entry" 1)")
   done
-  [[ ${#names[@]} -eq 0 ]] && { red "  no shells installed"; echo; exit 1; }
+  [[ ${#names[@]} -eq 0 ]] && die "no shells installed"
 
   if command -v fzf >/dev/null; then
     local choice
@@ -134,19 +622,35 @@ case "${1:-pick}" in
   use|switch)   shift; cmd_use "${1:-}" ;;
   restart)      cmd_restart ;;
   status)       running_shell || { dim "  no shell running"; echo; exit 1; } ;;
+  binds)        shift; cmd_binds "$@" ;;
   pick|"")      cmd_pick ;;
   -h|--help|help)
     cat <<USAGE
 
-  shellctl — switch desktop shells
+  shellctl — switch desktop shells, and keep each one's keybinds with it
 
-    shellctl              interactive picker
-    shellctl list         show installed shells and which is running
-    shellctl use NAME     switch to NAME
-    shellctl restart      restart the running shell
-    shellctl status       print the running shell's name
+    shellctl                    interactive picker
+    shellctl list               show installed shells and which is running
+    shellctl use NAME           switch to NAME (saves the old shell's binds,
+                                restores NAME's, reloads Hyprland)
+    shellctl restart            restart the running shell
+    shellctl status             print the running shell's name
+
+  keybinds
+
+    shellctl binds setup        wire the per-shell loader into your Hyprland config
+    shellctl binds show         what's tracked, saved, and live for each shell
+    shellctl binds save [NAME]  snapshot the tracked files into NAME's profile
+    shellctl binds load NAME    restore NAME's profile onto disk
+    shellctl binds diff [NAME]  what's changed since NAME was saved
+    shellctl binds track PATH   add a file to the tracked set
+    shellctl binds untrack PATH stop tracking a file
+    shellctl binds forget NAME  delete NAME's profile
+    shellctl binds doctor       check the wiring
+
+  shells: stratum, caelestia (aliases: cykler, cykler-caelestia)
 
 USAGE
     ;;
-  *) red "  unknown command: $1"; echo; exit 1 ;;
+  *) die "unknown command: $1" ;;
 esac

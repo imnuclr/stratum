@@ -24,6 +24,13 @@ PanelWindow {
     property int zoneLength: 320
     property int zoneDepth: 3
     property int dwell: 120
+    /*
+     * How far in from its edge the strip starts. A column bar sits on an edge
+     * and is drawn above this, so a zone on the same edge would be a strip
+     * nothing can reach: offset past it and the zone is the first thing beyond
+     * the bar instead.
+     */
+    property int inset: 0
 
     /*
      * The zone grows once its panel is up, to cover the gap between the screen
@@ -49,8 +56,8 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-    implicitWidth: vertical ? liveDepth : zoneLength
-    implicitHeight: vertical ? zoneLength : liveDepth
+    implicitWidth: vertical ? liveDepth + root.inset : zoneLength
+    implicitHeight: vertical ? zoneLength : liveDepth + root.inset
 
     anchors {
         top: root.edge === "top" || root.vertical
@@ -68,8 +75,14 @@ PanelWindow {
 
         width: root.vertical ? root.liveDepth : root.zoneLength
         height: root.vertical ? root.zoneLength : root.liveDepth
-        x: root.vertical ? 0 : Math.round((root.width - width) * root.along)
-        y: root.vertical ? Math.round((root.height - height) * root.along) : 0
+        // The inset is taken off whichever end the zone's own edge is, so the
+        // strip itself keeps its depth and simply starts further in.
+        x: root.vertical
+            ? (root.edge === "right" ? 0 : root.inset)
+            : Math.round((root.width - width) * root.along)
+        y: root.vertical
+            ? Math.round((root.height - height) * root.along)
+            : (root.edge === "bottom" ? 0 : root.inset)
 
         HoverHandler {
             onHoveredChanged: {

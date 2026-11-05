@@ -33,9 +33,11 @@ from your wallpaper, carried into your terminal, Spotify, Discord and GTK apps.
 Workspaces, clock, tray (with its menus right in a popout), and hover popouts for
 Wi-Fi, Bluetooth, sound and battery.
 
-**Control centre** — Wi-Fi, Bluetooth, brightness and volume (scroll them),
-toggles you arrange yourself, including **game mode** and VPN (WARP, Tailscale,
-Mullvad, NetworkManager), now playing, notifications.
+**Sidebar** — reached by running the pointer into the right edge of the screen.
+Notifications at the top, then Wi-Fi, Bluetooth, focus, brightness and volume
+(scroll them), toggles you arrange yourself, including **game mode** and VPN
+(WARP, Tailscale, Mullvad, NetworkManager), now playing; the clock, settings and
+power on the floor of it.
 
 **Launcher** — <kbd>Super</kbd> + <kbd>Space</kbd>. Apps ranked by how often you
 open them, files, open windows, single settings, actions and sums, with a preview
@@ -47,9 +49,13 @@ processes by CPU, memory or GPU, network, media.
 </td>
 <td width="50%" valign="top">
 
-**Desktop widgets** — thirteen of them on a snapping grid, per monitor: clock,
-greeting, weather, calendar, now playing, gauges, photo. They step aside for
-windows, and pick light or dark ink from the wallpaper behind them.
+**Desktop widgets** — fourteen of them on a snapping grid, per monitor: clock,
+greeting, weather, calendar, now playing, lyrics, gauges, photo. They step aside
+for windows, and pick light or dark ink from the wallpaper behind them.
+
+**Lyrics** — the words of whatever is playing, swept **word by word** rather than
+a line at a time. On the desktop as a widget, or over the whole screen with
+<kbd>Super</kbd> + <kbd>Y</kbd>. See [Lyrics](#lyrics).
 
 **Lock screen** — a real session lock with a composed entrance, your photo, and a
 password row of dots.
@@ -161,6 +167,7 @@ people have hit, and `stratum log` for the shell's own errors.
 | <kbd>Ctrl</kbd> <kbd>Print</kbd> | screenshot and annotate |
 | <kbd>Alt</kbd> <kbd>Print</kbd> | record a region (again to stop) |
 | <kbd>Super</kbd> <kbd>Shift</kbd> <kbd>W</kbd> | arrange desktop widgets |
+| <kbd>Super</kbd> <kbd>Y</kbd> | lyrics, full screen |
 | <kbd>Super</kbd> <kbd>L</kbd> | lock |
 
 Change any of them, or bind a key to an app, in **Settings → Keybinds**. An app key
@@ -175,6 +182,7 @@ stratumctl launcher firefox     # open the launcher, already searching
 stratumctl game on              # game mode
 stratumctl settings weather     # settings, on a page
 stratumctl wallpaper random
+stratumctl lyrics status        # which source answered, and how exact
 stratumctl screenshot screen
 stratumctl profile eco
 stratumctl check && stratumctl updates
@@ -182,6 +190,51 @@ stratumctl check && stratumctl updates
 
 `stratumctl` alone lists everything. `stratum start | stop | restart | log | doctor |
 update` looks after the shell itself.
+
+## Lyrics
+
+The words of whatever is playing, timed to it — and timed to the **word**, not
+just the line, so the sweep tells you where in a line you are rather than only
+which line it is.
+
+Two places to see them: a **lyrics widget** on the desktop (right-click the
+wallpaper to arrange, then pick it), a window onto the song that follows along —
+how many lines it shows is one of its options, and that sets the type size
+rather than the card's, so asking for more makes the words smaller; and a **full-screen view** on <kbd>Super</kbd> + <kbd>Y</kbd>, which shows
+the whole song, follows along, and lets you click a line to seek to it.
+
+Word timings come from [Spicy Lyrics](https://spicylyrics.org), which is the one
+public source that has them. Their API wants a free key:
+
+1. Go to [developers.spicylyrics.org](https://developers.spicylyrics.org) and
+   sign in.
+2. Create an application. You are shown a **secret key** (`sl_sk_…`) once — copy
+   it then.
+3. Paste it into **Settings → Lyrics**, or run
+   `stratumctl lyrics key sl_sk_…`.
+
+It is stored in `~/.config/stratum/spicylyrics.key`, on its own and not in
+`shell.json` — that is the file people paste into issues and push to dotfile
+repos, and a secret does not belong in it.
+
+Without a key the shell falls back to [LRCLIB](https://lrclib.net), which needs
+no account but only knows where each *line* starts.
+
+Lines that overlap — a duet, a backing vocal, one singer coming in over the end
+of the other's line — all light at once rather than one of them being skipped.
+
+**Not every track has word timings, key or no key.** Spicy Lyrics answers with
+the best sync it holds, and for many tracks that is Apple Music's or Spotify's,
+which time the line and not the words in it. When that happens the line lights
+whole rather than being swept — a sweep is a claim about where in the line the
+voice is, and guessing at it reads as the lyrics being out of time rather than
+as an estimate. The label above the words says which you are looking at: **word
+by word**, or **timed by line**.
+
+If the sweep runs ahead of or behind the voice, nudge it in **Settings → Lyrics →
+Offset**. Position comes over a bus and is always a little behind what has
+actually been played. `stratumctl lyrics status` says which source answered and
+whether the timing is exact.
 
 ## Wallpapers
 
@@ -235,7 +288,7 @@ Stratum installs alongside any other Quickshell config rather than replacing it.
 shellctl              # interactive picker (uses fzf when present)
 shellctl list         # what's installed, and what's running
 shellctl use stratum
-shellctl use caelestia
+shellctl use caelestia # also: cykler, cykler-caelestia
 shellctl restart
 ```
 
@@ -245,6 +298,50 @@ read it instead of hardcoding one shell:
 ```conf
 exec-once = shellctl use "$(cat ~/.config/stratum/active-shell 2>/dev/null || echo stratum)"
 ```
+
+### Keybinds per shell
+
+Two shells means two sets of binds, and loading both at once is what breaks the Super
+key: an overlay unbinds a key before claiming it, so whichever file Hyprland read last
+wins the key and aims it at a global — `stratum:launcher` — that the *running* shell
+never answers. Hyprland therefore loads exactly one overlay, the active shell's:
+
+```sh
+shellctl binds setup   # once: adds the loader to ~/.config/hypr/hyprland.lua
+shellctl binds doctor  # check the wiring
+```
+
+That writes `~/.config/hypr/shellctl-binds.lua`, which reads `active-shell` and pulls in
+only that shell's overlay, then starts that shell:
+
+| shell | overlay | written by |
+| --- | --- | --- |
+| `stratum` | `~/.config/hypr/stratum-binds.lua` | Settings → Keybinds |
+| `caelestia` | `~/.config/hypr/caelestia-binds.lua` | by hand; caelestia's own binds already come from its dots |
+
+On top of that, `shellctl` keeps a profile per shell, so the config each one owns travels
+with it. `shellctl use` saves the outgoing shell's files and restores the incoming one's
+before reloading Hyprland:
+
+```sh
+shellctl binds show          # what's tracked, saved and live for each shell
+shellctl binds save          # snapshot the active shell's files
+shellctl binds load stratum  # put a shell's saved set back
+shellctl binds diff          # what's changed since the last save
+shellctl binds track PATH    # carry another file between shells
+```
+
+Tracked by default — edit the list in `~/.config/shellctl/tracked`:
+
+```
+.config/hypr/stratum-binds.lua
+.config/hypr/caelestia-binds.lua
+.config/caelestia/hypr-vars.lua
+.config/caelestia/hypr-user.lua
+```
+
+Restoring is additive: a file the profile doesn't hold is left alone rather than deleted,
+so a half-filled profile never costs you a config file.
 
 
 ## Status

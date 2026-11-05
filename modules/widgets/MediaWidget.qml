@@ -38,7 +38,7 @@ Item {
         cell: Math.max(3, root.disc / 38)
         dotScale: 0.46
         source: Media.artUrl
-        colored: root.cover === "colour"
+        dithered: root.cover === "dots"
     }
 
     Column {

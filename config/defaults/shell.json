@@ -23,10 +23,10 @@
         },
         "workspaces": {
             "count": 6,
-            "slot": 15,
-            "gap": 4,
-            "dotSize": 5,
-            "trailFactor": 1.6
+            "slot": 22,
+            "gap": 2,
+            "verticalGap": 2,
+            "animMs": 500
         },
         "orientation": "vertical",
         "width": 56
@@ -111,12 +111,9 @@
         "deckLength": 560,
         "deckDepth": 14,
         "deckDwell": 60,
-        "cornerLength": 320,
-        "cornerDepth": 24,
-        "cornerDwell": 70,
-        "notifyLength": 320,
-        "notifyDepth": 24,
-        "notifyDwell": 70
+        "sideDepth": 6,
+        "sideDwell": 90,
+        "sideDwellCrossing": 320
     },
     "session": {
         "width": 300
@@ -162,5 +159,22 @@
     "updates": {
         "everyMinutes": 360,
         "check": true
+    },
+    "theme": {
+        "followWallpaper": true,
+        "lightThreshold": 0.5
+    },
+    "power": {
+        "warn": true,
+        "warnAt": 0.2,
+        "warnVeryLowAt": 0.1,
+        "warnCriticalAt": 0.05,
+        "ecoRefresh": true
+    },
+    "lyrics": {
+        "enabled": true,
+        "key": "",
+        "offsetMs": 0,
+        "depth": true
     }
 }

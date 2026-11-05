@@ -80,6 +80,7 @@ PanelWindow {
             "date": dateWidget,
             "gpu": gpuWidget,
             "media": mediaWidget,
+            "lyrics": lyricsWidget,
             "stats": statsWidget,
             "cpu": cpuWidget,
             "memory": memoryWidget,
@@ -1045,6 +1046,12 @@ PanelWindow {
         id: mediaWidget
 
         MediaWidget {}
+    }
+
+    Component {
+        id: lyricsWidget
+
+        LyricsWidget {}
     }
 
     Component {

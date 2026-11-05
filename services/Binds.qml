@@ -32,6 +32,7 @@ Singleton {
         { name: "session", label: "session menu" },
         { name: "control", label: "control centre" },
         { name: "deck", label: "dashboard" },
+        { name: "lyrics", label: "lyrics, full screen" },
         { name: "widgetsEdit", label: "arrange widgets" },
         { name: "screenshotRegion", label: "screenshot a region" },
         { name: "screenshot", label: "screenshot the screen" },
@@ -70,6 +71,7 @@ Singleton {
         { mods: ["ALT"], key: "Print", action: "recordRegion" },
         { mods: ["SUPER", "ALT"], key: "Print", action: "record" },
         { mods: ["SUPER", "SHIFT"], key: "W", action: "widgetsEdit" },
+        { mods: ["SUPER"], key: "Y", action: "lyrics" },
         { mods: ["SUPER", "ALT"], key: "P", action: "screenshot" }
     ]
 
@@ -605,7 +607,9 @@ Singleton {
         { id: "launcher", action: "launcher", tries: [[["SUPER"], "SPACE"], [["ALT"], "SPACE"], [["SUPER"], "A"]] },
         // For keyboards without Print: a region screenshot on letters.
         { id: "shotLetters", action: "screenshotRegion", tries: [[["SUPER", "SHIFT"], "S"], [["SUPER", "ALT"], "S"], [["SUPER", "CTRL"], "S"]] },
-        { id: "shotScreen", action: "screenshot", tries: [[["SUPER", "ALT"], "P"], [["SUPER", "CTRL"], "P"]] }
+        { id: "shotScreen", action: "screenshot", tries: [[["SUPER", "ALT"], "P"], [["SUPER", "CTRL"], "P"]] },
+        // The full-screen lyrics view, which arrived after most installs.
+        { id: "lyrics", action: "lyrics", tries: [[["SUPER"], "Y"], [["SUPER", "SHIFT"], "Y"], [["SUPER", "ALT"], "Y"]] }
     ]
 
     property bool upgradeChecked: false

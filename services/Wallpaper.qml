@@ -123,11 +123,50 @@ Singleton {
         lister.running = true;
     }
 
+    /*
+     * Remembering the choice, without the file racing the choice itself.
+     *
+     * The state file is watched so that a wallpaper set from another process
+     * shows up here. Writing to it therefore fires that watch, and cycling
+     * quickly — a key held down in the picker, which sets a wallpaper every few
+     * dozen milliseconds — turned that into a fight: each write landed a change
+     * event, each event re-read a file that was already a version or two behind,
+     * and the stale read put `current` back to a picture two steps ago. The
+     * desktop appeared to skip pictures, or to ignore a change entirely, because
+     * it was being told to go back as fast as it was being told to go on.
+     *
+     * So the write is debounced — the choice on screen is `current`, and the file
+     * only has to catch up eventually — and a read is ignored while one of our
+     * own writes is still settling. What the file says is only adopted when the
+     * file is the one with news.
+     */
+    property string lastWritten: ""
+
     function save() {
-        state.setText(JSON.stringify({
-            current: root.current,
-            monitors: root.overrides
-        }, null, 4) + "\n");
+        saveSoon.restart();
+        settle.restart();
+    }
+
+    Timer {
+        id: saveSoon
+
+        interval: 220
+        onTriggered: {
+            root.lastWritten = JSON.stringify({
+                current: root.current,
+                monitors: root.overrides
+            }, null, 4) + "\n";
+            settle.restart();
+            state.setText(root.lastWritten);
+        }
+    }
+
+    // How long after a write of our own a change event is treated as the echo
+    // of that write rather than as news from elsewhere.
+    Timer {
+        id: settle
+
+        interval: 900
     }
 
     Component.onCompleted: root.scan()
@@ -160,8 +199,13 @@ Singleton {
 
         onFileChanged: reload()
         onLoaded: {
+            const raw = text();
+            // Our own write coming back, or one landing while another of ours is
+            // still in flight: either way the shell already knows what it says.
+            if (raw === root.lastWritten || settle.running)
+                return;
             try {
-                const data = JSON.parse(text());
+                const data = JSON.parse(raw);
                 root.current = data.current ?? "";
                 root.overrides = data.monitors ?? ({});
             } catch (e) {

@@ -38,6 +38,14 @@ usage() {
     stratumctl wallpaper next|prev|random
     stratumctl wallpaper set FILE
 
+  lyrics
+    stratumctl lyrics             the full-screen view, on and off
+    stratumctl lyrics status      which source answered, and how exact
+    stratumctl lyrics key KEY     store a Spicy Lyrics key (developers.spicylyrics.org)
+    stratumctl lyrics offset MS   nudge the words earlier (-) or later (+)
+    stratumctl lyrics refresh     ask again for the track playing
+    stratumctl lyrics sample [word|line]   four placeholder lines, to see either kind
+
   settings and state
     stratumctl get KEY            e.g. stratumctl get bar.edge
     stratumctl set KEY JSON       e.g. stratumctl set bar.edge '"right"'
@@ -80,6 +88,17 @@ case "${1:-help}" in
       random) ipc wallpaper random "" ;;
       set)    need "${3:-}"; ipc wallpaper set "$(readlink -f "$3")" "" ;;
       *)      usage; exit 1 ;;
+    esac ;;
+
+  lyrics)
+    case "${2:-}" in
+      "")      ipc panel toggle lyrics ;;
+      status)  ipc lyrics status ;;
+      key)     need "${3:-}"; ipc lyrics key "$3" ;;
+      offset)  need "${3:-}"; ipc lyrics offset "$3" ;;
+      refresh) ipc lyrics refresh ;;
+      sample)  ipc lyrics sample "${3:-word}" ;;
+      *)       usage; exit 1 ;;
     esac ;;
 
   get)        need "${2:-}"; ipc config get "$2" ;;

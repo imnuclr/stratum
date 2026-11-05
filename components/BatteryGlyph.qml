@@ -29,11 +29,20 @@ Item {
     readonly property real bodyRadius: thick * 0.32
     readonly property real innerLength: bodyLength - inset * 2
     readonly property real innerThick: thick - inset * 2
-    // Never thinner than a pill's own height, or a nearly empty cell would
-    // draw a sliver with square-looking ends.
+    /*
+     * The fill is the charge, and nothing else.
+     *
+     * It used to be floored at the cell's inner height so a nearly empty battery
+     * would not draw a square-ended sliver. At a 24px glyph that floor is just
+     * over half the inner length, so every charge from 0% to 51% drew the same
+     * half-full cell — the bar said "half" while the number beside it said 24.
+     * A rounded cap on a short fill is the cheaper problem, and the radius below
+     * takes care of it, so the length is now proportional throughout. A hairline
+     * minimum is kept only so that 1% is visible at all.
+     */
     readonly property real fillLength: root.level <= 0
         ? 0
-        : Math.max(root.innerThick, root.innerLength * Math.min(1, root.level))
+        : Math.max(root.stroke, root.innerLength * Math.min(1, root.level))
 
     implicitWidth: vertical ? thick : size
     implicitHeight: vertical ? size : thick
@@ -72,7 +81,11 @@ Item {
             y: root.inset
             width: root.fillLength
             height: root.innerThick
-            radius: Math.max(1, root.bodyRadius - root.inset * 0.6)
+            // Capped at half the shorter side, so a fill narrower than it is tall
+            // reads as a rounded stub rather than a rectangle with its corners
+            // cut off at an angle.
+            radius: Math.min(Math.max(1, root.bodyRadius - root.inset * 0.6),
+                root.fillLength / 2, root.innerThick / 2)
             color: root.color
             visible: root.level > 0
 

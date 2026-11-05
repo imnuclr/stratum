@@ -2,59 +2,87 @@ import QtQuick
 import Quickshell
 import qs.components
 import qs.modules.bar.popouts
+import qs.modules.notifications
 import qs.config
 import qs.services
 import qs.theme
 import qs.utils
 
 /*
- * The control centre: the things you change. The dashboard is the counterpart —
- * that one is what you read.
+ * The sidebar: what is waiting, and the things you change.
  *
- * Grows out of the bottom-right corner, which is where it is reached from.
+ * These were two panels with two hot corners, and the control centre carried a
+ * card whose only job was to count notifications and send you to the other one.
+ * That is a strange thing to make someone travel for — the count was right there
+ * and acting on it meant going somewhere else — so the list lives here, and the
+ * separate page is gone.
+ *
+ * A full-height column joined to the right edge rather than a card floating in
+ * the corner. Two reasons: the notification list wants a fixed tall space rather
+ * than a panel that changes shape every time something arrives, and a panel you
+ * work down reads as a column. Joined to the edge, with the corners there
+ * squared, so it reads as the screen opening rather than a sheet dropped on top
+ * of it.
+ *
+ * Read top to bottom: what has arrived, then what you can change, then the time
+ * and the two things that leave. The notifications are at the top because they
+ * are the part that is *news* — the reason the panel is being opened most of the
+ * time — and the top of a column is where reading starts. The controls sit under
+ * them at hand height, and the clock, settings and power sit on the floor of the
+ * panel: a footer, not a title. None of them is something you came here to read
+ * first, and settings and power in particular are the two that take you out of
+ * the panel altogether, so they belong at the end of it rather than above
+ * everything else.
  */
 Sheet {
     id: root
 
     name: "control"
     hoverDismiss: true
-    originX: 1
-    originY: 1
-    sheetWidth: Config.get("control.width", 420)
-    // Clamped to the room actually available, not to a guess at it.
-    sheetHeight: Math.min(availableHeight, body.implicitHeight + Theme.space(4) * 2)
+    adoptOnOpen: false
 
-    /*
-     * Media only: no notification ages are shown here any more, so nothing on
-     * this panel needs a ticking clock. Shell collapses whichever list was open
-     * when a panel closes, so the height is its own business on the next open.
-     */
+    // Lives on the right edge, joined to it, and arrives from it.
+    originX: 1
+    originY: 0
+    attached: true
+    sideways: true
+
+    sheetWidth: Config.get("control.width", 420)
+    sheetHeight: monitor.height
+
+    readonly property real pad: Theme.space(4)
+
     onOpenChanged: {
         if (open) {
             Media.watch();
+            // Ages are relative ("now", "4 min"), so they only tick while
+            // someone is actually reading them.
+            Notifs.watch();
         } else {
             Media.unwatch();
+            Notifs.unwatch();
         }
     }
 
     /*
-     * The networks or devices, in a card of their own above the panel.
+     * The networks, devices or focus modes, over the controls that open them.
      *
-     * Reaching for a network used to close the control centre and put the list in
-     * a bar popout at the other end of the screen, which is a strange thing to do
-     * to someone who has just said they want to pick one: the thing they clicked
-     * disappears. Putting the list inside the panel instead made the panel grow
-     * and shrink, and collapsing it dragged the panel's own edge past the pointer
-     * that had just clicked — so it closed. Above the panel, the panel never
-     * moves.
-     */
-    /*
-     * The list stays in place while it folds away. Its height and its content
-     * used to drop to nothing the instant a chip was collapsed, which cut the
-     * card off mid-fade: it disappeared instead of closing.
+     * This list used to be a card floating above the panel, outside it, because
+     * a panel that grows to fit an expanding section moves its own edges under
+     * the pointer: collapsing the section dragged the boundary past the pointer
+     * that had just clicked, hover ended, and the whole thing closed. That card
+     * was placed by measuring upward from the top of the sheet — which is fine
+     * for a sheet with room above it and impossible for this one, a panel that
+     * is already as tall as the screen. There was nowhere above it but off the
+     * display, and that is where the card went: the chevrons worked, the list
+     * drew, and no part of it was ever on screen.
+     *
+     * Inside the panel instead, laid over the controls and anchored to the same
+     * bottom edge they are. The sheet is a fixed size whatever this does, so the
+     * reason the card was put outside in the first place does not apply.
      */
     property string lastChip: ""
-    property bool satelliteShown: false
+    property bool listShown: false
 
     Connections {
         target: Shell
@@ -63,101 +91,53 @@ Sheet {
             if (Shell.expandedChip.length > 0) {
                 root.lastChip = Shell.expandedChip;
                 fold.stop();
-                root.satelliteShown = true;
+                root.listShown = true;
             } else {
                 fold.restart();
             }
         }
     }
 
+    /*
+     * The list stays in place while it folds away. Its height and its content
+     * used to drop to nothing the instant a chip was collapsed, which cut the
+     * card off mid-fade: it disappeared instead of closing.
+     */
     Timer {
         id: fold
 
         interval: Theme.sheetMs + 40
-        onTriggered: root.satelliteShown = false
+        onTriggered: root.listShown = false
     }
 
-    satelliteHeight: root.satelliteShown ? Math.round(listLoader.implicitHeight + Theme.space(4) * 2) : 0
-
-    satellite: Rectangle {
-        id: listCard
-
-        anchors.fill: parent
-        radius: Theme.rSheet
-        color: Theme.surface
-        border.width: 1
-        border.color: Theme.outline
-        opacity: Shell.expandedChip.length > 0 ? 1 : 0
-
-        /*
-         * Grows out of the chip rather than appearing over it: anchored to the
-         * bottom edge it shares with the panel, so it unfolds upward from the
-         * control that opened it and folds back into it.
-         */
-        transformOrigin: Item.Bottom
-        scale: Shell.expandedChip.length > 0 ? 1 : 0.82
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Theme.sheetMs
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.soft
-            }
-        }
-
-        Behavior on scale {
-            NumberAnimation {
-                duration: Theme.sheetMs
-                easing.type: Easing.Bezier
-                easing.bezierCurve: Theme.soft
-            }
-        }
-
-        Loader {
-            id: listLoader
-
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: Theme.space(4)
-            active: root.satelliteShown
-            sourceComponent: root.lastChip === "network" ? networkList
-                : (root.lastChip === "focus" ? focusList : deviceList)
-        }
-    }
-
-    Component {
-        id: focusList
-
-        FocusList {}
-    }
-
-    Component {
-        id: networkList
-
-        NetworkPopout {
-            active: true
-        }
-    }
-
-    Component {
-        id: deviceList
-
-        BluetoothPopout {}
-    }
-
-    Column {
-        id: body
-
+    /*
+     * The notifications, filling everything the rest of the panel leaves.
+     *
+     * It is the part that should absorb a short screen: the controls have a size
+     * they need in order to stay usable, and a list is the one thing here that
+     * is happy to scroll.
+     */
+    NotificationList {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.margins: Theme.space(4)
-        spacing: Theme.space(3)
+        anchors.bottom: controls.top
+        anchors.topMargin: root.pad
+        anchors.leftMargin: root.pad
+        anchors.rightMargin: root.pad
+        anchors.bottomMargin: Theme.space(4)
+    }
 
-        ControlHeader {
-            width: parent.width
-        }
+    Column {
+        id: controls
+
+        anchors.bottom: footer.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: root.pad
+        anchors.rightMargin: root.pad
+        anchors.bottomMargin: Theme.space(3)
+        spacing: Theme.space(3)
 
         Row {
             width: parent.width
@@ -169,6 +149,7 @@ Sheet {
                 title: "Wi-Fi"
                 detail: Network.connected ? Network.label : "off"
                 active: Wifi.enabled
+                open: Shell.expandedChip === "network"
                 onToggled: Wifi.setEnabled(!Wifi.enabled)
                 onExpanded: Shell.expand("network")
             }
@@ -179,19 +160,21 @@ Sheet {
                 title: "Bluetooth"
                 detail: Bt.enabled ? Bt.label : "off"
                 active: Bt.enabled
+                open: Shell.expandedChip === "bluetooth"
                 onToggled: Bt.toggle()
                 onExpanded: Shell.expand("bluetooth")
             }
         }
 
         // Focus: the disc turns the last mode used on or off, the chevron
-        // opens the list of them in the card above.
+        // opens the list of them over the controls.
         ServicePill {
             width: parent.width
             icon: Focus.current?.icon ?? "moon"
             title: "Focus"
             detail: Focus.on ? `${Focus.current.name} · ${Focus.untilLabel}` : "off"
             active: Focus.on
+            open: Shell.expandedChip === "focus"
             onToggled: Focus.toggle()
             onExpanded: Shell.expand("focus")
         }
@@ -250,80 +233,115 @@ Sheet {
             width: parent.width
             visible: Media.available
         }
+    }
 
-        /*
-         * Only how many, and clearly. The notifications themselves live on their
-         * own page: an unbounded list at the bottom of a fixed panel was always
-         * the part that got cut, and a panel you open to change a setting is not
-         * where you want to be reading. This is the way across.
-         */
+    /*
+     * The expanded list, over the controls and growing out of the bottom of
+     * them. Clipped and capped at the room there is, so a long list of networks
+     * cannot reach past the top of the panel and out of the notifications.
+     */
+    Item {
+        id: overlay
+
+        anchors.bottom: controls.bottom
+        anchors.left: controls.left
+        anchors.right: controls.right
+        height: Math.min(listLoader.implicitHeight + root.pad * 2,
+            controls.height + Theme.space(3))
+        visible: root.listShown
+
         Rectangle {
-            width: parent.width
-            height: 56
-            radius: height / 2
-            color: Notifs.any && countHover.hovered ? Theme.surfaceTop : Theme.surfaceHi
+            id: listCard
 
-            Behavior on color {
-                ColorAnimation {
-                    duration: Theme.micro
+            anchors.fill: parent
+            radius: Theme.rSheet
+            color: Theme.surface
+            border.width: 1
+            border.color: Theme.outline
+            clip: true
+            opacity: Shell.expandedChip.length > 0 ? 1 : 0
+
+            // Unfolds upward out of the control that opened it, and folds back
+            // into it.
+            transformOrigin: Item.Bottom
+            scale: Shell.expandedChip.length > 0 ? 1 : 0.9
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.sheetMs
                     easing.type: Easing.Bezier
-                    easing.bezierCurve: Theme.smooth
+                    easing.bezierCurve: Theme.soft
                 }
             }
 
-            Row {
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.left
-                anchors.leftMargin: Theme.space(4)
-                spacing: Theme.space(3)
-
-                Glyph {
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: Notifs.any ? "bell" : "bell-off"
-                    size: 20
-                    color: Notifs.any ? Theme.fg : Theme.fgDim
-                }
-
-                DotText {
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: Notifs.any
-                    text: `${Notifs.count}`
-                    size: 24
-                    plain: true
-                }
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: !Notifs.any ? "No notifications" : (Notifs.count === 1 ? "notification" : "notifications")
-                    color: Notifs.any ? Theme.fg : Theme.fgBright
-                    font.family: Theme.fontUi
-                    font.pixelSize: 15
-                    font.weight: Font.Medium
-                    renderType: Text.NativeRendering
+            Behavior on scale {
+                NumberAnimation {
+                    duration: Theme.sheetMs
+                    easing.type: Easing.Bezier
+                    easing.bezierCurve: Theme.soft
                 }
             }
 
-            Glyph {
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.right: parent.right
-                anchors.rightMargin: Theme.space(4)
-                name: "chevron-left"
-                size: 16
-                rotation: 180
-                color: Theme.fgBright
-                visible: Notifs.any
+            // Swallows clicks, so a press meant for a row in the list cannot
+            // reach the control sitting underneath it.
+            MouseArea {
+                anchors.fill: parent
             }
 
-            HoverHandler {
-                id: countHover
+            Flickable {
+                anchors.fill: parent
+                anchors.margins: root.pad
+                contentHeight: listLoader.implicitHeight
+                clip: true
+                interactive: contentHeight > height
+                boundsBehavior: Flickable.StopAtBounds
 
-                cursorShape: Notifs.any ? Qt.PointingHandCursor : Qt.ArrowCursor
-            }
+                Loader {
+                    id: listLoader
 
-            TapHandler {
-                enabled: Notifs.any
-                onTapped: Shell.open("notifications", root.monitor.name)
+                    width: parent.width
+                    active: root.listShown
+                    sourceComponent: root.lastChip === "network" ? networkList
+                        : (root.lastChip === "focus" ? focusList : deviceList)
+                }
             }
         }
+    }
+
+    Component {
+        id: focusList
+
+        FocusList {}
+    }
+
+    Component {
+        id: networkList
+
+        NetworkPopout {
+            active: true
+        }
+    }
+
+    Component {
+        id: deviceList
+
+        BluetoothPopout {}
+    }
+
+    /*
+     * The floor of the panel: the time, and the two things that leave it.
+     * Settings opens a window and power ends the session — neither is a state,
+     * so neither belongs among the toggles, and neither is what the panel is
+     * opened to look at, so neither belongs at the top.
+     */
+    ControlHeader {
+        id: footer
+
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: root.pad
+        anchors.rightMargin: root.pad
+        anchors.bottomMargin: root.pad
     }
 }
