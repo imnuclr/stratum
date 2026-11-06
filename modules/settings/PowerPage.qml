@@ -157,6 +157,17 @@ SettingsPage {
                 onPicked: index => Power.setProfile(Power.profiles[index])
             }
         }
+
+        SettingRow {
+            visible: Power.hasBattery
+            title: "Switch to eco on battery"
+            detail: "Unplugging chooses the eco profile; plugging back in returns to balanced."
+
+            Switch {
+                checked: Config.get("power.autoEco", false)
+                onToggled: value => Config.set("power.autoEco", value)
+            }
+        }
     }
 
     /*

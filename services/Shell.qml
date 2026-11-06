@@ -71,6 +71,21 @@ Singleton {
      */
     property string expandedChip: ""
 
+    // Which menu the top of the control centre shows: 0 notifications, 1 to-do.
+    // Here for the same reason as expandedChip, and so a trackpad swipe can move
+    // it without reaching into a window.
+    property int sidebarTab: 0
+
+    // Set while the sidebar was opened by the four-finger gesture. Only that kind
+    // closes on the next outside click; a click on the bar still toggles it.
+    property bool gestureOpened: false
+
+    /*
+     * Whether the pointer is over the open sheet, kept by Sheet's hover and
+     * cursor checks. A click that arrives while this is false is outside it.
+     */
+    property bool pointerOnSheet: false
+
     // Which settings page is showing. Here rather than on the sheet because there
     // is one sheet per monitor and the choice should follow you between them.
     property string settingsPage: "wallpaper"
@@ -81,6 +96,29 @@ Singleton {
 
     function expand(which) {
         root.expandedChip = root.expandedChip === which ? "" : which;
+    }
+
+    /*
+     * The trackpad gesture's way through the sidebar: open it on notifications,
+     * again for the to-do list, again to close it. A closed panel starts back on
+     * notifications, so the same gesture always takes the same three steps.
+     */
+    function sidebarSwipe() {
+        if (root.openPanel !== "control") {
+            root.sidebarTab = 0;
+            // A gesture has no pointer to attribute a screen to, so it lands on
+            // the focused one. Passing it explicitly keeps `open()` from being
+            // handed no screen at all.
+            root.open("control", root.fallbackScreen);
+            root.gestureOpened = true;
+            return;
+        }
+        if (root.sidebarTab === 0) {
+            root.sidebarTab = 1;
+            root.gestureOpened = true;
+            return;
+        }
+        root.close();
     }
 
     function engage() {
@@ -127,6 +165,7 @@ Singleton {
             return;
         root.openFrom = from ?? "";
         root.hoverOpened = false;
+        root.gestureOpened = false;
         root.expandedChip = "";
         adopt.stop();
         root.openScreen = screen ?? "";
@@ -142,6 +181,7 @@ Singleton {
             return;
         }
         root.hoverOpened = false;
+        root.gestureOpened = false;
         root.expandedChip = "";
         adopt.stop();
         root.openScreen = screen ?? "";
@@ -157,6 +197,7 @@ Singleton {
             return;
         grace.stop();
         root.hoverOpened = true;
+        root.gestureOpened = false;
         root.openScreen = screen ?? "";
         openPanel = name;
     }
@@ -210,6 +251,8 @@ Singleton {
         grace.stop();
         root.holds = 0;
         root.hoverOpened = false;
+        root.gestureOpened = false;
+        root.pointerOnSheet = false;
         root.expandedChip = "";
         adopt.stop();
         if (openPanel.length > 0) {

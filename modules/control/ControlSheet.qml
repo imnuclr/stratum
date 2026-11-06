@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import qs.components
 import qs.modules.bar.popouts
-import qs.modules.notifications
 import qs.config
 import qs.services
 import qs.theme
@@ -24,15 +23,15 @@ import qs.utils
  * squared, so it reads as the screen opening rather than a sheet dropped on top
  * of it.
  *
- * Read top to bottom: what has arrived, then what you can change, then the time
- * and the two things that leave. The notifications are at the top because they
- * are the part that is *news* — the reason the panel is being opened most of the
- * time — and the top of a column is where reading starts. The controls sit under
- * them at hand height, and the clock, settings and power sit on the floor of the
- * panel: a footer, not a title. None of them is something you came here to read
- * first, and settings and power in particular are the two that take you out of
- * the panel altogether, so they belong at the end of it rather than above
- * everything else.
+ * Read top to bottom: what has arrived or been written down, then what you can
+ * change, then the time and the two things that leave. Notifications and notes
+ * share the top as two menus — both are *news*, the reason the panel is being
+ * opened most of the time, and the top of a column is where reading starts. The
+ * controls sit under them at hand height, and the clock, settings and power sit
+ * on the floor of the panel: a footer, not a title. None of them is something
+ * you came here to read first, and settings and power in particular are the two
+ * that take you out of the panel altogether, so they belong at the end of it
+ * rather than above everything else.
  */
 Sheet {
     id: root
@@ -111,27 +110,40 @@ Sheet {
     }
 
     /*
-     * The notifications, filling everything the rest of the panel leaves.
+     * Notifications and notes, sharing the room above the controls.
      *
-     * It is the part that should absorb a short screen: the controls have a size
-     * they need in order to stay usable, and a list is the one thing here that
-     * is happy to scroll.
+     * Two menus rather than two stacked sections: the top of the panel is the
+     * part that should absorb a short screen, and giving each list a tab keeps
+     * the controls where they are instead of pushing them up for a block that
+     * is not a control.
      */
-    NotificationList {
+    SidebarPanel {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: controls.top
+        anchors.bottom: separator.top
         anchors.topMargin: root.pad
         anchors.leftMargin: root.pad
         anchors.rightMargin: root.pad
-        anchors.bottomMargin: Theme.space(4)
+        anchors.bottomMargin: Theme.space(3)
+    }
+
+    // The line between what has arrived and what you can change.
+    DotRule {
+        id: separator
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: root.pad
+        anchors.rightMargin: root.pad
+        anchors.bottom: controls.top
+        anchors.bottomMargin: Theme.space(3)
     }
 
     Column {
         id: controls
 
-        anchors.bottom: footer.top
+        anchors.bottom: footerSeparator.top
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: root.pad
@@ -233,6 +245,18 @@ Sheet {
             width: parent.width
             visible: Media.available
         }
+    }
+
+    // The same rule again, between the controls and the floor of the panel.
+    DotRule {
+        id: footerSeparator
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: root.pad
+        anchors.rightMargin: root.pad
+        anchors.bottom: footer.top
+        anchors.bottomMargin: Theme.space(3)
     }
 
     /*

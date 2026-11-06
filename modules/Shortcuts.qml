@@ -183,4 +183,22 @@ Item {
         name: "session"
         onPressed: Shell.toggle("session")
     }
+
+    /*
+     * A left click anywhere while a gesture-opened sidebar is up. The bind in
+     * stratum-binds.lua is non-consuming, so the press still reaches the window;
+     * this only decides whether the sidebar should close. A click over the sheet
+     * itself belongs to its controls.
+     */
+    GlobalShortcut {
+        appid: "stratum"
+        name: "outsideClick"
+        onPressed: {
+            if (Shell.openPanel !== "control" || !Shell.gestureOpened)
+                return;
+            Diag.log("dismiss", `outside click: inside=${Shell.pointerOnSheet}`);
+            if (!Shell.pointerOnSheet)
+                Shell.close();
+        }
+    }
 }

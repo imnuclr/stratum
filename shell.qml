@@ -98,6 +98,14 @@ ShellRoot {
         function expanded(): string {
             return Shell.expandedChip;
         }
+
+        // The four-finger-left path: open, to-do, closed.
+        function sidebar(): string {
+            Shell.sidebarSwipe();
+            if (Shell.openPanel !== "control")
+                return "closed";
+            return Shell.sidebarTab === 1 ? "to-do" : "notifications";
+        }
     }
 
     // Bottom of the stack, so everything else draws over it.

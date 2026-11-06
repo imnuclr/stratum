@@ -169,7 +169,8 @@
         "warnAt": 0.2,
         "warnVeryLowAt": 0.1,
         "warnCriticalAt": 0.05,
-        "ecoRefresh": true
+        "ecoRefresh": true,
+        "autoEco": false
     },
     "lyrics": {
         "enabled": true,

@@ -116,6 +116,11 @@ Singleton {
         // power
         ["power", "Power profile", "power profile eco balanced performance battery saver mode"],
         ["power", "Saving energy", "battery life save energy eco low power savers"],
+        ["power", "Hide the clock's seconds", "clock seconds repaint battery saver"],
+        ["power", "Flat wallpaper", "cutout subject depth rembg layer battery saver"],
+        ["power", "Check the weather less", "weather forecast refresh network battery saver"],
+        ["power", "No automatic update checks", "updates check fetch network battery saver"],
+        ["power", "Switch to eco on battery", "auto eco unplug charger battery saver profile"],
         ["power", "On the lock screen", "lock screen shut down restart reboot log out sleep power buttons"],
         ["power", "Lock when it sleeps", "lock lid close suspend sleep screen password wake"],
         ["power", "Keep awake", "caffeine idle sleep screen off awake inhibit"],

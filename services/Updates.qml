@@ -145,9 +145,13 @@ Singleton {
         }
     }
 
+    // A check is a git fetch over the network for news that can wait: an energy
+    // saver stops them until the cable is back.
+    readonly property bool paused: Power.saving("updates")
+
     Timer {
         // First check a little after starting, then every six hours.
-        running: root.automatic
+        running: root.automatic && !root.paused
         repeat: true
         triggeredOnStart: false
         interval: root.checkedAt.length === 0 ? 90000 : root.everyMinutes * 60000

@@ -725,6 +725,7 @@ Singleton {
             "local locked = { locked = true }",
             "local repeating = { locked = true, repeating = true }",
             "local release = { release = true }",
+            "local nonconsuming = { non_consuming = true }",
             "",
             "-- Anything already on these keys is dropped first, or Hyprland fires both.",
             "if type(hl.unbind) == \"function\" then"
@@ -741,6 +742,16 @@ Singleton {
             const f = root.flags(b.action, b.key);
             out.push(`hl.bind("${root.combo(b.mods, b.key)}", hl.dsp.global("stratum:${b.action}")${f ? ", " + f : ""})`);
         }
+        // Not keybinds, but this is the file Hyprland already loads, and the
+        // sidebar's gestures belong together: the swipe that opens it, and the
+        // click that dismisses it without swallowing the click.
+        out.push("",
+            "-- A left click outside a gesture-opened sidebar closes it. Non-consuming",
+            "-- leaves the click alone, so it still reaches the window underneath.",
+            'hl.bind("mouse:272", hl.dsp.global("stratum:outsideClick"), nonconsuming)',
+            "",
+            "-- Four fingers left: the sidebar, then the to-do list, then away.",
+            'hl.gesture({ fingers = 4, direction = "left", action = function() hl.exec_cmd("qs -c stratum ipc call panel sidebar") end })');
         return out.join("\n") + "\n";
     }
 
@@ -765,6 +776,12 @@ Singleton {
             const kind = { repeating: "bindle", locked: "bindl", release: "bindr" }[f] ?? "bind";
             out.push(`${kind} = ${b.mods.join(" ")}, ${b.key}, global, stratum:${b.action}`);
         }
+        // Not a keybind, but it belongs with the rest: a left click outside a
+        // gesture-opened sidebar dismisses it, and the click still goes through.
+        out.push("",
+            "# A left click outside a gesture-opened sidebar closes it. bindn is",
+            "# non-consuming: the click still reaches the window underneath.",
+            "bindn = , mouse:272, global, stratum:outsideClick");
         return out.join("\n") + "\n";
     }
 

@@ -19,7 +19,11 @@ Item {
     readonly property string hours: Widgets.option(root.item, "hours")
     readonly property bool twelve: root.hours === "12h" || (root.hours !== "24h" && Time.twelveHour)
     readonly property bool showDate: Widgets.option(root.item, "date") !== "hide"
-    readonly property bool showSeconds: Widgets.option(root.item, "seconds") === "show"
+    // What the widget is set to, and what it is allowed to show: an energy saver
+    // hides the seconds, because a repaint a second on the desktop layer is the
+    // cheapest thing to give up and the minute itself still lands on time.
+    readonly property bool secondsSet: Widgets.option(root.item, "seconds") === "show"
+    readonly property bool showSeconds: root.secondsSet && !Power.saving("seconds")
 
     /*
      * Seconds cost a repaint a second on the desktop layer, so the clock only

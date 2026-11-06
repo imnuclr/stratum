@@ -78,6 +78,42 @@ Singleton {
     }
 
     /*
+     * Off the charger, choose eco for you. Off by default: the profile is yours
+     * to pick, and switching it the first time the cable came out would be a
+     * surprise. Only balanced is replaced — a profile chosen on purpose, and
+     * performance above all, is left alone.
+     */
+    readonly property bool autoEco: Config.get("power.autoEco", false)
+    // Whether the switch to eco was this arrangement's idea. Without it, a
+    // profile chosen by hand would be put back to balanced at the next startup
+    // just because the machine was on the charger.
+    property bool autoEcoDid: false
+
+    function applyAutoEco() {
+        if (!root.autoEco) {
+            root.autoEcoDid = false;
+            return;
+        }
+        if (!root.hasBattery)
+            return;
+        if (root.onBattery && !root.charging) {
+            if (root.profile === "balanced") {
+                root.autoEcoDid = true;
+                root.setProfile("power-saver");
+            }
+            return;
+        }
+        if (root.autoEcoDid) {
+            root.autoEcoDid = false;
+            if (root.profile === "power-saver")
+                root.setProfile("balanced");
+        }
+    }
+
+    onOnBatteryChanged: root.applyAutoEco()
+    onAutoEcoChanged: root.applyAutoEco()
+
+    /*
      * What each profile switches off to save energy. Eco and balanced can each
      * have their own set; performance never turns anything off, because it is
      * the one you pick when you want everything. Defaults: eco saves where it
@@ -88,8 +124,12 @@ Singleton {
         { key: "effects", title: "No blur or shadows", detail: "Hyprland's heaviest effects on windows.", eco: true, balanced: false },
         { key: "motion", title: "No animations", detail: "Panels and popouts appear without moving.", eco: true, balanced: false },
         { key: "widgets", title: "Slower desktop widgets", detail: "Readings update every few seconds instead of every second.", eco: true, balanced: false },
+        { key: "seconds", title: "Hide the clock's seconds", detail: "The desktop clock stops repainting once a second.", eco: true, balanced: false },
         { key: "widgetsStop", title: "Stop desktop widgets", detail: "Freezes them, with a pause sign, until you switch back.", eco: false, balanced: false },
         { key: "drift", title: "Still wallpaper", detail: "No drifting between workspaces.", eco: true, balanced: false },
+        { key: "cutout", title: "Flat wallpaper", detail: "No cut-out subject layer in front of the widgets.", eco: true, balanced: false },
+        { key: "weather", title: "Check the weather less", detail: "Every hour rather than every fifteen minutes.", eco: true, balanced: false },
+        { key: "updates", title: "No automatic update checks", detail: "Nothing is fetched to look for a new version.", eco: false, balanced: false },
         { key: "dim", title: "Dim the screen", detail: "Down to 40% when switching, if brighter.", eco: true, balanced: false },
         { key: "bluetooth", title: "Turn off Bluetooth", detail: "When switching to this profile.", eco: false, balanced: false }
     ]
@@ -151,6 +191,7 @@ Singleton {
             Hypr.setEffects(false);
         if (root.lowRefresh)
             root.applyRefresh("min");
+        root.applyAutoEco();
     }
 
     function applyRefresh(which) {

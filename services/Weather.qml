@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.config
+import qs.services
 
 /*
  * Current conditions from open-meteo, which needs no API key.
@@ -134,11 +135,17 @@ Singleton {
     Component.onCompleted: refresh()
 
     // Conditions do not change minute to minute, and this is a third-party
-    // request; fifteen minutes is frequent enough.
+    // request; fifteen minutes is frequent enough. On an energy saver it waits
+    // an hour, since a forecast is the least urgent thing the shell fetches.
+    readonly property int everyMs: Power.saving("weather") ? 3600000 : 900000
+
+    // The saver just came off: ask now rather than wait out the longer interval.
+    onEveryMsChanged: refreshSoon.restart()
+
     Timer {
         running: root.enabled
         repeat: true
-        interval: 900000
+        interval: root.everyMs
         onTriggered: root.refresh()
     }
 

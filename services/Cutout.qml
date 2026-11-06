@@ -20,6 +20,9 @@ Singleton {
     id: root
 
     readonly property bool enabled: Config.get("wallpaper.cutout", true)
+    // An energy saver keeps the flat wallpaper and stops making cut-outs in the
+    // background, which is a `nice`d rembg run per new picture.
+    readonly property bool active: root.enabled && !Power.saving("cutout")
     readonly property string model: Config.get("wallpaper.cutoutModel", "isnet-general-use")
     readonly property string cacheDir: `${Quickshell.env("XDG_CACHE_HOME") || Quickshell.env("HOME") + "/.cache"}/stratum/cutouts`
 
@@ -46,6 +49,8 @@ Singleton {
     readonly property string status: {
         if (!root.enabled)
             return "off";
+        if (!root.active)
+            return "paused";
         if (!root.available)
             return "needs rembg";
         if (root.error.length > 0)
@@ -55,6 +60,7 @@ Singleton {
 
     onWantedChanged: root.pump()
     onEnabledChanged: root.pump()
+    onActiveChanged: root.pump()
 
     // A short stable name for an image, so its cutout can be found again.
     function key(path) {
@@ -70,11 +76,11 @@ Singleton {
 
     function urlFor(monitor) {
         const cut = root.done[Wallpaper.forMonitor(monitor)];
-        return root.enabled && cut ? `file://${cut}` : "";
+        return root.active && cut ? `file://${cut}` : "";
     }
 
     function pump() {
-        if (!root.enabled || !root.available || maker.running)
+        if (!root.active || !root.available || maker.running)
             return;
         const next = root.wanted.find(p => !root.done[p] && p !== root.failed);
         if (!next)

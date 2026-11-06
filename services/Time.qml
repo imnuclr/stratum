@@ -65,12 +65,41 @@ Singleton {
     // Fraction of the day elapsed, for the dashboard's day-progress DotBar.
     readonly property real dayProgress: (hours * 60 + minutes) / 1440
 
+    /*
+     * Arm the clock for the next boundary.
+     *
+     * Called again after every tick, not once at start-up: a repeating timer
+     * keeps the interval it was given, so a minute timer first armed at :17
+     * ticked every 43 seconds for the rest of the session and every minute
+     * change landed early. Armed afresh each time, the time changes when the
+     * time changes. One-shot rather than repeating, because the interval is the
+     * part that has to be recomputed and a one-shot timer can be re-armed
+     * without restart semantics entering into it.
+     */
+    function schedule() {
+        const d = new Date();
+        ticker.interval = root.secondConsumers > 0
+            ? Math.max(50, 1000 - d.getMilliseconds())
+            : Math.max(50, 60000 - (d.getSeconds() * 1000 + d.getMilliseconds()));
+        // Restart rather than start: asking for seconds in the middle of a
+        // minute has to move the tick off the minute boundary, and start() does
+        // nothing to a timer that is already armed.
+        ticker.restart();
+    }
+
+    // Seconds are wanted or no longer wanted: pick up the right cadence at once.
+    onSecondConsumersChanged: root.schedule()
+    Component.onCompleted: root.schedule()
+
     Timer {
-        running: true
-        repeat: true
-        triggeredOnStart: true
-        // Align to the minute boundary when nobody needs seconds.
-        interval: root.secondConsumers > 0 ? 1000 : 1000 * (60 - new Date().getSeconds())
-        onTriggered: root.now = new Date()
+        id: ticker
+
+        running: false
+        repeat: false
+        interval: 1000
+        onTriggered: {
+            root.now = new Date();
+            root.schedule();
+        }
     }
 }

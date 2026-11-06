@@ -19,13 +19,18 @@ import qs.theme
 Item {
     id: root
 
+    // A tab above the list can carry the heading instead; the list still owns
+    // its content either way.
+    property bool heading: true
+
     Item {
         id: header
 
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: title.implicitHeight + Theme.space(2)
+        height: root.heading ? title.implicitHeight + Theme.space(2) : 0
+        visible: root.heading
 
         SectionLabel {
             id: title
@@ -104,7 +109,7 @@ Item {
         id: list
 
         anchors.top: header.bottom
-        anchors.topMargin: Theme.space(2)
+        anchors.topMargin: root.heading ? Theme.space(2) : 0
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

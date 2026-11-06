@@ -188,6 +188,9 @@ PanelWindow {
     visible: true
 
     onOpenChanged: {
+        // An outside click is only outside relative to the sheet open now: start
+        // from "not over it" and let hover say otherwise.
+        Shell.pointerOnSheet = false;
         if (open && root.hoverDismiss && root.adoptOnOpen)
             Shell.armDismiss();
         if (!open) {
@@ -347,6 +350,11 @@ PanelWindow {
 
                 onHoveredChanged: {
                     Diag.log("sheet", `${root.name} bodyHover=${hovered} holds=${Shell.holds}`);
+                    // A click counts as outside only while the pointer is not
+                    // over the sheet. Hover says so at the moment of the press;
+                    // the poll below corrects a hover loss caused by a grab.
+                    if (root.open)
+                        Shell.pointerOnSheet = hovered;
                     if (!root.hoverDismiss)
                         return;
                     if (hovered) {
@@ -411,10 +419,12 @@ PanelWindow {
                              * stayed open for good once you had clicked in it.
                              */
                             root.take();
+                            Shell.pointerOnSheet = true;
                             return;
                         }
                         verify.stop();
                         root.give();
+                        Shell.pointerOnSheet = false;
                     }
                 }
             }
